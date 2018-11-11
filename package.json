@@ -1,0 +1,11 @@
+{
+  "name": "canvas-game-engine",
+  "version": "1.0.0",
+  "description": "An HTML5 canvas game engine",
+  "main": "index.js",
+  "scripts": {
+    "start": "rollup -c --watch"
+  },
+  "author": "Austin Gray",
+  "license": "ISC"
+}
