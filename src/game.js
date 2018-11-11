@@ -1,16 +1,22 @@
 import Canvas from './Canvas';
+import SceneMainMenu from './SceneMainMenu';
 
 function game() {
   // view state
-  this.screen = 'menu';
+  this.currentScene = 'mainMenu';
 
   // debug stuff
   this.debug = true;
   this.frameCount = 0;
 
   // create the canvas
-  this.canvas = new this.Canvas();
-  
+  this.canvas = new Canvas();
+
+  // define the scenes
+  this.scenes = {
+    mainMenu: new SceneMainMenu(this.canvas),
+  }
+
   /**
    * Calls request animation frame and the update function
    */
@@ -27,12 +33,8 @@ function game() {
     // clear the canvas
     this.canvas.clear();
 
-    // draw a different scene depending on the screen
-    switch (this.screen) {
-      case 'menu':
-        this.canvas.drawMainMenu();
-        break;
-    }
+    // draw the current scene
+    this.scenes[this.currentScene].draw();
 
     // maybe show debug info
     if (this.debug) {
@@ -44,9 +46,5 @@ function game() {
   // kick the tires and light the fires
   this.loop();
 };
-
-Object.assign(game.prototype, {
-  Canvas,
-});
 
 export default game;

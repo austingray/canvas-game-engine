@@ -29,10 +29,6 @@
 
       // get context
       this.ctx = this.element.getContext('2d');
-
-      // defaults
-      this.ctx.font = "24px Arial";
-      this.ctx.fillStyle = '#FFFFFF';
     }
 
     /**
@@ -45,12 +41,18 @@
     }
 
     /**
-     * A basic method for drawing text
+     * Draws text to the canvas
      *
-     * @param {string} text
+     * @param {string} txt
+     * @param {integer} x
+     * @param {integer} y
+     * @param {string} [font='32px Arial']
+     * @param {string} [fillStyle='#FFFFFF']
      * @memberof Canvas
      */
-    drawText(txt, x, y) {
+    drawText(txt, x, y, font = '32px Arial', fillStyle = '#FFFFFF') {
+      this.ctx.font = font;
+      this.ctx.fillStyle = fillStyle;
       this.ctx.fillText(txt, x, y);
     }
 
@@ -67,59 +69,39 @@
     }
 
     /**
-     * Draws the main menu
+     * Calculates the starting x pos to center a string
      *
+     * @param {string} text the text to be measured
+     * @param {string} font canvas context font
+     * @returns {integer} x coordinate
      * @memberof Canvas
      */
-    drawMainMenu() {
-      this.drawGradientBackground();
-      this.drawLogo();
-      this.drawMenuItems();
+    calcCenteredTextX(text, font) {
+      this.ctx.font = font;
+      const width = this.ctx.measureText(text).width;
+      return (this.width / 2 - width / 2);
     }
 
     /**
-     * Draws all the main menu items
+     * Calculates x position for an array of strings to be stacked centered and left justified
      *
+     * @param {array} txtArr
+     * @param {string} [font='32px Arial']
+     * @returns {integer} x coordinate
      * @memberof Canvas
      */
-    drawMenuItems() {
-      // set the font size
-      this.ctx.font = '32px Arial';
+    calcCenteredTextBoxX(txtArr, font = '32px Arial') {
+      // set the font size to calculate with
+      this.ctx.font = font;
 
-      // define the menu items
-      const menuText = [
-        'New Game',
-        'Continue',
-        'Options',
-      ];
+      // get the width of each string
+      const strWidthArr = txtArr.map(txt => this.ctx.measureText(txt).width);
 
-      // get the x offset based on the item with the largest width
-      // TODO: calculate this in the constructor so it isn't called during the loop
-      // TODO: move all the menu canvas stuff into its own class
-      const menuItems = menuText.map(txt => ({
-        txt,
-        width: this.ctx.measureText(txt).width,
-      }));
-      const widths = menuItems.map(item => item.width);
-      const max = widths.reduce((a, b) => Math.max(a, b));
-      const x = this.width / 2 - (max / 2);
+      // get the longest width
+      const longest = strWidthArr.reduce((a, b) => Math.max(a, b));
 
-      // draw em
-      menuItems.forEach((item, i) => this.drawMenuItem(item.txt, i, x));
-    }
-
-    /**
-     * Draws a single menu item
-     *
-     * @param {string} txt  The menu text
-     * @param {integer} i The offset, used for calculating the y position
-     * @param {integer} x The x pos
-     * @memberof Canvas
-     */
-    drawMenuItem(txt, i, x) {
-      const txtWidth = this.ctx.measureText(txt).width;
-      const y = (this.height / 2) - 55 + (55 * i);
-      this.drawText(txt, x, y);
+      // calculate and return x
+      return (this.width / 2) - (longest / 2);
     }
 
     /**
@@ -131,37 +113,191 @@
       const grd = this.ctx.createLinearGradient(0, 0, this.width, this.height);
       grd.addColorStop(0, '#333333');
       grd.addColorStop(1, '#000000');
-
       this.ctx.fillStyle = grd;
       this.ctx.fillRect(0, 0, this.width, this.height);
     }
+  }
+
+  /**
+   * Base helper class for canvas scenes
+   *
+   * @class Scene
+   */
+  class Scene {
+    constructor(canvas) {
+      // easy access to the canvas and canvas context
+      this.canvas = canvas;
+      this.ctx = canvas.ctx;
+
+      // the scene contains objects to be drawn
+      this.scene = [];
+
+      // additional constructor actions for child classes
+      this.init();
+    }
 
     /**
-     * Draws the "logo", for now just text with the project name
+     * Should be overridden by child class, used as its constructor
      *
-     * @memberof Canvas
+     * @memberof Scene
      */
-    drawLogo() {
-      const text = 'Canvas Game';
-      this.ctx.font = '44px Arial';
-      const txtWidth = this.ctx.measureText(text);
-      const x = this.width / 2 - txtWidth.width / 2;
-      this.ctx.fillStyle = '#FFFFFF';
-      this.ctx.fillText(text, x, 44 + this.padding);
+    init() {
+      // hello from the other side
+    }
+
+    /**
+     * Push the object to the scene
+     *
+     * @param {object} obj
+     * @memberof Scene
+     */
+    pushToScene(obj) {
+      this.scene.push(obj);
+    }
+
+    /**
+     * Draws the menu items to the canvas
+     *
+     * @memberof Scene
+     */
+    drawSceneToCanvas() {
+      // draw each object in the scene
+      this.scene.forEach(obj => {
+        obj.draw(this.canvas);
+      });
+
+      // clear the scene for the next frame
+      this.scene = [];
+    }
+  }
+
+  /**
+   * A text object for the canvas to display
+   *
+   * @class CanvasTextObject
+   */
+  class CanvasTextObject {
+    constructor(args) {
+      this.text = args.text;
+      this.x = args.x;
+      this.y = args.y;
+      this.font = (typeof args.font !== 'undefined') ? args.font : '32px Arial';
+      this.fillStyle = (typeof args.fillStyle !== 'undefined') ? args.fillStyle : '#FFFFFF';
+    }
+
+    /**
+     * Draws the text object using the canvas drawText method
+     *
+     * @param {Canvas} canvas
+     * @memberof CanvasTextObject
+     */
+    draw(canvas) {
+      canvas.drawText(this.text, this.x, this.y, this.font, this.fillStyle);
+    }
+  }
+
+  /**
+   * Extends the CanvasTextObject a callback to the CanvasTextObject
+   *
+   * @class CanvasTextObjectInteractive
+   * @extends {CanvasTextObject}
+   */
+  class CanvasTextObjectInteractive extends CanvasTextObject {
+    callback() {
+      console.log(`do ${this.text}`);
+    }
+  }
+
+  class SceneMainMenu extends Scene {
+    /**
+     * Constructor
+     *
+     * @memberof SceneMainMenu
+     */
+    init() {
+      // create the logo object
+      this.createLogo();
+
+      // create the menu objects
+      this.createMenuObjects();
+    }
+
+    /**
+     * Creates the logo object
+     *
+     * @memberof SceneMainMenu
+     */
+    createLogo() {
+      const text = 'Canvas Game Engine';
+      const font = '44px Arial';
+      this.logo = new CanvasTextObject({
+        text,
+        x: this.canvas.calcCenteredTextX(text, font),
+        y: 44 + this.canvas.padding,
+        font,
+      });
+    }
+
+    /**
+     * Creates the menu item objects
+     *
+     * @memberof SceneMainMenu
+     */
+    createMenuObjects() {
+      // the menu text
+      const menuText = [
+        'New Game',
+        'Continue',
+        'Options',
+      ];
+
+      // the x position
+      const menuTextX = this.canvas.calcCenteredTextBoxX(menuText);
+
+      // create new CanvasTextObjectInteractive for each
+      this.menuObjects = menuText.map((text, i) => new CanvasTextObjectInteractive({
+        text,
+        x: menuTextX,
+        y: (this.canvas.height / 2) - 55 + (55 * i),
+      }));
+    }
+
+    /**
+     * Draws the main menu
+     *
+     * @memberof SceneMainMenu
+     */
+    draw() {
+      // draw the background
+      this.canvas.drawGradientBackground();
+
+      // push the logo to the scene
+      this.pushToScene(this.logo);
+
+      // push the menu items to the scene
+      this.menuObjects.forEach(obj => this.pushToScene(obj));
+      
+      // draw the scene objects to the canvas
+      this.drawSceneToCanvas();
     }
   }
 
   function game() {
     // view state
-    this.screen = 'menu';
+    this.currentScene = 'mainMenu';
 
     // debug stuff
     this.debug = true;
     this.frameCount = 0;
 
     // create the canvas
-    this.canvas = new this.Canvas();
-    
+    this.canvas = new Canvas();
+
+    // define the scenes
+    this.scenes = {
+      mainMenu: new SceneMainMenu(this.canvas),
+    };
+
     /**
      * Calls request animation frame and the update function
      */
@@ -178,12 +314,8 @@
       // clear the canvas
       this.canvas.clear();
 
-      // draw a different scene depending on the screen
-      switch (this.screen) {
-        case 'menu':
-          this.canvas.drawMainMenu();
-          break;
-      }
+      // draw the current scene
+      this.scenes[this.currentScene].draw();
 
       // maybe show debug info
       if (this.debug) {
@@ -195,9 +327,6 @@
     // kick the tires and light the fires
     this.loop();
   }
-  Object.assign(game.prototype, {
-    Canvas,
-  });
 
   return game;
 

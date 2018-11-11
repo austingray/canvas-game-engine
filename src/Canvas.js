@@ -23,10 +23,6 @@ class Canvas {
 
     // get context
     this.ctx = this.element.getContext('2d');
-
-    // defaults
-    this.ctx.font = "24px Arial";
-    this.ctx.fillStyle = '#FFFFFF';
   }
 
   /**
@@ -39,12 +35,18 @@ class Canvas {
   }
 
   /**
-   * A basic method for drawing text
+   * Draws text to the canvas
    *
-   * @param {string} text
+   * @param {string} txt
+   * @param {integer} x
+   * @param {integer} y
+   * @param {string} [font='32px Arial']
+   * @param {string} [fillStyle='#FFFFFF']
    * @memberof Canvas
    */
-  drawText(txt, x, y) {
+  drawText(txt, x, y, font = '32px Arial', fillStyle = '#FFFFFF') {
+    this.ctx.font = font;
+    this.ctx.fillStyle = fillStyle;
     this.ctx.fillText(txt, x, y);
   }
 
@@ -61,59 +63,39 @@ class Canvas {
   }
 
   /**
-   * Draws the main menu
+   * Calculates the starting x pos to center a string
    *
+   * @param {string} text the text to be measured
+   * @param {string} font canvas context font
+   * @returns {integer} x coordinate
    * @memberof Canvas
    */
-  drawMainMenu() {
-    this.drawGradientBackground();
-    this.drawLogo();
-    this.drawMenuItems();
+  calcCenteredTextX(text, font) {
+    this.ctx.font = font;
+    const width = this.ctx.measureText(text).width;
+    return (this.width / 2 - width / 2);
   }
 
   /**
-   * Draws all the main menu items
+   * Calculates x position for an array of strings to be stacked centered and left justified
    *
+   * @param {array} txtArr
+   * @param {string} [font='32px Arial']
+   * @returns {integer} x coordinate
    * @memberof Canvas
    */
-  drawMenuItems() {
-    // set the font size
-    this.ctx.font = '32px Arial';
+  calcCenteredTextBoxX(txtArr, font = '32px Arial') {
+    // set the font size to calculate with
+    this.ctx.font = font;
 
-    // define the menu items
-    const menuText = [
-      'New Game',
-      'Continue',
-      'Options',
-    ];
+    // get the width of each string
+    const strWidthArr = txtArr.map(txt => this.ctx.measureText(txt).width);
 
-    // get the x offset based on the item with the largest width
-    // TODO: calculate this in the constructor so it isn't called during the loop
-    // TODO: move all the menu canvas stuff into its own class
-    const menuItems = menuText.map(txt => ({
-      txt,
-      width: this.ctx.measureText(txt).width,
-    }));
-    const widths = menuItems.map(item => item.width);
-    const max = widths.reduce((a, b) => Math.max(a, b));
-    const x = this.width / 2 - (max / 2);
+    // get the longest width
+    const longest = strWidthArr.reduce((a, b) => Math.max(a, b));
 
-    // draw em
-    menuItems.forEach((item, i) => this.drawMenuItem(item.txt, i, x));
-  }
-
-  /**
-   * Draws a single menu item
-   *
-   * @param {string} txt  The menu text
-   * @param {integer} i The offset, used for calculating the y position
-   * @param {integer} x The x pos
-   * @memberof Canvas
-   */
-  drawMenuItem(txt, i, x) {
-    const txtWidth = this.ctx.measureText(txt).width;
-    const y = (this.height / 2) - 55 + (55 * i);
-    this.drawText(txt, x, y);
+    // calculate and return x
+    return (this.width / 2) - (longest / 2);
   }
 
   /**
@@ -125,23 +107,8 @@ class Canvas {
     const grd = this.ctx.createLinearGradient(0, 0, this.width, this.height);
     grd.addColorStop(0, '#333333');
     grd.addColorStop(1, '#000000');
-
     this.ctx.fillStyle = grd;
     this.ctx.fillRect(0, 0, this.width, this.height);
-  }
-
-  /**
-   * Draws the "logo", for now just text with the project name
-   *
-   * @memberof Canvas
-   */
-  drawLogo() {
-    const text = 'Canvas Game';
-    this.ctx.font = '44px Arial';
-    const txtWidth = this.ctx.measureText(text);
-    const x = this.width / 2 - txtWidth.width / 2;
-    this.ctx.fillStyle = '#FFFFFF';
-    this.ctx.fillText(text, x, 44 + this.padding);
   }
 }
 
