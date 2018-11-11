@@ -1,5 +1,6 @@
 import Canvas from './Canvas';
 import SceneMainMenu from './SceneMainMenu';
+import KeyboardController from './KeyboardController';
 
 function game() {
   // view state
@@ -8,6 +9,9 @@ function game() {
   // debug stuff
   this.debug = true;
   this.frameCount = 0;
+
+  // input handler
+  this.keyboard = new KeyboardController();
 
   // create the canvas
   this.canvas = new Canvas();
@@ -35,6 +39,9 @@ function game() {
 
     // draw the current scene
     this.scenes[this.currentScene].draw();
+
+    // handle keyboard input for the current scene
+    this.scenes[this.currentScene].handleInput(this.keyboard.activeKeys);
 
     // maybe show debug info
     if (this.debug) {

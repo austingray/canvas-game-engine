@@ -183,6 +183,7 @@
       this.y = args.y;
       this.font = (typeof args.font !== 'undefined') ? args.font : '32px Arial';
       this.fillStyle = (typeof args.fillStyle !== 'undefined') ? args.fillStyle : '#FFFFFF';
+      this.id = (typeof args.id !== 'undefined') ? args.id : null;
     }
 
     /**
@@ -194,6 +195,26 @@
     draw(canvas) {
       canvas.drawText(this.text, this.x, this.y, this.font, this.fillStyle);
     }
+
+    /**
+     * Set the X coord
+     *
+     * @param {integer} x
+     * @memberof CanvasTextObject
+     */
+    setX(x) {
+      this.x = x;
+    }
+
+    /**
+     * Set the Y coord
+     *
+     * @param {integer} y
+     * @memberof CanvasTextObject
+     */
+    setY(y) {
+      this.y = y;
+    }
   }
 
   /**
@@ -204,7 +225,7 @@
    */
   class CanvasTextObjectInteractive extends CanvasTextObject {
     callback() {
-      console.log(`do ${this.text}`);
+      alert(`do ${this.text}`);
     }
   }
 
@@ -226,6 +247,14 @@
 
       // create the menu objects
       this.createMenuObjects();
+
+      // create the menu selector arrow
+      this.createArrow();
+
+      // keyboard input stuff
+      this.allowInput = true;
+      this.keyboardCooldown = 100;
+      this.keyboardCooldownTimer;
     }
 
     /**
@@ -265,7 +294,81 @@
         text,
         x: menuTextX,
         y: (this.canvas.height / 2) - 55 + (55 * i),
+        id: i + 1,
       }));
+      
+      // set the focus and total
+      this.focusMenuObjectId = 1;
+      this.totalMenuObjects = 3;
+    }
+
+    /**
+     * Gets a menu object by its id
+     *
+     * @param {integer} id
+     * @returns {CanvasTextObjectInteractive}
+     * @memberof SceneMainMenu
+     */
+    getMenuObjectById(id) {
+      return this.menuObjects.filter(obj => obj.id === id)[0];
+    }
+
+    /**
+     * Gets the current focused menu object
+     *
+     * @returns {CanvasTextObjectInteractive}
+     * @memberof SceneMainMenu
+     */
+    getFocusMenuObject() {
+      return this.getMenuObjectById(this.focusMenuObjectId);
+    }
+
+    /**
+     * Increments the current focused menu item
+     *
+     * @memberof SceneMainMenu
+     */
+    incrementFocusMenuObject() {
+      this.focusMenuObjectId = this.focusMenuObjectId === this.totalMenuObjects
+        ? 1
+        : this.focusMenuObjectId + 1;
+    }
+
+    /**
+     * Decrements the current focused menu item
+     *
+     * @memberof SceneMainMenu
+     */
+    decrementFocusMenuObject() {
+      this.focusMenuObjectId = this.focusMenuObjectId === 1
+        ? this.totalMenuObjects
+        : this.focusMenuObjectId - 1;
+    }
+
+    /**
+     * Creates the focus menu item arrow
+     *
+     * @memberof SceneMainMenu
+     */
+    createArrow() {
+      // the arrow
+      const text = '->';
+      const font = '44px Arial';
+      
+      // get the width to offset from the menu items
+      this.ctx.font = font;
+      const width = this.ctx.measureText(text).width;
+
+      // get the current focus object
+      const focusMenuObject = this.getFocusMenuObject();
+      
+      // create the object
+      this.arrow = new CanvasTextObject({
+        text,
+        font,
+        x: focusMenuObject.x - width,
+        y: focusMenuObject.y,
+      });
     }
 
     /**
@@ -282,9 +385,68 @@
 
       // push the menu items to the scene
       this.menuObjects.forEach(obj => this.pushToScene(obj));
+
+      // draw the arrow
+      this.arrow.y = this.getFocusMenuObject().y;
+      this.pushToScene(this.arrow);
       
       // draw the scene objects to the canvas
       this.drawSceneToCanvas();
+    }
+
+    handleInput(activeKeys) {
+      if (!this.allowInput) {
+        return;
+      }
+
+      if (activeKeys.length === 0) {
+        return;
+      }
+
+      // handle down
+      if (activeKeys.indexOf(40) > -1) {
+        // increment the focused object
+        this.incrementFocusMenuObject();
+        this.allowInput = false;
+      }
+
+      // handle up
+      if (activeKeys.indexOf(38) > -1) {
+        // decrement the focused object
+        this.decrementFocusMenuObject();
+        this.allowInput = false;
+      }
+
+      // handle enter
+      if (activeKeys.indexOf(13) > -1) {
+        // do the menu item callback
+        this.getFocusMenuObject().callback();
+        this.allowInput = false;
+        return;
+      }
+
+      window.clearTimeout(this.keyboardCooldownTimer);
+      const that = this;
+      this.keyboardCooldownTimer = window.setTimeout(function() {
+        that.allowInput = true;
+      }, this.keyboardCooldown);
+    }
+  }
+
+  class KeyboardController {
+    constructor() {
+      this.activeKeys = [];
+      
+      document.addEventListener('keydown', (e) => {
+        if (this.activeKeys.indexOf(e.keyCode) === -1) {
+          this.activeKeys.push(e.keyCode);
+        }
+      });
+
+      document.addEventListener('keyup', (e) => {
+        const index = this.activeKeys.indexOf(e.keyCode);
+        this.activeKeys.splice(index, 1);
+      });
     }
   }
 
@@ -295,6 +457,9 @@
     // debug stuff
     this.debug = true;
     this.frameCount = 0;
+
+    // input handler
+    this.keyboard = new KeyboardController();
 
     // create the canvas
     this.canvas = new Canvas();
@@ -322,6 +487,9 @@
 
       // draw the current scene
       this.scenes[this.currentScene].draw();
+
+      // handle keyboard input for the current scene
+      this.scenes[this.currentScene].handleInput(this.keyboard.activeKeys);
 
       // maybe show debug info
       if (this.debug) {

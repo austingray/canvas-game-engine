@@ -20,6 +20,14 @@ class SceneMainMenu extends Scene {
 
     // create the menu objects
     this.createMenuObjects();
+
+    // create the menu selector arrow
+    this.createArrow();
+
+    // keyboard input stuff
+    this.allowInput = true;
+    this.keyboardCooldown = 100;
+    this.keyboardCooldownTimer;
   }
 
   /**
@@ -59,7 +67,81 @@ class SceneMainMenu extends Scene {
       text,
       x: menuTextX,
       y: (this.canvas.height / 2) - 55 + (55 * i),
+      id: i + 1,
     }));
+    
+    // set the focus and total
+    this.focusMenuObjectId = 1;
+    this.totalMenuObjects = 3;
+  }
+
+  /**
+   * Gets a menu object by its id
+   *
+   * @param {integer} id
+   * @returns {CanvasTextObjectInteractive}
+   * @memberof SceneMainMenu
+   */
+  getMenuObjectById(id) {
+    return this.menuObjects.filter(obj => obj.id === id)[0];
+  }
+
+  /**
+   * Gets the current focused menu object
+   *
+   * @returns {CanvasTextObjectInteractive}
+   * @memberof SceneMainMenu
+   */
+  getFocusMenuObject() {
+    return this.getMenuObjectById(this.focusMenuObjectId);
+  }
+
+  /**
+   * Increments the current focused menu item
+   *
+   * @memberof SceneMainMenu
+   */
+  incrementFocusMenuObject() {
+    this.focusMenuObjectId = this.focusMenuObjectId === this.totalMenuObjects
+      ? 1
+      : this.focusMenuObjectId + 1;
+  }
+
+  /**
+   * Decrements the current focused menu item
+   *
+   * @memberof SceneMainMenu
+   */
+  decrementFocusMenuObject() {
+    this.focusMenuObjectId = this.focusMenuObjectId === 1
+      ? this.totalMenuObjects
+      : this.focusMenuObjectId - 1;
+  }
+
+  /**
+   * Creates the focus menu item arrow
+   *
+   * @memberof SceneMainMenu
+   */
+  createArrow() {
+    // the arrow
+    const text = '->';
+    const font = '44px Arial';
+    
+    // get the width to offset from the menu items
+    this.ctx.font = font;
+    const width = this.ctx.measureText(text).width;
+
+    // get the current focus object
+    const focusMenuObject = this.getFocusMenuObject();
+    
+    // create the object
+    this.arrow = new CanvasTextObject({
+      text,
+      font,
+      x: focusMenuObject.x - width,
+      y: focusMenuObject.y,
+    });
   }
 
   /**
@@ -76,9 +158,51 @@ class SceneMainMenu extends Scene {
 
     // push the menu items to the scene
     this.menuObjects.forEach(obj => this.pushToScene(obj));
+
+    // draw the arrow
+    this.arrow.y = this.getFocusMenuObject().y;
+    this.pushToScene(this.arrow);
     
     // draw the scene objects to the canvas
     this.drawSceneToCanvas();
+  }
+
+  handleInput(activeKeys) {
+    if (!this.allowInput) {
+      return;
+    }
+
+    if (activeKeys.length === 0) {
+      return;
+    }
+
+    // handle down
+    if (activeKeys.indexOf(40) > -1) {
+      // increment the focused object
+      this.incrementFocusMenuObject();
+      this.allowInput = false;
+    }
+
+    // handle up
+    if (activeKeys.indexOf(38) > -1) {
+      // decrement the focused object
+      this.decrementFocusMenuObject();
+      this.allowInput = false;
+    }
+
+    // handle enter
+    if (activeKeys.indexOf(13) > -1) {
+      // do the menu item callback
+      this.getFocusMenuObject().callback();
+      this.allowInput = false;
+      return;
+    }
+
+    window.clearTimeout(this.keyboardCooldownTimer);
+    const that = this;
+    this.keyboardCooldownTimer = window.setTimeout(function() {
+      that.allowInput = true;
+    }, this.keyboardCooldown);
   }
 }
 
