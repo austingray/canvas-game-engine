@@ -2,6 +2,10 @@
   "name": "canvas-game-engine",
   "version": "1.0.0",
   "description": "An HTML5 canvas game engine",
+  "repository": {
+    "type": "git",
+    "url": "git@github.com:austingray/canvas-game-engine.git"
+  },
   "main": "index.js",
   "scripts": {
     "start": "rollup -c --watch"
