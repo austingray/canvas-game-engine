@@ -1,5 +1,7 @@
 /**
- * Creates a canvas
+ * Creates a canvas and provides methods for drawing to it
+ *
+ * @class Canvas
  */
 class Canvas {
   constructor(args = {}) {
@@ -69,25 +71,47 @@ class Canvas {
     this.drawMenuItems();
   }
 
-
+  /**
+   * Draws all the main menu items
+   *
+   * @memberof Canvas
+   */
   drawMenuItems() {
     // set the font size
     this.ctx.font = '32px Arial';
 
     // define the menu items
-    const menuItems = [
+    const menuText = [
       'New Game',
       'Continue',
       'Options',
     ];
 
+    // get the x offset based on the item with the largest width
+    // TODO: calculate this in the constructor so it isn't called during the loop
+    // TODO: move all the menu canvas stuff into its own class
+    const menuItems = menuText.map(txt => ({
+      txt,
+      width: this.ctx.measureText(txt).width,
+    }));
+    const widths = menuItems.map(item => item.width);
+    const max = widths.reduce((a, b) => Math.max(a, b));
+    const x = this.width / 2 - (max / 2);
+
     // draw em
-    menuItems.forEach((item, i) => this.drawMenuItem(item, i));
+    menuItems.forEach((item, i) => this.drawMenuItem(item.txt, i, x));
   }
 
-  drawMenuItem(txt, i) {
+  /**
+   * Draws a single menu item
+   *
+   * @param {string} txt  The menu text
+   * @param {integer} i The offset, used for calculating the y position
+   * @param {integer} x The x pos
+   * @memberof Canvas
+   */
+  drawMenuItem(txt, i, x) {
     const txtWidth = this.ctx.measureText(txt).width;
-    const x = (this.width / 2) - (txtWidth / 2)
     const y = (this.height / 2) - 55 + (55 * i);
     this.drawText(txt, x, y);
   }
