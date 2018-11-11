@@ -2,6 +2,12 @@ import Scene from './Scene';
 import CanvasTextObject from './CanvasTextObject';
 import CanvasTextObjectInteractive from './CanvasTextObjectInteractive';
 
+/**
+ * The Main Menu scene
+ *
+ * @class SceneMainMenu
+ * @extends {Scene}
+ */
 class SceneMainMenu extends Scene {
   /**
    * Constructor

@@ -208,6 +208,12 @@
     }
   }
 
+  /**
+   * The Main Menu scene
+   *
+   * @class SceneMainMenu
+   * @extends {Scene}
+   */
   class SceneMainMenu extends Scene {
     /**
      * Constructor
