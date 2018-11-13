@@ -45,8 +45,12 @@ function game() {
 
     // maybe show debug info
     if (this.debug) {
+      const debugText = `
+        Active Keys: [${this.keyboard.activeKeys}]
+        Total frames: ${this.frameCount}
+      `;
       this.frameCount++;
-      this.canvas.drawDebugText(`Total frames: ${this.frameCount}`);
+      this.canvas.drawDebugText(debugText);
     }
   }
 

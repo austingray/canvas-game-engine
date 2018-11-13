@@ -26,7 +26,7 @@ class SceneMainMenu extends Scene {
 
     // keyboard input stuff
     this.allowInput = true;
-    this.keyboardCooldown = 100;
+    this.keyboardCooldown = 150;
     this.keyboardCooldownTimer;
   }
 
@@ -41,7 +41,7 @@ class SceneMainMenu extends Scene {
     this.logo = new CanvasTextObject({
       text,
       x: this.canvas.calcCenteredTextX(text, font),
-      y: 44 + this.canvas.padding,
+      y: 64 + this.canvas.padding,
       font,
     });
   }
@@ -72,7 +72,7 @@ class SceneMainMenu extends Scene {
     
     // set the focus and total
     this.focusMenuObjectId = 1;
-    this.totalMenuObjects = 3;
+    this.totalMenuObjects = menuText.length;
   }
 
   /**
@@ -125,7 +125,7 @@ class SceneMainMenu extends Scene {
    */
   createArrow() {
     // the arrow
-    const text = '->';
+    const text = ')';
     const font = '44px Arial';
     
     // get the width to offset from the menu items
@@ -139,7 +139,7 @@ class SceneMainMenu extends Scene {
     this.arrow = new CanvasTextObject({
       text,
       font,
-      x: focusMenuObject.x - width,
+      x: focusMenuObject.x - width - 12,
       y: focusMenuObject.y,
     });
   }
@@ -167,11 +167,20 @@ class SceneMainMenu extends Scene {
     this.drawSceneToCanvas();
   }
 
+  /**
+   * Handle input for the scene
+   *
+   * @param {array} activeKeys
+   * @returns {void}
+   * @memberof SceneMainMenu
+   */
   handleInput(activeKeys) {
+    // bail if input is disabled
     if (!this.allowInput) {
       return;
     }
 
+    // bail if no key press
     if (activeKeys.length === 0) {
       return;
     }
@@ -195,9 +204,9 @@ class SceneMainMenu extends Scene {
       // do the menu item callback
       this.getFocusMenuObject().callback();
       this.allowInput = false;
-      return;
     }
-
+    
+    // set timeout to enable key press again
     window.clearTimeout(this.keyboardCooldownTimer);
     const that = this;
     this.keyboardCooldownTimer = window.setTimeout(function() {

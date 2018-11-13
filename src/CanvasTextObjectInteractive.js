@@ -8,7 +8,7 @@ import CanvasTextObject from './CanvasTextObject';
  */
 class CanvasTextObjectInteractive extends CanvasTextObject {
   callback() {
-    alert(`do ${this.text}`);
+    console.log(`do ${this.text}`);
   }
 }
 

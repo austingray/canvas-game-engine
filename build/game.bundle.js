@@ -225,7 +225,7 @@
    */
   class CanvasTextObjectInteractive extends CanvasTextObject {
     callback() {
-      alert(`do ${this.text}`);
+      console.log(`do ${this.text}`);
     }
   }
 
@@ -253,7 +253,7 @@
 
       // keyboard input stuff
       this.allowInput = true;
-      this.keyboardCooldown = 100;
+      this.keyboardCooldown = 150;
       this.keyboardCooldownTimer;
     }
 
@@ -268,7 +268,7 @@
       this.logo = new CanvasTextObject({
         text,
         x: this.canvas.calcCenteredTextX(text, font),
-        y: 44 + this.canvas.padding,
+        y: 64 + this.canvas.padding,
         font,
       });
     }
@@ -299,7 +299,7 @@
       
       // set the focus and total
       this.focusMenuObjectId = 1;
-      this.totalMenuObjects = 3;
+      this.totalMenuObjects = menuText.length;
     }
 
     /**
@@ -352,7 +352,7 @@
      */
     createArrow() {
       // the arrow
-      const text = '->';
+      const text = ')';
       const font = '44px Arial';
       
       // get the width to offset from the menu items
@@ -366,7 +366,7 @@
       this.arrow = new CanvasTextObject({
         text,
         font,
-        x: focusMenuObject.x - width,
+        x: focusMenuObject.x - width - 12,
         y: focusMenuObject.y,
       });
     }
@@ -394,11 +394,20 @@
       this.drawSceneToCanvas();
     }
 
+    /**
+     * Handle input for the scene
+     *
+     * @param {array} activeKeys
+     * @returns {void}
+     * @memberof SceneMainMenu
+     */
     handleInput(activeKeys) {
+      // bail if input is disabled
       if (!this.allowInput) {
         return;
       }
 
+      // bail if no key press
       if (activeKeys.length === 0) {
         return;
       }
@@ -422,9 +431,9 @@
         // do the menu item callback
         this.getFocusMenuObject().callback();
         this.allowInput = false;
-        return;
       }
-
+      
+      // set timeout to enable key press again
       window.clearTimeout(this.keyboardCooldownTimer);
       const that = this;
       this.keyboardCooldownTimer = window.setTimeout(function() {
@@ -493,8 +502,12 @@
 
       // maybe show debug info
       if (this.debug) {
+        const debugText = `
+        Active Keys: [${this.keyboard.activeKeys}]
+        Total frames: ${this.frameCount}
+      `;
         this.frameCount++;
-        this.canvas.drawDebugText(`Total frames: ${this.frameCount}`);
+        this.canvas.drawDebugText(debugText);
       }
     };
 
