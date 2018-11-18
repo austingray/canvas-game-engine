@@ -1,10 +1,11 @@
 /**
  * A text object for the canvas to display
  *
- * @class CanvasTextObject
+ * @class ObjectText
  */
-class CanvasTextObject {
+class ObjectText {
   constructor(args) {
+    this.args = args;
     this.text = args.text;
     this.x = args.x;
     this.y = args.y;
@@ -16,18 +17,18 @@ class CanvasTextObject {
   /**
    * Draws the text object using the canvas drawText method
    *
-   * @param {Canvas} canvas
-   * @memberof CanvasTextObject
+   * @param {Canvas} Canvas
+   * @memberof ObjectText
    */
-  draw(canvas) {
-    canvas.drawText(this.text, this.x, this.y, this.font, this.fillStyle);
+  draw(Canvas) {
+    Canvas.drawText(this.text, this.x, this.y, this.font, this.fillStyle);
   }
 
   /**
    * Set the X coord
    *
    * @param {integer} x
-   * @memberof CanvasTextObject
+   * @memberof ObjectText
    */
   setX(x) {
     this.x = x;
@@ -37,11 +38,11 @@ class CanvasTextObject {
    * Set the Y coord
    *
    * @param {integer} y
-   * @memberof CanvasTextObject
+   * @memberof ObjectText
    */
   setY(y) {
     this.y = y;
   }
 }
 
-export default CanvasTextObject;
+export default ObjectText;

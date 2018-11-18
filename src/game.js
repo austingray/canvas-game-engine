@@ -1,5 +1,6 @@
 import Canvas from './Canvas';
-import SceneMainMenu from './SceneMainMenu';
+import Objects from './Objects/index';
+import Scenes from './Scenes/index';
 import KeyboardController from './KeyboardController';
 
 function game() {
@@ -11,14 +12,18 @@ function game() {
   this.frameCount = 0;
 
   // input handler
-  this.keyboard = new KeyboardController();
+  this.Keyboard = new KeyboardController();
 
   // create the canvas
-  this.canvas = new Canvas();
+  this.Canvas = new Canvas();
+
+  // the object factory
+  this.Objects = new Objects(this);
 
   // define the scenes
   this.scenes = {
-    mainMenu: new SceneMainMenu(this.canvas),
+    mainMenu: new Scenes.SceneMainMenu(this),
+    game: new Scenes.SceneGame(this),
   }
 
   /**
@@ -35,23 +40,30 @@ function game() {
    */
   this.update = () => {
     // clear the canvas
-    this.canvas.clear();
+    this.Canvas.clear();
 
     // draw the current scene
     this.scenes[this.currentScene].draw();
 
     // handle keyboard input for the current scene
-    this.scenes[this.currentScene].handleInput(this.keyboard.activeKeys);
+    this.scenes[this.currentScene].handleInput(this.Keyboard.activeKeys);
 
     // maybe show debug info
     if (this.debug) {
       const debugText = `
-        Active Keys: [${this.keyboard.activeKeys}]
+        Active Keys: [${this.Keyboard.activeKeys}]
         Total frames: ${this.frameCount}
       `;
       this.frameCount++;
-      this.canvas.drawDebugText(debugText);
+      this.Canvas.drawDebugText(debugText);
     }
+  }
+
+  /** 
+   * A method for changing the current scene
+   */
+  this.changeCurrentScene = (sceneName) => {
+    this.currentScene = sceneName;
   }
 
   // kick the tires and light the fires

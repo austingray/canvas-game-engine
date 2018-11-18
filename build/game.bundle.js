@@ -6,7 +6,6 @@
 
   /**
    * Creates a canvas and provides methods for drawing to it
-   *
    * @class Canvas
    */
   class Canvas {
@@ -33,7 +32,6 @@
 
     /**
      * Clears the canvas
-     *
      * @memberof Canvas
      */
     clear() {
@@ -42,7 +40,6 @@
 
     /**
      * Draws text to the canvas
-     *
      * @param {string} txt
      * @param {integer} x
      * @param {integer} y
@@ -58,7 +55,6 @@
 
     /**
      * Draws debug text
-     *
      * @param {string} txt
      * @memberof Canvas
      */
@@ -70,7 +66,6 @@
 
     /**
      * Calculates the starting x pos to center a string
-     *
      * @param {string} text the text to be measured
      * @param {string} font canvas context font
      * @returns {integer} x coordinate
@@ -84,7 +79,6 @@
 
     /**
      * Calculates x position for an array of strings to be stacked centered and left justified
-     *
      * @param {array} txtArr
      * @param {string} [font='32px Arial']
      * @returns {integer} x coordinate
@@ -105,8 +99,19 @@
     }
 
     /**
+     * Calculates text width
+     * @param {*} txt
+     * @param {*} font
+     * @returns
+     * @memberof Canvas
+     */
+    calcTextWidth(txt, font) {
+      this.ctx.font = font;
+      return this.ctx.measureText(txt).width;
+    }
+
+    /**
      * Draws a black gradient across the entire canvas
-     *
      * @memberof Canvas
      */
     drawGradientBackground() {
@@ -119,65 +124,13 @@
   }
 
   /**
-   * Base helper class for canvas scenes
-   *
-   * @class Scene
-   */
-  class Scene {
-    constructor(canvas) {
-      // easy access to the canvas and canvas context
-      this.canvas = canvas;
-      this.ctx = canvas.ctx;
-
-      // the scene contains objects to be drawn
-      this.scene = [];
-
-      // additional constructor actions for child classes
-      this.init();
-    }
-
-    /**
-     * Should be overridden by child class, used as its constructor
-     *
-     * @memberof Scene
-     */
-    init() {
-      // hello from the other side
-    }
-
-    /**
-     * Push the object to the scene
-     *
-     * @param {object} obj
-     * @memberof Scene
-     */
-    pushToScene(obj) {
-      this.scene.push(obj);
-    }
-
-    /**
-     * Draws the menu items to the canvas
-     *
-     * @memberof Scene
-     */
-    drawSceneToCanvas() {
-      // draw each object in the scene
-      this.scene.forEach(obj => {
-        obj.draw(this.canvas);
-      });
-
-      // clear the scene for the next frame
-      this.scene = [];
-    }
-  }
-
-  /**
    * A text object for the canvas to display
    *
-   * @class CanvasTextObject
+   * @class ObjectText
    */
-  class CanvasTextObject {
+  class ObjectText {
     constructor(args) {
+      this.args = args;
       this.text = args.text;
       this.x = args.x;
       this.y = args.y;
@@ -189,18 +142,18 @@
     /**
      * Draws the text object using the canvas drawText method
      *
-     * @param {Canvas} canvas
-     * @memberof CanvasTextObject
+     * @param {Canvas} Canvas
+     * @memberof ObjectText
      */
-    draw(canvas) {
-      canvas.drawText(this.text, this.x, this.y, this.font, this.fillStyle);
+    draw(Canvas) {
+      Canvas.drawText(this.text, this.x, this.y, this.font, this.fillStyle);
     }
 
     /**
      * Set the X coord
      *
      * @param {integer} x
-     * @memberof CanvasTextObject
+     * @memberof ObjectText
      */
     setX(x) {
       this.x = x;
@@ -210,7 +163,7 @@
      * Set the Y coord
      *
      * @param {integer} y
-     * @memberof CanvasTextObject
+     * @memberof ObjectText
      */
     setY(y) {
       this.y = y;
@@ -218,14 +171,336 @@
   }
 
   /**
-   * Extends the CanvasTextObject a callback to the CanvasTextObject
+   * Extends the ObjectText with a callback method
    *
-   * @class CanvasTextObjectInteractive
-   * @extends {CanvasTextObject}
+   * @class ObjectTextInteractive
+   * @extends {ObjectText}
    */
-  class CanvasTextObjectInteractive extends CanvasTextObject {
+  class ObjectTextInteractive extends ObjectText {
     callback() {
-      console.log(`do ${this.text}`);
+      this.args.callback();
+    }
+  }
+
+  /**
+   * Draws a circle to the Canvas
+   *
+   * @class ObjectCircle
+   */
+  class ObjectCircle {
+    constructor(args) {    
+      this.args = args;
+      this.x = args.x;
+      this.y = args.y;
+      this.radius = args.radius;
+      this.fillStyle = args.fillStyle;
+      this.startAngle = Math.PI / 180 * 0;
+      this.endAngle = Math.PI / 180 * 360;
+      this.anticlockwise = false;
+    }
+
+    draw(Canvas) {
+      Canvas.ctx.fillStyle = this.fillStyle;
+      Canvas.ctx.arc(
+        this.x,
+        this.y,
+        this.radius,
+        this.startAngle,
+        this.endAngle,
+        this.anticlockwise,
+      );
+      Canvas.ctx.fill();
+    }
+  }
+
+  class ObjectMenu {
+    /**
+     * Creates an instance of ObjectMenu.
+     * @param {*} args
+     * @memberof ObjectMenu
+     */
+    constructor(args, game) {
+      // default to having focus
+      this.hasFocus = true;
+      
+      // reference to the game object
+      this.game = game;
+
+      // calculate the menu starting x position.
+      this.startX = this.game.Canvas.calcCenteredTextBoxX(args.options.map(option => option.text));
+
+      // create the option objects
+      this.createOptionObjects(args.options);
+
+      // set the focus menu object to the first one.
+      this.focusMenuObject = this.options[0];
+
+      // create the arrow
+      this.createArrow(args);
+    }
+
+    /**
+     * Sets focus on the menu.
+     * this.hasFocus means Arrow keys will change the selected menu item.
+     * @param {boolean} [hasFocus=true]
+     * @memberof ObjectMenu
+     */
+    setFocus(hasFocus = true) {
+      this.hasFocus = hasFocus;
+    }
+
+    /**
+     * Creates the menu item option Objects
+     * @param {*} options
+     * @memberof ObjectMenu
+     */
+    createOptionObjects(options) {
+      this.options = options.map((option, i) => this.game.Objects.create({
+        ...option,
+        type: 'textInteractive',
+        x: this.startX,
+        y: (this.game.Canvas.height / 2) - 55 + (i * 55),
+      }));
+    }
+
+    /**
+     * Creates the arrow indicating which object is selected
+     * @memberof ObjectMenu
+     */
+    createArrow() {
+      // the arrow
+      const text = ')';
+      const font = '44px Arial';
+      
+      // get the width to offset from the menu items
+      const width = this.game.Canvas.calcTextWidth(text, font);
+
+      // get the current focus object
+      // const focusMenuObject = this.getFocusMenuObject();
+      
+      // create the object
+      this.arrow = this.game.Objects.create({
+        type: 'text',
+        text,
+        font,
+        x: this.startX - width - 12,
+        y: this.focusMenuObject.y,
+      });
+    }
+
+    /**
+     * Gets the array index of the focused menu option by its id
+     *
+     * @param {*} id
+     * @returns
+     * @memberof ObjectMenu
+     */
+    getFocusMenuObjectIndexById(id) {
+      return this.options.map(option => option.id).indexOf(id);
+    }
+
+    /**
+     * Increments the current focused menu item
+     *
+     * @memberof SceneMainMenu
+     */
+    incrementFocusMenuObject() {
+      // get the focused menu object's index in the option array
+      const index = this.getFocusMenuObjectIndexById(this.focusMenuObject.id);
+
+      // increment it or start back at the beginning
+      this.focusMenuObject = index === (this.options.length - 1)
+        ? this.options[0]
+        : this.options[index + 1];
+          
+      // update the arrow position
+      this.arrow.y = this.focusMenuObject.y;
+    }
+
+    /**
+     * Decrements the current focused menu item
+     *
+     * @memberof SceneMainMenu
+     */
+    decrementFocusMenuObject() {
+      // get the focused menu object's index in the option array
+      const index = this.getFocusMenuObjectIndexById(this.focusMenuObject.id);
+
+      // increment it or start back at the beginning
+      this.focusMenuObject = index === 0
+        ? this.options[this.options.length - 1]
+        : this.options[index - 1];
+          
+      // update the arrow position
+      this.arrow.y = this.focusMenuObject.y;
+    }
+
+    /**
+     * Draws the menu
+     *
+     * @memberof ObjectMenu
+     */
+    draw() {
+      this.options.forEach(option => option.draw(this.game.Canvas));
+
+      if (this.hasFocus) {
+        this.arrow.draw(this.game.Canvas);
+      }
+    }
+  }
+
+  /**
+   * Handles Object creation for use in Scenes
+   *
+   * @class Objects
+   */
+  class Objects {
+    constructor(game) {
+      this.game = game;
+
+      // Used as the object.id when creating new objects.
+      // Increments after each usage.
+      this.newObjectId = 0;
+    }
+
+    /**
+     * Creates a new object
+     *
+     * @param {*} args
+     * @returns A Scene Object
+     * @memberof Objects
+     */
+    create(args) {
+      // get a new object id
+      this.newObjectId++;
+
+      // create the new object args
+      const object = Object.assign({}, args, {
+        id: this.newObjectId,
+      });
+
+      switch (object.type) {
+        case 'text':
+          return new ObjectText(object)
+          break;
+        
+        case 'textInteractive':
+          return new ObjectTextInteractive(object);
+          break;
+
+        case 'circle':
+          return new ObjectCircle(object);
+          break;
+        
+        case 'menu':
+          return new ObjectMenu(object, this.game);
+          break;
+        
+        default:
+          break;
+      }
+
+      return {};
+    }
+  }
+
+  /**
+   * Base helper class for canvas scenes
+   *
+   * @class Scene
+   */
+  class Scene {
+    // constructor games the game object
+    constructor(game) {
+      // make the game instance available to the scene
+      this.game = game;
+
+      // easy access to the canvas and canvas context
+      this.Canvas = this.game.Canvas;
+      this.ctx = this.game.Canvas.ctx;
+
+      // each access to the object factory
+      this.Objects = this.game.Objects;
+
+      // the scene contains objects to be drawn
+      this.scene = [];
+
+      // additional constructor actions for child classes
+      this.init();
+    }
+
+    /**
+     ** Should be declared by subclass
+     *  called at the end of constructor
+     *
+     * @memberof Scene
+     */
+    init() {
+      // hello from the other side
+    }
+
+    /**
+     * Push an object to the scene
+     *
+     * @param {object} obj
+     * @memberof Scene
+     */
+    pushToScene(obj) {
+      this.scene.push(obj);
+    }
+
+    /**
+     ** Should be declared by subclass
+     *  What/where objects should be displayed
+     *
+     * @memberof Scene
+     */
+    prepareScene() {
+      /* for example
+      if (this.shouldShowObject) {
+        this.pushToScene(this.obj);
+      }
+      */
+    }
+
+    /**
+     * Calls the .draw() method of each object in the scene
+     * 
+     *
+     * @memberof Scene
+     */
+    drawSceneToCanvas() {
+      // draw each object in the scene
+      this.scene.forEach(obj => {
+        obj.draw(this.Canvas);
+      });
+
+      // clear the scene for the next frame
+      this.scene = [];
+    }
+
+    /**
+     * Draws the current scene
+     * Called in the main game loop
+     *
+     * @memberof Scene
+     */
+    draw() {
+      // push the scene objects to the scene array
+      this.prepareScene();
+
+      // call each object's draw method
+      this.drawSceneToCanvas();
+    }
+
+    /**
+     ** Should be overridden by subclass
+     *  Handles input from keyboard/mouse
+     *
+     * @memberof Scene
+     */
+    handleInput() {
+      // hello from the other side
     }
   }
 
@@ -246,10 +521,10 @@
       this.createLogo();
 
       // create the menu objects
-      this.createMenuObjects();
+      // this.createMenuObjects();
 
-      // create the menu selector arrow
-      this.createArrow();
+      //
+      this.createMenu();
 
       // keyboard input stuff
       this.allowInput = true;
@@ -265,133 +540,60 @@
     createLogo() {
       const text = 'Canvas Game Engine';
       const font = '44px Arial';
-      this.logo = new CanvasTextObject({
+      this.logo = this.Objects.create({
+        type: 'text',
         text,
-        x: this.canvas.calcCenteredTextX(text, font),
-        y: 64 + this.canvas.padding,
+        x: this.Canvas.calcCenteredTextX(text, font),
+        y: 64 + this.Canvas.padding,
         font,
       });
     }
 
     /**
-     * Creates the menu item objects
+     * Creates the menu
      *
      * @memberof SceneMainMenu
      */
-    createMenuObjects() {
-      // the menu text
-      const menuText = [
-        'New Game',
-        'Continue',
-        'Options',
-      ];
-
-      // the x position
-      const menuTextX = this.canvas.calcCenteredTextBoxX(menuText);
-
-      // create new CanvasTextObjectInteractive for each
-      this.menuObjects = menuText.map((text, i) => new CanvasTextObjectInteractive({
-        text,
-        x: menuTextX,
-        y: (this.canvas.height / 2) - 55 + (55 * i),
-        id: i + 1,
-      }));
-      
-      // set the focus and total
-      this.focusMenuObjectId = 1;
-      this.totalMenuObjects = menuText.length;
-    }
-
-    /**
-     * Gets a menu object by its id
-     *
-     * @param {integer} id
-     * @returns {CanvasTextObjectInteractive}
-     * @memberof SceneMainMenu
-     */
-    getMenuObjectById(id) {
-      return this.menuObjects.filter(obj => obj.id === id)[0];
-    }
-
-    /**
-     * Gets the current focused menu object
-     *
-     * @returns {CanvasTextObjectInteractive}
-     * @memberof SceneMainMenu
-     */
-    getFocusMenuObject() {
-      return this.getMenuObjectById(this.focusMenuObjectId);
-    }
-
-    /**
-     * Increments the current focused menu item
-     *
-     * @memberof SceneMainMenu
-     */
-    incrementFocusMenuObject() {
-      this.focusMenuObjectId = this.focusMenuObjectId === this.totalMenuObjects
-        ? 1
-        : this.focusMenuObjectId + 1;
-    }
-
-    /**
-     * Decrements the current focused menu item
-     *
-     * @memberof SceneMainMenu
-     */
-    decrementFocusMenuObject() {
-      this.focusMenuObjectId = this.focusMenuObjectId === 1
-        ? this.totalMenuObjects
-        : this.focusMenuObjectId - 1;
-    }
-
-    /**
-     * Creates the focus menu item arrow
-     *
-     * @memberof SceneMainMenu
-     */
-    createArrow() {
-      // the arrow
-      const text = ')';
-      const font = '44px Arial';
-      
-      // get the width to offset from the menu items
-      this.ctx.font = font;
-      const width = this.ctx.measureText(text).width;
-
-      // get the current focus object
-      const focusMenuObject = this.getFocusMenuObject();
-      
-      // create the object
-      this.arrow = new CanvasTextObject({
-        text,
-        font,
-        x: focusMenuObject.x - width - 12,
-        y: focusMenuObject.y,
+    createMenu() {
+      this.menu = this.Objects.create({
+        type: 'menu',
+        options: [
+          {
+            text: 'New Game',
+            callback: () => {
+              this.game.changeCurrentScene('game');
+            },
+          },
+          {
+            text: 'Continue',
+            callback: () => {
+              console.log('do Continue');
+            },
+          },
+          {
+            text: 'Options',
+            callback: () => {
+              console.log('do Options');
+            },
+          },
+        ]
       });
     }
 
     /**
-     * Draws the main menu
+     * Loads the objects to the scene for drawing
      *
      * @memberof SceneMainMenu
      */
-    draw() {
+    prepareScene() {
       // draw the background
-      this.canvas.drawGradientBackground();
+      this.Canvas.drawGradientBackground();
 
       // push the logo to the scene
       this.pushToScene(this.logo);
 
-      // push the menu items to the scene
-      this.menuObjects.forEach(obj => this.pushToScene(obj));
-
-      // draw the arrow
-      this.arrow.y = this.getFocusMenuObject().y;
-      this.pushToScene(this.arrow);
-      
-      // draw the scene objects to the canvas
-      this.drawSceneToCanvas();
+      // push the menu to the scene
+      this.pushToScene(this.menu);
     }
 
     /**
@@ -415,21 +617,21 @@
       // handle down
       if (activeKeys.indexOf(40) > -1) {
         // increment the focused object
-        this.incrementFocusMenuObject();
+        this.menu.incrementFocusMenuObject();
         this.allowInput = false;
       }
 
       // handle up
       if (activeKeys.indexOf(38) > -1) {
         // decrement the focused object
-        this.decrementFocusMenuObject();
+        this.menu.decrementFocusMenuObject();
         this.allowInput = false;
       }
 
       // handle enter
       if (activeKeys.indexOf(13) > -1) {
         // do the menu item callback
-        this.getFocusMenuObject().callback();
+        this.menu.focusMenuObject.callback();
         this.allowInput = false;
       }
       
@@ -441,6 +643,32 @@
       }, this.keyboardCooldown);
     }
   }
+
+  class SceneGame extends Scene {
+    init() {
+      this.createHero();
+    }
+
+    createHero() {
+      this.hero = this.Objects.create({
+        type: 'circle',
+        x: 10,
+        y: 10,
+        radius: 10,
+        fillStyle: 'green',
+      });
+    }
+
+    draw() {
+      this.pushToScene(this.hero);
+      this.drawSceneToCanvas();
+    }
+  }
+
+  var Scenes = {
+    SceneMainMenu,
+    SceneGame,
+  };
 
   class KeyboardController {
     constructor() {
@@ -468,14 +696,18 @@
     this.frameCount = 0;
 
     // input handler
-    this.keyboard = new KeyboardController();
+    this.Keyboard = new KeyboardController();
 
     // create the canvas
-    this.canvas = new Canvas();
+    this.Canvas = new Canvas();
+
+    // the object factory
+    this.Objects = new Objects(this);
 
     // define the scenes
     this.scenes = {
-      mainMenu: new SceneMainMenu(this.canvas),
+      mainMenu: new Scenes.SceneMainMenu(this),
+      game: new Scenes.SceneGame(this),
     };
 
     /**
@@ -492,23 +724,30 @@
      */
     this.update = () => {
       // clear the canvas
-      this.canvas.clear();
+      this.Canvas.clear();
 
       // draw the current scene
       this.scenes[this.currentScene].draw();
 
       // handle keyboard input for the current scene
-      this.scenes[this.currentScene].handleInput(this.keyboard.activeKeys);
+      this.scenes[this.currentScene].handleInput(this.Keyboard.activeKeys);
 
       // maybe show debug info
       if (this.debug) {
         const debugText = `
-        Active Keys: [${this.keyboard.activeKeys}]
+        Active Keys: [${this.Keyboard.activeKeys}]
         Total frames: ${this.frameCount}
       `;
         this.frameCount++;
-        this.canvas.drawDebugText(debugText);
+        this.Canvas.drawDebugText(debugText);
       }
+    };
+
+    /** 
+     * A method for changing the current scene
+     */
+    this.changeCurrentScene = (sceneName) => {
+      this.currentScene = sceneName;
     };
 
     // kick the tires and light the fires

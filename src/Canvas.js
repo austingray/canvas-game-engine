@@ -1,6 +1,5 @@
 /**
  * Creates a canvas and provides methods for drawing to it
- *
  * @class Canvas
  */
 class Canvas {
@@ -27,7 +26,6 @@ class Canvas {
 
   /**
    * Clears the canvas
-   *
    * @memberof Canvas
    */
   clear() {
@@ -36,7 +34,6 @@ class Canvas {
 
   /**
    * Draws text to the canvas
-   *
    * @param {string} txt
    * @param {integer} x
    * @param {integer} y
@@ -52,7 +49,6 @@ class Canvas {
 
   /**
    * Draws debug text
-   *
    * @param {string} txt
    * @memberof Canvas
    */
@@ -64,7 +60,6 @@ class Canvas {
 
   /**
    * Calculates the starting x pos to center a string
-   *
    * @param {string} text the text to be measured
    * @param {string} font canvas context font
    * @returns {integer} x coordinate
@@ -78,7 +73,6 @@ class Canvas {
 
   /**
    * Calculates x position for an array of strings to be stacked centered and left justified
-   *
    * @param {array} txtArr
    * @param {string} [font='32px Arial']
    * @returns {integer} x coordinate
@@ -99,8 +93,19 @@ class Canvas {
   }
 
   /**
+   * Calculates text width
+   * @param {*} txt
+   * @param {*} font
+   * @returns
+   * @memberof Canvas
+   */
+  calcTextWidth(txt, font) {
+    this.ctx.font = font;
+    return this.ctx.measureText(txt).width;
+  }
+
+  /**
    * Draws a black gradient across the entire canvas
-   *
    * @memberof Canvas
    */
   drawGradientBackground() {

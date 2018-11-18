@@ -5,14 +5,14 @@ import CanvasTextObjectInteractive from './CanvasTextObjectInteractive';
 /**
  * The Main Menu scene
  *
- * @class SceneMainMenu
+ * @class ScenePause
  * @extends {Scene}
  */
-class SceneMainMenu extends Scene {
+class ScenePause extends Scene {
   /**
    * Constructor
    *
-   * @memberof SceneMainMenu
+   * @memberof ScenePause
    */
   init() {
     // create the logo object
@@ -33,15 +33,15 @@ class SceneMainMenu extends Scene {
   /**
    * Creates the logo object
    *
-   * @memberof SceneMainMenu
+   * @memberof ScenePause
    */
   createLogo() {
-    const text = 'Canvas Game Engine';
+    const text = 'Pause';
     const font = '44px Arial';
     this.logo = new CanvasTextObject({
       text,
-      x: this.canvas.calcCenteredTextX(text, font),
-      y: 64 + this.canvas.padding,
+      x: this.Canvas.calcCenteredTextX(text, font),
+      y: 64 + this.Canvas.padding,
       font,
     });
   }
@@ -49,30 +49,41 @@ class SceneMainMenu extends Scene {
   /**
    * Creates the menu item objects
    *
-   * @memberof SceneMainMenu
+   * @memberof ScenePause
    */
   createMenuObjects() {
+    // calculate the x coord
+    const x = this.Canvas.calcCenteredTextBoxX([ 'Continue', 'Return to Main Menu']);
+
     // the menu text
-    const menuText = [
-      'New Game',
-      'Continue',
-      'Options',
+    const that = this;
+    const menuObjects = [
+      {
+        text: 'Continue',
+        callback: () => {
+          this.game.changeCurrentScene('game');
+        },
+        x,
+        y: (this.Canvas.height / 2) - 55 + (55 * 0),
+        id: 1,
+      },
+      {
+        text: 'Return to Main Menu',
+        callback: () => {
+          this.game.changeCurrentScene('mainMenu');
+        },
+        x,
+        y: (this.Canvas.height / 2) - 55 + (55 * 1),
+        id: 2,
+      },
     ];
 
-    // the x position
-    const menuTextX = this.canvas.calcCenteredTextBoxX(menuText);
-
     // create new CanvasTextObjectInteractive for each
-    this.menuObjects = menuText.map((text, i) => new CanvasTextObjectInteractive({
-      text,
-      x: menuTextX,
-      y: (this.canvas.height / 2) - 55 + (55 * i),
-      id: i + 1,
-    }));
+    this.menuObjects = menuObjects.map(option => new CanvasTextObjectInteractive(option));
     
     // set the focus and total
     this.focusMenuObjectId = 1;
-    this.totalMenuObjects = menuText.length;
+    this.totalMenuObjects = menuObjects.length;
   }
 
   /**
@@ -80,7 +91,7 @@ class SceneMainMenu extends Scene {
    *
    * @param {integer} id
    * @returns {CanvasTextObjectInteractive}
-   * @memberof SceneMainMenu
+   * @memberof ScenePause
    */
   getMenuObjectById(id) {
     return this.menuObjects.filter(obj => obj.id === id)[0];
@@ -90,7 +101,7 @@ class SceneMainMenu extends Scene {
    * Gets the current focused menu object
    *
    * @returns {CanvasTextObjectInteractive}
-   * @memberof SceneMainMenu
+   * @memberof ScenePause
    */
   getFocusMenuObject() {
     return this.getMenuObjectById(this.focusMenuObjectId);
@@ -99,7 +110,7 @@ class SceneMainMenu extends Scene {
   /**
    * Increments the current focused menu item
    *
-   * @memberof SceneMainMenu
+   * @memberof ScenePause
    */
   incrementFocusMenuObject() {
     this.focusMenuObjectId = this.focusMenuObjectId === this.totalMenuObjects
@@ -110,7 +121,7 @@ class SceneMainMenu extends Scene {
   /**
    * Decrements the current focused menu item
    *
-   * @memberof SceneMainMenu
+   * @memberof ScenePause
    */
   decrementFocusMenuObject() {
     this.focusMenuObjectId = this.focusMenuObjectId === 1
@@ -121,7 +132,7 @@ class SceneMainMenu extends Scene {
   /**
    * Creates the focus menu item arrow
    *
-   * @memberof SceneMainMenu
+   * @memberof ScenePause
    */
   createArrow() {
     // the arrow
@@ -145,13 +156,13 @@ class SceneMainMenu extends Scene {
   }
 
   /**
-   * Draws the main menu
+   * Loads the objects to the scene for drawing
    *
-   * @memberof SceneMainMenu
+   * @memberof ScenePause
    */
-  draw() {
+  prepareScene() {
     // draw the background
-    this.canvas.drawGradientBackground();
+    this.Canvas.drawGradientBackground();
 
     // push the logo to the scene
     this.pushToScene(this.logo);
@@ -161,10 +172,7 @@ class SceneMainMenu extends Scene {
 
     // draw the arrow
     this.arrow.y = this.getFocusMenuObject().y;
-    this.pushToScene(this.arrow);
-    
-    // draw the scene objects to the canvas
-    this.drawSceneToCanvas();
+    this.pushToScene(this.arrow);    
   }
 
   /**
@@ -172,7 +180,7 @@ class SceneMainMenu extends Scene {
    *
    * @param {array} activeKeys
    * @returns {void}
-   * @memberof SceneMainMenu
+   * @memberof ScenePause
    */
   handleInput(activeKeys) {
     // bail if input is disabled
@@ -215,4 +223,4 @@ class SceneMainMenu extends Scene {
   }
 }
 
-export default SceneMainMenu;
+export default ScenePause;
