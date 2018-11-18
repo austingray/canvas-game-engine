@@ -13,9 +13,12 @@ class ObjectCircle {
     this.startAngle = Math.PI / 180 * 0;
     this.endAngle = Math.PI / 180 * 360;
     this.anticlockwise = false;
+
+    this.init();
   }
 
   draw(Canvas) {
+    Canvas.ctx.beginPath();
     Canvas.ctx.fillStyle = this.fillStyle;
     Canvas.ctx.arc(
       this.x,
@@ -26,6 +29,7 @@ class ObjectCircle {
       this.anticlockwise,
     );
     Canvas.ctx.fill();
+    Canvas.ctx.closePath();
   }
 }
 

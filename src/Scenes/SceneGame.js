@@ -7,17 +7,32 @@ class SceneGame extends Scene {
 
   createHero() {
     this.hero = this.Objects.create({
-      type: 'circle',
-      x: 10,
-      y: 10,
-      radius: 10,
+      type: 'hero',
+      x: 30,
+      y: 30,
+      radius: 30,
       fillStyle: 'green',
     });
   }
 
-  draw() {
+  prepareScene() {
     this.pushToScene(this.hero);
-    this.drawSceneToCanvas();
+  }
+
+  /**
+   * Handle input for the scene
+   *
+   * @param {array} activeKeys
+   * @returns {void}
+   * @memberof SceneMainMenu
+   */
+  handleInput(activeKeys) {
+    // pause the game
+    if (activeKeys.indexOf(27) > -1) {
+      this.game.changeCurrentScene('pause');
+    }
+
+    this.hero.handleInput(activeKeys);
   }
 }
 

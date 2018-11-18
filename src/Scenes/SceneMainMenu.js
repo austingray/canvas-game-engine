@@ -73,7 +73,7 @@ class SceneMainMenu extends Scene {
           },
         },
       ]
-    })
+    });
   }
 
   /**

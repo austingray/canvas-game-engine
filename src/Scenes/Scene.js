@@ -96,6 +96,21 @@ class Scene {
   handleInput() {
     // hello from the other side
   }
+
+  /**
+   * Handle scene transitions
+   *
+   * @memberof Scene
+   */
+  transitionIn() {
+    // disable and reenable keyboard on scene transition
+    this.game.Keyboard.setDisabled();
+    this.game.Keyboard.clear();
+    const that = this;
+    setTimeout(function() {
+      that.game.Keyboard.setDisabled(false);
+    }, 150);
+  }
 }
 
 export default Scene;

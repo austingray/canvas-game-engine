@@ -24,6 +24,7 @@ function game() {
   this.scenes = {
     mainMenu: new Scenes.SceneMainMenu(this),
     game: new Scenes.SceneGame(this),
+    pause: new Scenes.ScenePause(this),
   }
 
   /**
@@ -64,6 +65,7 @@ function game() {
    */
   this.changeCurrentScene = (sceneName) => {
     this.currentScene = sceneName;
+    this.scenes[this.currentScene].transitionIn();
   }
 
   // kick the tires and light the fires
