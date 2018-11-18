@@ -197,9 +197,12 @@
       this.startAngle = Math.PI / 180 * 0;
       this.endAngle = Math.PI / 180 * 360;
       this.anticlockwise = false;
+
+      this.init();
     }
 
     draw(Canvas) {
+      Canvas.ctx.beginPath();
       Canvas.ctx.fillStyle = this.fillStyle;
       Canvas.ctx.arc(
         this.x,
@@ -210,6 +213,7 @@
         this.anticlockwise,
       );
       Canvas.ctx.fill();
+      Canvas.ctx.closePath();
     }
   }
 
@@ -349,6 +353,172 @@
     }
   }
 
+  class Hero extends ObjectCircle {
+    init() {
+      // allows keyboard input to the character
+      this.allowInput = true;
+      this.canMoveUp = true;
+      this.canMoveRight = true;
+      this.canMoveDown = true;
+      this.canMoveLeft = true;
+
+      // handle character's directional velocity
+      this.velocities = [0, 0, 0, 0];
+      this.maxSpeed = 30;
+      this.rateOfIncrease = 1 + this.maxSpeed / 100;
+
+      // set target x,y for easing the character movement
+      this.targetX = this.x;
+      this.targetY = this.y;
+      this.targetXTimer;
+      this.targetYTimer;
+
+      // cooldown beteween movement
+      this.inputCooldown = 30;
+    }
+
+    targetYTimerHandler(dir) {
+      // clear the existing timer
+      clearTimeout(this.targetYTimer);
+
+      // get the difference between the current y and the target y
+      const difference = Math.abs(this.y - this.targetY);
+
+      // set a new timer
+      this.targetYTimer = setTimeout(() => {
+        // handle direction
+        this.y = dir === 'up'
+          ? this.y - (difference / this.inputCooldown)
+          : this.y + (difference / this.inputCooldown);
+
+        // if we're not close enough to the target Y, keep moving
+        if (difference > 1) {
+          this.targetYTimerHandler(dir);
+        }
+      }, difference / this.inputCooldown);
+    }
+
+    targetXTimerHandler(dir) {
+      // clear the existing timer
+      clearTimeout(this.targetXTimer);
+
+      // get the difference between the current y and the target y
+      const difference = Math.abs(this.x - this.targetX);
+
+      // set a new timer
+      this.targetXTimer = setTimeout(() => {
+        // handle direction
+        this.x = dir === 'left'
+          ? this.x - (difference / this.inputCooldown)
+          : this.x + (difference / this.inputCooldown);
+
+        // if we're not close enough to the target Y, keep moving
+        if (difference > 1) {
+          this.targetXTimerHandler(dir);
+        }
+      }, difference / this.inputCooldown);
+    }
+
+    handleInput(activeKeys) {
+      // bail if input is disabled
+      if (!this.allowInput) {
+        return;
+      }
+
+      // bail if no key press
+      if (activeKeys.length === 0) {
+        // cooldown velocities
+
+        // velocity cooldown
+        this.velocities = this.velocities.map((velocity) => {
+          if (velocity > 0) {
+            velocity = velocity - this.rateOfIncrease;
+          }
+
+          if (velocity < 0) {
+            velocity = 0;
+          }
+
+          return velocity;
+        });
+        return;
+      }
+
+      // handle up
+      if (activeKeys.indexOf(38) > -1) {
+        this.velocities[0] = (this.velocities[0] + 1) * this.rateOfIncrease;
+        if (this.velocities[0] > this.maxSpeed) {
+          this.velocities[0] = this.maxSpeed;
+        }
+
+        // cancel opposite direction velocity
+        this.velocities[2] = 0;
+
+        // movement easing
+        this.targetY = this.y - this.velocities[0];
+        this.targetYTimerHandler('up');
+        this.canMoveUp = false;
+      }
+
+      // handle right
+      if (activeKeys.indexOf(39) > -1) {
+        this.velocities[1] = (this.velocities[1] + 1) * this.rateOfIncrease;
+        if (this.velocities[1] > this.maxSpeed) {
+          this.velocities[1] = this.maxSpeed;
+        }
+        
+        // cancel opposite direction velocity
+        this.velocities[3] = 0;
+
+        // movement easing
+        this.targetX = this.x + this.velocities[1];
+        this.targetXTimerHandler('right');
+        this.canMoveRight = false;
+      }
+
+      // handle down
+      if (activeKeys.indexOf(40) > -1) {
+        this.velocities[2] = (this.velocities[2] + 1) * this.rateOfIncrease;
+        if (this.velocities[2] > this.maxSpeed) {
+          this.velocities[2] = this.maxSpeed;
+        }
+
+        // cancel opposite direction velocity
+        this.velocities[0] = 0;
+
+        // movement easing
+        this.targetY = this.y + this.velocities[2];
+        this.targetYTimerHandler('down');
+        this.canMoveDown = false;
+      }
+
+      // handle left
+      if (activeKeys.indexOf(37) > -1) {
+        this.velocities[3] = (this.velocities[3] + 1) * this.rateOfIncrease;
+        if (this.velocities[3] > this.maxSpeed) {
+          this.velocities[3] = this.maxSpeed;
+        }
+        
+        // cancel opposite direction velocity
+        this.velocities[1] = 0;
+
+        // movement easing
+        this.targetX = this.x - this.velocities[3];
+        this.targetXTimerHandler('left');
+        this.canMoveLeft = false;
+      }
+      
+      // set timeout to enable key press again
+      clearTimeout(this.keyboardCooldownTimer);
+      this.keyboardCooldownTimer = setTimeout(() => {
+        this.canMoveUp = true;
+        this.canMoveRight = true;
+        this.canMoveDown = true;
+        this.canMoveLeft = true;
+      }, this.inputCooldown);
+    }
+  }
+
   /**
    * Handles Object creation for use in Scenes
    *
@@ -394,6 +564,10 @@
         
         case 'menu':
           return new ObjectMenu(object, this.game);
+          break;
+
+        case 'hero':
+          return new Hero(object);
           break;
         
         default:
@@ -501,6 +675,21 @@
      */
     handleInput() {
       // hello from the other side
+    }
+
+    /**
+     * Handle scene transitions
+     *
+     * @memberof Scene
+     */
+    transitionIn() {
+      // disable and reenable keyboard on scene transition
+      this.game.Keyboard.setDisabled();
+      this.game.Keyboard.clear();
+      const that = this;
+      setTimeout(function() {
+        that.game.Keyboard.setDisabled(false);
+      }, 150);
     }
   }
 
@@ -651,39 +840,214 @@
 
     createHero() {
       this.hero = this.Objects.create({
-        type: 'circle',
-        x: 10,
-        y: 10,
-        radius: 10,
+        type: 'hero',
+        x: 30,
+        y: 30,
+        radius: 30,
         fillStyle: 'green',
       });
     }
 
-    draw() {
+    prepareScene() {
       this.pushToScene(this.hero);
-      this.drawSceneToCanvas();
+    }
+
+    /**
+     * Handle input for the scene
+     *
+     * @param {array} activeKeys
+     * @returns {void}
+     * @memberof SceneMainMenu
+     */
+    handleInput(activeKeys) {
+      // pause the game
+      if (activeKeys.indexOf(27) > -1) {
+        this.game.changeCurrentScene('pause');
+      }
+
+      this.hero.handleInput(activeKeys);
+    }
+  }
+
+  /**
+   * The Main Menu scene
+   *
+   * @class ScenePause
+   * @extends {Scene}
+   */
+  class ScenePause extends Scene {
+    /**
+     * Constructor
+     *
+     * @memberof ScenePause
+     */
+    init() {
+      // create the logo object
+      this.createLogo();
+
+      // create the menu items
+      this.createMenu();
+
+      // keyboard input stuff
+      this.allowInput = true;
+      this.keyboardCooldown = 150;
+      this.keyboardCooldownTimer;
+    }
+
+    /**
+     * Creates the logo object
+     *
+     * @memberof ScenePause
+     */
+    createLogo() {
+      const text = 'Paused';
+      const font = '44px Arial';
+      this.logo = this.Objects.create({
+        type: 'text',
+        text,
+        x: this.Canvas.calcCenteredTextX(text, font),
+        y: 64 + this.Canvas.padding,
+        font,
+      });
+    }
+
+    /**
+     * Creates the menu
+     *
+     * @memberof ScenePause
+     */
+    createMenu() {
+      this.menu = this.Objects.create({
+        type: 'menu',
+        options: [
+          {
+            text: 'Resume',
+            callback: () => {
+              this.game.changeCurrentScene('game');
+            },
+          },
+          {
+            text: 'Quit To Menu',
+            callback: () => {
+              this.game.changeCurrentScene('mainMenu');
+            },
+          },
+        ]
+      });
+    }
+
+    /**
+     * Loads the objects to the scene for drawing
+     *
+     * @memberof ScenePause
+     */
+    prepareScene() {
+      // draw the background
+      this.Canvas.drawGradientBackground();
+
+      // push the logo to the scene
+      this.pushToScene(this.logo);
+
+      // push the menu to the scene
+      this.pushToScene(this.menu);
+    }
+
+    /**
+     * Handle input for the scene
+     *
+     * @param {array} activeKeys
+     * @returns {void}
+     * @memberof ScenePause
+     */
+    handleInput(activeKeys) {
+      // bail if input is disabled
+      if (!this.allowInput) {
+        return;
+      }
+
+      // bail if no key press
+      if (activeKeys.length === 0) {
+        return;
+      }
+
+      // handle down
+      if (activeKeys.indexOf(40) > -1) {
+        // increment the focused object
+        this.menu.incrementFocusMenuObject();
+        this.allowInput = false;
+      }
+
+      // handle up
+      if (activeKeys.indexOf(38) > -1) {
+        // decrement the focused object
+        this.menu.decrementFocusMenuObject();
+        this.allowInput = false;
+      }
+
+      // handle enter
+      if (activeKeys.indexOf(13) > -1) {
+        // do the menu item callback
+        this.menu.focusMenuObject.callback();
+        this.allowInput = false;
+      }
+      
+      // set timeout to enable key press again
+      window.clearTimeout(this.keyboardCooldownTimer);
+      const that = this;
+      this.keyboardCooldownTimer = window.setTimeout(function() {
+        that.allowInput = true;
+      }, this.keyboardCooldown);
     }
   }
 
   var Scenes = {
     SceneMainMenu,
     SceneGame,
+    ScenePause,
   };
 
   class KeyboardController {
     constructor() {
+      this.disabled = false;
       this.activeKeys = [];
       
       document.addEventListener('keydown', (e) => {
+        if (this.disabled) {
+          return;
+        }
+
         if (this.activeKeys.indexOf(e.keyCode) === -1) {
           this.activeKeys.push(e.keyCode);
         }
       });
 
       document.addEventListener('keyup', (e) => {
+        if (this.disabled) {
+          return;
+        }
+
         const index = this.activeKeys.indexOf(e.keyCode);
         this.activeKeys.splice(index, 1);
       });
+    }
+
+    /**
+     * Clear all active keys
+     *
+     * @memberof KeyboardController
+     */
+    clear() {
+      this.activeKeys = [];
+    }
+
+    /**
+     * Disable use of the keyboard
+     *
+     * @param {boolean} [disabled=true]
+     * @memberof KeyboardController
+     */
+    setDisabled(disabled = true) {
+      this.disabled = disabled;
     }
   }
 
@@ -708,6 +1072,7 @@
     this.scenes = {
       mainMenu: new Scenes.SceneMainMenu(this),
       game: new Scenes.SceneGame(this),
+      pause: new Scenes.ScenePause(this),
     };
 
     /**
@@ -748,6 +1113,7 @@
      */
     this.changeCurrentScene = (sceneName) => {
       this.currentScene = sceneName;
+      this.scenes[this.currentScene].transitionIn();
     };
 
     // kick the tires and light the fires
