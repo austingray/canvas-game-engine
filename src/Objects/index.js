@@ -3,6 +3,7 @@ import ObjectTextInteractive from './ObjectTextInteractive';
 import ObjectCircle from './ObjectCircle';
 import ObjectMenu from './ObjectMenu';
 import Hero from './Hero';
+import Map from './Map';
 
 /**
  * Handles Object creation for use in Scenes
@@ -53,6 +54,10 @@ class Objects {
 
       case 'hero':
         return new Hero(object);
+        break;
+      
+      case 'map':
+        return new Map(object, this.game);
         break;
       
       default:

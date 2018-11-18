@@ -2,7 +2,14 @@ import Scene from './Scene';
 
 class SceneGame extends Scene {
   init() {
+    this.createMap();
     this.createHero();
+  }
+
+  createMap() {
+    this.map = this.Objects.create({
+      type: 'map',
+    });
   }
 
   createHero() {
@@ -11,11 +18,12 @@ class SceneGame extends Scene {
       x: 30,
       y: 30,
       radius: 30,
-      fillStyle: 'green',
+      fillStyle: 'purple',
     });
   }
 
   prepareScene() {
+    this.pushToScene(this.map);
     this.pushToScene(this.hero);
   }
 

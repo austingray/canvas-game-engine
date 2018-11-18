@@ -20,6 +20,15 @@ function game() {
   // the object factory
   this.Objects = new Objects(this);
 
+  // introducing the idea of a Camera
+  // TODO: move to standalone class file or roll into Canvas
+  this.Camera = {
+    x: this.Canvas.width / 2,
+    y: this.Canvas.height / 2,
+    objectOffsetX: 0,
+    objectOffsetY: 0,
+  };
+
   // define the scenes
   this.scenes = {
     mainMenu: new Scenes.SceneMainMenu(this),

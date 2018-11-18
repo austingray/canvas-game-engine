@@ -29,6 +29,9 @@ class ObjectCircle {
       this.anticlockwise,
     );
     Canvas.ctx.fill();
+    // Canvas.ctx.strokeStyle = 'yellow';
+    // Canvas.ctx.lineWidth = 10;
+    // Canvas.ctx.stroke();
     Canvas.ctx.closePath();
   }
 }

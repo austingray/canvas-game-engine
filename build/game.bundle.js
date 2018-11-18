@@ -213,6 +213,9 @@
         this.anticlockwise,
       );
       Canvas.ctx.fill();
+      // Canvas.ctx.strokeStyle = 'yellow';
+      // Canvas.ctx.lineWidth = 10;
+      // Canvas.ctx.stroke();
       Canvas.ctx.closePath();
     }
   }
@@ -364,7 +367,7 @@
 
       // handle character's directional velocity
       this.velocities = [0, 0, 0, 0];
-      this.maxSpeed = 30;
+      this.maxSpeed = 25; 
       this.rateOfIncrease = 1 + this.maxSpeed / 100;
 
       // set target x,y for easing the character movement
@@ -519,6 +522,50 @@
     }
   }
 
+  class MapTile {
+    constructor(x, y) {
+      this.x = x;
+      this.y = y;
+      this.width = 50;
+      this.height = 50;
+    }
+
+    draw(Canvas) {
+      const ctx = Canvas.ctx;
+      ctx.beginPath();
+      ctx.lineWidth = '1';
+      ctx.fillStyle='#008000';
+      ctx.strokeStyle = '#063c06';
+      ctx.rect(this.x, this.y, this.width, this.height);
+      ctx.fill();
+      ctx.stroke();
+    }
+  }
+
+  class Map {
+    constructor() {
+      this.tiles = [];
+
+      // used for offsetting the map to follow the hero
+      this.x = this.y = 0;
+
+      // get the width and height of the map in total pixels
+      this.width = this.height = 50 * 50;
+
+      // crude tile creation
+      for (let i = 0; i < 50; i++) {
+        for (let j = 0; j < 50; j++) {
+          this.tiles.push(new MapTile(i * 50, j * 50));
+        }
+      }
+    }
+
+    // draw each tile
+    draw(Canvas) {
+      this.tiles.forEach(tile => tile.draw(Canvas));
+    }
+  }
+
   /**
    * Handles Object creation for use in Scenes
    *
@@ -568,6 +615,10 @@
 
         case 'hero':
           return new Hero(object);
+          break;
+        
+        case 'map':
+          return new Map(object, this.game);
           break;
         
         default:
@@ -835,7 +886,14 @@
 
   class SceneGame extends Scene {
     init() {
+      this.createMap();
       this.createHero();
+    }
+
+    createMap() {
+      this.map = this.Objects.create({
+        type: 'map',
+      });
     }
 
     createHero() {
@@ -844,11 +902,12 @@
         x: 30,
         y: 30,
         radius: 30,
-        fillStyle: 'green',
+        fillStyle: 'purple',
       });
     }
 
     prepareScene() {
+      this.pushToScene(this.map);
       this.pushToScene(this.hero);
     }
 
@@ -1067,6 +1126,15 @@
 
     // the object factory
     this.Objects = new Objects(this);
+
+    // introducing the idea of a Camera
+    // TODO: move to standalone class file or roll into Canvas
+    this.Camera = {
+      x: this.Canvas.width / 2,
+      y: this.Canvas.height / 2,
+      objectOffsetX: 0,
+      objectOffsetY: 0,
+    };
 
     // define the scenes
     this.scenes = {
