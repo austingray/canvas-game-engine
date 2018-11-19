@@ -7,20 +7,74 @@ class Map {
     // used for offsetting the map to follow the hero
     this.x = this.y = 0;
 
+    // map width and height in tiles
+    this.width = 50;
+    this.height = 50;
+
+    // single tile width and height in pixels
+    this.tileWidth = 50;
+    this.tileHeight = 50;
+
     // get the width and height of the map in total pixels
-    this.width = this.height = 50 * 50;
+    this.pixelWidth = this.width * this.tileWidth;
+    this.pixelHeight = this.height * this.tileHeight;
 
     // crude tile creation
-    for (let i = 0; i < 50; i++) {
-      for (let j = 0; j < 50; j++) {
-        this.tiles.push(new MapTile(i * 50, j * 50));
+    for (let i = 0; i < this.width; i++) {
+      for (let j = 0; j < this.height; j++) {
+        this.tiles.push(new MapTile(i * this.tileWidth, j * this.tileHeight));
       }
     }
   }
 
   // draw each tile
   draw(Canvas) {
-    this.tiles.forEach(tile => tile.draw(Canvas));
+    this.tiles.forEach(tile => Canvas.drawTile(tile));
+  }
+
+  /**
+   * Check if a coordinate is a collision and return the collision boundaries
+   *
+   * @param {*} x
+   * @param {*} y
+   * @returns
+   * @memberof Map
+   */
+  getCollision(x, y, dir) {
+    // TODO: convert to check against a x1, y1, x2, y2;
+    // hardcode the hero
+    const heroRadius = 20;
+    const x1 = x - heroRadius;
+    const x2 = x + heroRadius;
+    const y1 = y - heroRadius;
+    const y2 = y + heroRadius;
+    
+    // map boundaries
+    if (
+      x1 < 0
+      || y1 < 0
+      || x2 > this.pixelWidth
+      || y2 > this.pixelHeight
+    ) {
+      return true;
+    }
+
+    // tile blocking
+    for (let i = 0; i < this.tiles.length; i++) {
+      let tile = this.tiles[i];
+      if (tile.blocking) {
+        if (
+          x2 > tile.x
+          && x1 < tile.x + tile.width
+          && y2 > tile.y
+          && y1 < tile.y + tile.height
+        ) {
+          return true;
+        }
+      }
+    }
+
+    return false;
   }
 }
 

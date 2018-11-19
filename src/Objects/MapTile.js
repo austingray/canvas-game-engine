@@ -4,17 +4,17 @@ class MapTile {
     this.y = y;
     this.width = 50;
     this.height = 50;
-  }
+    this.lineWidth = '1';
 
-  draw(Canvas) {
-    const ctx = Canvas.ctx;
-    ctx.beginPath();
-    ctx.lineWidth = '1';
-    ctx.fillStyle='#008000';
-    ctx.strokeStyle = '#063c06';
-    ctx.rect(this.x, this.y, this.width, this.height);
-    ctx.fill();
-    ctx.stroke();
+    // randomize the tiles for now
+    const random = Math.random() * 10;
+    if (random < .5) {
+      this.type = 'rock';
+      this.blocking = true;
+    } else {
+      this.type = 'grass';
+      this.blocking = false;
+    }
   }
 }
 

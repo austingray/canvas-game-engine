@@ -53,7 +53,7 @@ class Objects {
         break;
 
       case 'hero':
-        return new Hero(object);
+        return new Hero(object, this.game);
         break;
       
       case 'map':

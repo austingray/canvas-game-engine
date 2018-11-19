@@ -15,11 +15,16 @@ class SceneGame extends Scene {
   createHero() {
     this.hero = this.Objects.create({
       type: 'hero',
-      x: 30,
-      y: 30,
-      radius: 30,
-      fillStyle: 'purple',
+      x: 25,
+      y: 25,
+      radius: 25,
+      fillStyle: '#800080',
     });
+
+    // set focus to hero
+    this.Canvas.Camera.x = this.hero.x;
+    this.Canvas.Camera.y = this.hero.y;
+    this.Canvas.Camera.setFocus(this.hero);
   }
 
   prepareScene() {
@@ -40,7 +45,7 @@ class SceneGame extends Scene {
       this.game.changeCurrentScene('pause');
     }
 
-    this.hero.handleInput(activeKeys);
+    this.hero.handleInput(activeKeys, this.map);
   }
 }
 

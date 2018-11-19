@@ -11,7 +11,7 @@ class Hero extends ObjectCircle {
 
     // handle character's directional velocity
     this.velocities = [0, 0, 0, 0];
-    this.maxSpeed = 25; 
+    this.maxSpeed = 100; 
     this.rateOfIncrease = 1 + this.maxSpeed / 100;
 
     // set target x,y for easing the character movement
@@ -24,7 +24,57 @@ class Hero extends ObjectCircle {
     this.inputCooldown = 30;
   }
 
-  targetYTimerHandler(dir) {
+  /**
+   * Handles easing on the X axis
+   *
+   * @param {*} dir
+   * @param {*} map
+   * @memberof Hero
+   */
+  targetXTimerHandler(dir, map) {
+    // clear the existing timer
+    clearTimeout(this.targetXTimer);
+
+    // get the difference between the current y and the target y
+    const difference = Math.abs(this.x - this.targetX);
+
+    // set a new timer
+    this.targetXTimer = setTimeout(() => {
+      // calculate what the new x should be
+      const newX = dir === 'left'
+        ? this.x - (difference / this.inputCooldown)
+        : this.x + (difference / this.inputCooldown);
+
+      // handle collision
+      const collision = map.getCollision(newX, this.y, dir)
+
+      if (collision) {
+        this.targetX = this.x;
+      } else {
+        this.x = newX;
+      }
+
+      // calculate
+      this.game.Canvas.Camera.setFocus({
+        x: this.x,
+        y: this.y,
+      });
+
+      // if we're not close enough to the target Y, keep moving
+      if (difference > 1) {
+        this.targetXTimerHandler(dir, map);
+      }
+    }, difference / this.inputCooldown)
+  }
+
+  /**
+   * Handles easing on the Y axis
+   *
+   * @param {*} dir
+   * @param {*} map
+   * @memberof Hero
+   */
+  targetYTimerHandler(dir, map) {
     // clear the existing timer
     clearTimeout(this.targetYTimer);
 
@@ -34,39 +84,42 @@ class Hero extends ObjectCircle {
     // set a new timer
     this.targetYTimer = setTimeout(() => {
       // handle direction
-      this.y = dir === 'up'
+      const newY = dir === 'up'
         ? this.y - (difference / this.inputCooldown)
         : this.y + (difference / this.inputCooldown);
 
+      // handle collision
+      const collision = map.getCollision(this.x, newY, dir);
+
+      if (collision) {
+        this.targetY = this.y
+      } else {
+        // update the y
+        this.y = newY;
+      }
+
+      // calculate
+      this.game.Canvas.Camera.setFocus({
+        x: this.x,
+        y: this.y,
+      });
+
       // if we're not close enough to the target Y, keep moving
       if (difference > 1) {
-        this.targetYTimerHandler(dir);
+        this.targetYTimerHandler(dir, map);
       }
     }, difference / this.inputCooldown)
   }
 
-  targetXTimerHandler(dir) {
-    // clear the existing timer
-    clearTimeout(this.targetXTimer);
-
-    // get the difference between the current y and the target y
-    const difference = Math.abs(this.x - this.targetX);
-
-    // set a new timer
-    this.targetXTimer = setTimeout(() => {
-      // handle direction
-      this.x = dir === 'left'
-        ? this.x - (difference / this.inputCooldown)
-        : this.x + (difference / this.inputCooldown);
-
-      // if we're not close enough to the target Y, keep moving
-      if (difference > 1) {
-        this.targetXTimerHandler(dir);
-      }
-    }, difference / this.inputCooldown)
-  }
-
-  handleInput(activeKeys) {
+  /**
+   * Handle input for the hero
+   *
+   * @param {*} activeKeys
+   * @param {*} map
+   * @returns
+   * @memberof Hero
+   */
+  handleInput(activeKeys, map) {
     // bail if input is disabled
     if (!this.allowInput) {
       return;
@@ -103,7 +156,7 @@ class Hero extends ObjectCircle {
 
       // movement easing
       this.targetY = this.y - this.velocities[0];
-      this.targetYTimerHandler('up');
+      this.targetYTimerHandler('up', map);
       this.canMoveUp = false;
     }
 
@@ -119,7 +172,7 @@ class Hero extends ObjectCircle {
 
       // movement easing
       this.targetX = this.x + this.velocities[1];
-      this.targetXTimerHandler('right');
+      this.targetXTimerHandler('right', map);
       this.canMoveRight = false;
     }
 
@@ -135,7 +188,7 @@ class Hero extends ObjectCircle {
 
       // movement easing
       this.targetY = this.y + this.velocities[2];
-      this.targetYTimerHandler('down');
+      this.targetYTimerHandler('down', map);    
       this.canMoveDown = false;
     }
 
@@ -151,7 +204,7 @@ class Hero extends ObjectCircle {
 
       // movement easing
       this.targetX = this.x - this.velocities[3];
-      this.targetXTimerHandler('left');
+      this.targetXTimerHandler('left', map);
       this.canMoveLeft = false;
     }
     

@@ -9,7 +9,7 @@
    * @class Canvas
    */
   class Canvas {
-    constructor(args = {}) {
+    constructor(args = {}, Camera) {
       // id attribute of the canvas element
       this.id = (typeof args.id !== 'undefined') ? args.id : 'canvas';
       // canvas width
@@ -28,6 +28,53 @@
 
       // get context
       this.ctx = this.element.getContext('2d');
+
+      const that = this;
+
+      // camera
+      this.Camera = {
+        x: this.width / 2,
+        y: this.height / 2,
+        offsetX: 0,
+        offsetY: 0,
+        setFocus(object) {
+          // if we're at the right edge of the viewport
+          if (
+            this.x > (that.width * .7) - this.offsetX
+            && object.x >= this.x
+          ) {
+            this.offsetX = (that.width * .7) - this.x;
+          }
+
+          // left edge
+          if (
+            this.x < (that.width * .3) - this.offsetX
+            && object.x <= this.x
+          ) {
+            this.offsetX = (that.width * .3) - this.x;
+          }
+
+          // top edge
+          if (
+            this.y < (that.height * .3) - this.offsetY
+            && object.y <= this.y
+          ) {
+            this.offsetY = (that.height * .3) - this.y;
+          }
+
+          // bottom edge
+          if (
+            this.y > (that.height * .7) - this.offsetY
+            && object.y >= this.y
+          ) {
+            this.offsetY = (that.height * .7) - this.y;
+          }
+
+          // update this
+          this.x = object.x;
+          this.y = object.y;
+        }
+      };
     }
 
     /**
@@ -62,6 +109,61 @@
       this.ctx.font = "18px Arial";
       const txtWidth = this.ctx.measureText(txt).width; 
       this.ctx.fillText(txt, this.width - txtWidth - this.padding, this.height - this.padding);
+    }
+
+    /**
+     * Draws a circle
+     *
+     * @param {*} args
+     * @memberof Canvas
+     */
+    drawCircle(args) {
+      // offset for camera
+      const x = args.x + this.Camera.offsetX;
+      const y = args.y + this.Camera.offsetY;
+
+      // draw
+      this.ctx.fillStyle = args.fillStyle;
+      this.ctx.beginPath();
+      this.ctx.arc(
+        x,
+        y,
+        args.radius,
+        args.startAngle,
+        args.endAngle,
+        args.anticlockwise,
+      );
+      this.ctx.fill();
+      this.ctx.strokeStyle = '#500050';
+      this.ctx.lineWidth = 1;
+      this.ctx.stroke();
+      this.ctx.closePath();
+    }
+
+    drawTile(tile) {
+      const x = tile.x + this.Camera.offsetX;
+      const y = tile.y + this.Camera.offsetY;
+      this.ctx.beginPath();
+      this.ctx.lineWidth = tile.lineWidth;
+      
+      switch (tile.type) {
+        case 'rock':
+          this.ctx.fillStyle='#888787';
+          this.ctx.strokeStyle = '#464242';
+          break;
+
+        case 'grass':
+        default:
+          this.ctx.fillStyle='#008000';
+          this.ctx.strokeStyle = '#063c06';
+          break;
+      }
+
+      
+      this.ctx.rect(x, y, tile.width, tile.height);
+      this.ctx.fill();
+      this.ctx.stroke();
+      this.ctx.closePath();
     }
 
     /**
@@ -188,7 +290,10 @@
    * @class ObjectCircle
    */
   class ObjectCircle {
-    constructor(args) {    
+    constructor(args, game) {    
+      // access to the game object
+      this.game = game;
+
       this.args = args;
       this.x = args.x;
       this.y = args.y;
@@ -202,21 +307,15 @@
     }
 
     draw(Canvas) {
-      Canvas.ctx.beginPath();
-      Canvas.ctx.fillStyle = this.fillStyle;
-      Canvas.ctx.arc(
-        this.x,
-        this.y,
-        this.radius,
-        this.startAngle,
-        this.endAngle,
-        this.anticlockwise,
-      );
-      Canvas.ctx.fill();
-      // Canvas.ctx.strokeStyle = 'yellow';
-      // Canvas.ctx.lineWidth = 10;
-      // Canvas.ctx.stroke();
-      Canvas.ctx.closePath();
+      Canvas.drawCircle({
+        fillStyle: this.fillStyle,
+        x: this.x,
+        y: this.y,
+        radius: this.radius,
+        startAngle: this.startAngle,
+        endAngle: this.endAngle,
+        anticlockwise: this.anticlockwise,
+      });
     }
   }
 
@@ -367,7 +466,7 @@
 
       // handle character's directional velocity
       this.velocities = [0, 0, 0, 0];
-      this.maxSpeed = 25; 
+      this.maxSpeed = 100; 
       this.rateOfIncrease = 1 + this.maxSpeed / 100;
 
       // set target x,y for easing the character movement
@@ -380,7 +479,57 @@
       this.inputCooldown = 30;
     }
 
-    targetYTimerHandler(dir) {
+    /**
+     * Handles easing on the X axis
+     *
+     * @param {*} dir
+     * @param {*} map
+     * @memberof Hero
+     */
+    targetXTimerHandler(dir, map) {
+      // clear the existing timer
+      clearTimeout(this.targetXTimer);
+
+      // get the difference between the current y and the target y
+      const difference = Math.abs(this.x - this.targetX);
+
+      // set a new timer
+      this.targetXTimer = setTimeout(() => {
+        // calculate what the new x should be
+        const newX = dir === 'left'
+          ? this.x - (difference / this.inputCooldown)
+          : this.x + (difference / this.inputCooldown);
+
+        // handle collision
+        const collision = map.getCollision(newX, this.y, dir);
+
+        if (collision) {
+          this.targetX = this.x;
+        } else {
+          this.x = newX;
+        }
+
+        // calculate
+        this.game.Canvas.Camera.setFocus({
+          x: this.x,
+          y: this.y,
+        });
+
+        // if we're not close enough to the target Y, keep moving
+        if (difference > 1) {
+          this.targetXTimerHandler(dir, map);
+        }
+      }, difference / this.inputCooldown);
+    }
+
+    /**
+     * Handles easing on the Y axis
+     *
+     * @param {*} dir
+     * @param {*} map
+     * @memberof Hero
+     */
+    targetYTimerHandler(dir, map) {
       // clear the existing timer
       clearTimeout(this.targetYTimer);
 
@@ -390,39 +539,42 @@
       // set a new timer
       this.targetYTimer = setTimeout(() => {
         // handle direction
-        this.y = dir === 'up'
+        const newY = dir === 'up'
           ? this.y - (difference / this.inputCooldown)
           : this.y + (difference / this.inputCooldown);
 
+        // handle collision
+        const collision = map.getCollision(this.x, newY, dir);
+
+        if (collision) {
+          this.targetY = this.y;
+        } else {
+          // update the y
+          this.y = newY;
+        }
+
+        // calculate
+        this.game.Canvas.Camera.setFocus({
+          x: this.x,
+          y: this.y,
+        });
+
         // if we're not close enough to the target Y, keep moving
         if (difference > 1) {
-          this.targetYTimerHandler(dir);
+          this.targetYTimerHandler(dir, map);
         }
       }, difference / this.inputCooldown);
     }
 
-    targetXTimerHandler(dir) {
-      // clear the existing timer
-      clearTimeout(this.targetXTimer);
-
-      // get the difference between the current y and the target y
-      const difference = Math.abs(this.x - this.targetX);
-
-      // set a new timer
-      this.targetXTimer = setTimeout(() => {
-        // handle direction
-        this.x = dir === 'left'
-          ? this.x - (difference / this.inputCooldown)
-          : this.x + (difference / this.inputCooldown);
-
-        // if we're not close enough to the target Y, keep moving
-        if (difference > 1) {
-          this.targetXTimerHandler(dir);
-        }
-      }, difference / this.inputCooldown);
-    }
-
-    handleInput(activeKeys) {
+    /**
+     * Handle input for the hero
+     *
+     * @param {*} activeKeys
+     * @param {*} map
+     * @returns
+     * @memberof Hero
+     */
+    handleInput(activeKeys, map) {
       // bail if input is disabled
       if (!this.allowInput) {
         return;
@@ -459,7 +611,7 @@
 
         // movement easing
         this.targetY = this.y - this.velocities[0];
-        this.targetYTimerHandler('up');
+        this.targetYTimerHandler('up', map);
         this.canMoveUp = false;
       }
 
@@ -475,7 +627,7 @@
 
         // movement easing
         this.targetX = this.x + this.velocities[1];
-        this.targetXTimerHandler('right');
+        this.targetXTimerHandler('right', map);
         this.canMoveRight = false;
       }
 
@@ -491,7 +643,7 @@
 
         // movement easing
         this.targetY = this.y + this.velocities[2];
-        this.targetYTimerHandler('down');
+        this.targetYTimerHandler('down', map);    
         this.canMoveDown = false;
       }
 
@@ -507,7 +659,7 @@
 
         // movement easing
         this.targetX = this.x - this.velocities[3];
-        this.targetXTimerHandler('left');
+        this.targetXTimerHandler('left', map);
         this.canMoveLeft = false;
       }
       
@@ -528,17 +680,17 @@
       this.y = y;
       this.width = 50;
       this.height = 50;
-    }
+      this.lineWidth = '1';
 
-    draw(Canvas) {
-      const ctx = Canvas.ctx;
-      ctx.beginPath();
-      ctx.lineWidth = '1';
-      ctx.fillStyle='#008000';
-      ctx.strokeStyle = '#063c06';
-      ctx.rect(this.x, this.y, this.width, this.height);
-      ctx.fill();
-      ctx.stroke();
+      // randomize the tiles for now
+      const random = Math.random() * 10;
+      if (random < .5) {
+        this.type = 'rock';
+        this.blocking = true;
+      } else {
+        this.type = 'grass';
+        this.blocking = false;
+      }
     }
   }
 
@@ -549,20 +701,74 @@
       // used for offsetting the map to follow the hero
       this.x = this.y = 0;
 
+      // map width and height in tiles
+      this.width = 50;
+      this.height = 50;
+
+      // single tile width and height in pixels
+      this.tileWidth = 50;
+      this.tileHeight = 50;
+
       // get the width and height of the map in total pixels
-      this.width = this.height = 50 * 50;
+      this.pixelWidth = this.width * this.tileWidth;
+      this.pixelHeight = this.height * this.tileHeight;
 
       // crude tile creation
-      for (let i = 0; i < 50; i++) {
-        for (let j = 0; j < 50; j++) {
-          this.tiles.push(new MapTile(i * 50, j * 50));
+      for (let i = 0; i < this.width; i++) {
+        for (let j = 0; j < this.height; j++) {
+          this.tiles.push(new MapTile(i * this.tileWidth, j * this.tileHeight));
         }
       }
     }
 
     // draw each tile
     draw(Canvas) {
-      this.tiles.forEach(tile => tile.draw(Canvas));
+      this.tiles.forEach(tile => Canvas.drawTile(tile));
+    }
+
+    /**
+     * Check if a coordinate is a collision and return the collision boundaries
+     *
+     * @param {*} x
+     * @param {*} y
+     * @returns
+     * @memberof Map
+     */
+    getCollision(x, y, dir) {
+      // TODO: convert to check against a x1, y1, x2, y2;
+      // hardcode the hero
+      const heroRadius = 20;
+      const x1 = x - heroRadius;
+      const x2 = x + heroRadius;
+      const y1 = y - heroRadius;
+      const y2 = y + heroRadius;
+      
+      // map boundaries
+      if (
+        x1 < 0
+        || y1 < 0
+        || x2 > this.pixelWidth
+        || y2 > this.pixelHeight
+      ) {
+        return true;
+      }
+
+      // tile blocking
+      for (let i = 0; i < this.tiles.length; i++) {
+        let tile = this.tiles[i];
+        if (tile.blocking) {
+          if (
+            x2 > tile.x
+            && x1 < tile.x + tile.width
+            && y2 > tile.y
+            && y1 < tile.y + tile.height
+          ) {
+            return true;
+          }
+        }
+      }
+
+      return false;
     }
   }
 
@@ -614,7 +820,7 @@
           break;
 
         case 'hero':
-          return new Hero(object);
+          return new Hero(object, this.game);
           break;
         
         case 'map':
@@ -899,11 +1105,16 @@
     createHero() {
       this.hero = this.Objects.create({
         type: 'hero',
-        x: 30,
-        y: 30,
-        radius: 30,
-        fillStyle: 'purple',
+        x: 25,
+        y: 25,
+        radius: 25,
+        fillStyle: '#800080',
       });
+
+      // set focus to hero
+      this.Canvas.Camera.x = this.hero.x;
+      this.Canvas.Camera.y = this.hero.y;
+      this.Canvas.Camera.setFocus(this.hero);
     }
 
     prepareScene() {
@@ -924,7 +1135,7 @@
         this.game.changeCurrentScene('pause');
       }
 
-      this.hero.handleInput(activeKeys);
+      this.hero.handleInput(activeKeys, this.map);
     }
   }
 
@@ -1121,20 +1332,14 @@
     // input handler
     this.Keyboard = new KeyboardController();
 
+    // introducing the idea of a Camera
+    // TODO: move to standalone class file or roll into Canvas
+
     // create the canvas
-    this.Canvas = new Canvas();
+    this.Canvas = new Canvas({}, this.Camera);
 
     // the object factory
     this.Objects = new Objects(this);
-
-    // introducing the idea of a Camera
-    // TODO: move to standalone class file or roll into Canvas
-    this.Camera = {
-      x: this.Canvas.width / 2,
-      y: this.Canvas.height / 2,
-      objectOffsetX: 0,
-      objectOffsetY: 0,
-    };
 
     // define the scenes
     this.scenes = {

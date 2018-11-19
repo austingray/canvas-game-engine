@@ -3,7 +3,7 @@
  * @class Canvas
  */
 class Canvas {
-  constructor(args = {}) {
+  constructor(args = {}, Camera) {
     // id attribute of the canvas element
     this.id = (typeof args.id !== 'undefined') ? args.id : 'canvas';
     // canvas width
@@ -22,6 +22,53 @@ class Canvas {
 
     // get context
     this.ctx = this.element.getContext('2d');
+
+    const that = this;
+
+    // camera
+    this.Camera = {
+      x: this.width / 2,
+      y: this.height / 2,
+      offsetX: 0,
+      offsetY: 0,
+      setFocus(object) {
+        // if we're at the right edge of the viewport
+        if (
+          this.x > (that.width * .7) - this.offsetX
+          && object.x >= this.x
+        ) {
+          this.offsetX = (that.width * .7) - this.x;
+        }
+
+        // left edge
+        if (
+          this.x < (that.width * .3) - this.offsetX
+          && object.x <= this.x
+        ) {
+          this.offsetX = (that.width * .3) - this.x;
+        }
+
+        // top edge
+        if (
+          this.y < (that.height * .3) - this.offsetY
+          && object.y <= this.y
+        ) {
+          this.offsetY = (that.height * .3) - this.y;
+        }
+
+        // bottom edge
+        if (
+          this.y > (that.height * .7) - this.offsetY
+          && object.y >= this.y
+        ) {
+          this.offsetY = (that.height * .7) - this.y;
+        }
+
+        // update this
+        this.x = object.x;
+        this.y = object.y;
+      }
+    };
   }
 
   /**
@@ -56,6 +103,61 @@ class Canvas {
     this.ctx.font = "18px Arial";
     const txtWidth = this.ctx.measureText(txt).width; 
     this.ctx.fillText(txt, this.width - txtWidth - this.padding, this.height - this.padding);
+  }
+
+  /**
+   * Draws a circle
+   *
+   * @param {*} args
+   * @memberof Canvas
+   */
+  drawCircle(args) {
+    // offset for camera
+    const x = args.x + this.Camera.offsetX;
+    const y = args.y + this.Camera.offsetY;
+
+    // draw
+    this.ctx.fillStyle = args.fillStyle;
+    this.ctx.beginPath();
+    this.ctx.arc(
+      x,
+      y,
+      args.radius,
+      args.startAngle,
+      args.endAngle,
+      args.anticlockwise,
+    );
+    this.ctx.fill();
+    this.ctx.strokeStyle = '#500050';
+    this.ctx.lineWidth = 1;
+    this.ctx.stroke();
+    this.ctx.closePath();
+  }
+
+  drawTile(tile) {
+    const x = tile.x + this.Camera.offsetX;
+    const y = tile.y + this.Camera.offsetY;
+    this.ctx.beginPath();
+    this.ctx.lineWidth = tile.lineWidth;
+    
+    switch (tile.type) {
+      case 'rock':
+        this.ctx.fillStyle='#888787';
+        this.ctx.strokeStyle = '#464242';
+        break;
+
+      case 'grass':
+      default:
+        this.ctx.fillStyle='#008000';
+        this.ctx.strokeStyle = '#063c06';
+        break;
+    }
+
+    
+    this.ctx.rect(x, y, tile.width, tile.height);
+    this.ctx.fill();
+    this.ctx.stroke();
+    this.ctx.closePath();
   }
 
   /**

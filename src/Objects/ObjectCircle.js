@@ -4,7 +4,10 @@
  * @class ObjectCircle
  */
 class ObjectCircle {
-  constructor(args) {    
+  constructor(args, game) {    
+    // access to the game object
+    this.game = game;
+
     this.args = args;
     this.x = args.x;
     this.y = args.y;
@@ -18,21 +21,15 @@ class ObjectCircle {
   }
 
   draw(Canvas) {
-    Canvas.ctx.beginPath();
-    Canvas.ctx.fillStyle = this.fillStyle;
-    Canvas.ctx.arc(
-      this.x,
-      this.y,
-      this.radius,
-      this.startAngle,
-      this.endAngle,
-      this.anticlockwise,
-    );
-    Canvas.ctx.fill();
-    // Canvas.ctx.strokeStyle = 'yellow';
-    // Canvas.ctx.lineWidth = 10;
-    // Canvas.ctx.stroke();
-    Canvas.ctx.closePath();
+    Canvas.drawCircle({
+      fillStyle: this.fillStyle,
+      x: this.x,
+      y: this.y,
+      radius: this.radius,
+      startAngle: this.startAngle,
+      endAngle: this.endAngle,
+      anticlockwise: this.anticlockwise,
+    });
   }
 }
 
