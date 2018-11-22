@@ -11,8 +11,9 @@ class Hero extends ObjectCircle {
 
     // handle character's directional velocity
     this.velocities = [0, 0, 0, 0];
-    this.maxSpeed = 100; 
+    this.maxSpeed = 22; 
     this.rateOfIncrease = 1 + this.maxSpeed / 100;
+    this.rateOfDecrease = 1 + this.maxSpeed;
 
     // set target x,y for easing the character movement
     this.targetX = this.x;
@@ -41,15 +42,18 @@ class Hero extends ObjectCircle {
     // set a new timer
     this.targetXTimer = setTimeout(() => {
       // calculate what the new x should be
-      const newX = dir === 'left'
-        ? this.x - (difference / this.inputCooldown)
-        : this.x + (difference / this.inputCooldown);
+      const newX = dir === 1 // right
+        ? this.x + (difference / this.inputCooldown)
+        : this.x - (difference / this.inputCooldown); 
 
       // handle collision
-      const collision = map.getCollision(newX, this.y, dir)
+      const collision = map.getCollision(newX, this.y);
 
       if (collision) {
         this.targetX = this.x;
+        // reset velocity on collision
+        // this.velocities[1] = 0;
+        // this.velocities[3] = 0;
       } else {
         this.x = newX;
       }
@@ -84,12 +88,12 @@ class Hero extends ObjectCircle {
     // set a new timer
     this.targetYTimer = setTimeout(() => {
       // handle direction
-      const newY = dir === 'up'
+      const newY = dir === 0 // up
         ? this.y - (difference / this.inputCooldown)
         : this.y + (difference / this.inputCooldown);
 
       // handle collision
-      const collision = map.getCollision(this.x, newY, dir);
+      const collision = map.getCollision(this.x, newY);
 
       if (collision) {
         this.targetY = this.y
@@ -125,89 +129,49 @@ class Hero extends ObjectCircle {
       return;
     }
 
-    // bail if no key press
-    if (Keyboard.activeKeys.length === 0) {
-      // cooldown velocities
-
-      // velocity cooldown
-      this.velocities = this.velocities.map((velocity) => {
-        if (velocity > 0) {
-          velocity = velocity - this.rateOfIncrease;
+    // loop through the direction keys
+    Keyboard.dirs.forEach((active, i) => {
+      // if direction is active
+      if (active) {
+        this.canMove[i] = false;
+        
+        // make it faster
+        this.velocities[i] = this.velocities[i] >= this.maxSpeed
+          ? this.maxSpeed
+          : (this.velocities[i] + 1) * this.rateOfIncrease;
+        
+        // y axis
+        if (i === 0 || i === 2) {
+          // opposite directions cancel eachother out
+          if (!(Keyboard.dir.up && Keyboard.dir.down)) {
+            this.targetY = i === 0
+              ? this.y - this.velocities[i] // up
+              : this.y + this.velocities[i] // down
+            
+            this.targetYTimerHandler(i, map);
+          } else {
+            this.velocities[i] = 0;
+          }
         }
 
-        if (velocity < 0) {
-          velocity = 0;
+        // x axis
+        if (i === 1 || i === 3) {
+          // opposite directions cancel eachother out
+          if (!(Keyboard.dir.left && Keyboard.dir.right)) {
+            this.targetX = i === 1
+              ? this.x + this.velocities[i] // right
+              : this.x - this.velocities[i]; // left
+            
+            this.targetXTimerHandler(i, map);
+          } else {
+            this.velocities[i] = 0;
+          }
         }
-
-        return velocity;
-      });
-
-      return;
-    }
-
-    // handle up
-    if (Keyboard.dir.up) {
-      this.velocities[0] = (this.velocities[0] + 1) * this.rateOfIncrease;
-      if (this.velocities[0] > this.maxSpeed) {
-        this.velocities[0] = this.maxSpeed;
+      } else {
+        // nuke velocity if not active
+        this.velocities[i] = 0;
       }
-
-      // cancel opposite direction velocity
-      this.velocities[2] = 0;
-
-      // movement easing
-      this.targetY = this.y - this.velocities[0];
-      this.targetYTimerHandler('up', map);
-      this.canMove[0] = 0;
-    }
-
-    // handle right
-    if (Keyboard.dir.right) {
-      this.velocities[1] = (this.velocities[1] + 1) * this.rateOfIncrease;
-      if (this.velocities[1] > this.maxSpeed) {
-        this.velocities[1] = this.maxSpeed;
-      }
-      
-      // cancel opposite direction velocity
-      this.velocities[3] = 0;
-
-      // movement easing
-      this.targetX = this.x + this.velocities[1];
-      this.targetXTimerHandler('right', map);
-      this.canMove[1] = 0;
-    }
-
-    // handle down
-    if (Keyboard.dir.down) {
-      this.velocities[2] = (this.velocities[2] + 1) * this.rateOfIncrease;
-      if (this.velocities[2] > this.maxSpeed) {
-        this.velocities[2] = this.maxSpeed;
-      }
-
-      // cancel opposite direction velocity
-      this.velocities[0] = 0;
-
-      // movement easing
-      this.targetY = this.y + this.velocities[2];
-      this.targetYTimerHandler('down', map);    
-      this.canMove[2] = 0;
-    }
-
-    // handle left
-    if (Keyboard.dir.left) {
-      this.velocities[3] = (this.velocities[3] + 1) * this.rateOfIncrease;
-      if (this.velocities[3] > this.maxSpeed) {
-        this.velocities[3] = this.maxSpeed;
-      }
-      
-      // cancel opposite direction velocity
-      this.velocities[1] = 0;
-
-      // movement easing
-      this.targetX = this.x - this.velocities[3];
-      this.targetXTimerHandler('left', map);
-      this.canMove[3] = 0;
-    }
+    });
     
     // set timeout to enable movement in the direction
     clearTimeout(this.keyboardCooldownTimer);

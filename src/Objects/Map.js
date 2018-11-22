@@ -52,9 +52,7 @@ class Map {
    * @returns
    * @memberof Map
    */
-  getCollision(x, y, dir) {
-    
-
+  getCollision(x, y) {
     // hardcode the hero
     const heroRadius = 20;
     const x1 = x - heroRadius;

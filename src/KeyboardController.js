@@ -17,6 +17,9 @@ class KeyboardController {
       down: false,
       left: false,
     };
+
+    // alternative implementation for checking active directions
+    this.dirs = [false, false, false, false];
     
     // add event listeners
     this.addEventListeners();
@@ -68,8 +71,10 @@ class KeyboardController {
       || this.activeKeys.indexOf(87) > -1 // w
     ) {
       this.dir.up = true;
+      this.dirs[0] = true;
     } else {
       this.dir.up = false;
+      this.dirs[0] = false;
     }
 
     // right
@@ -78,8 +83,10 @@ class KeyboardController {
       || this.activeKeys.indexOf(68) > -1 // d
     ) {
       this.dir.right = true;
+      this.dirs[1] = true;
     } else {
       this.dir.right = false;
+      this.dirs[1] = false;
     }
 
     // down
@@ -88,8 +95,10 @@ class KeyboardController {
       || this.activeKeys.indexOf(83) > -1 // s
     ) {
       this.dir.down = true;
+      this.dirs[2] = true;
     } else {
       this.dir.down = false;
+      this.dirs[2] = false;
     }
 
     // left
@@ -98,8 +107,10 @@ class KeyboardController {
       || this.activeKeys.indexOf(65) > -1 // a
     ) {
       this.dir.left = true;
+      this.dirs[3] = true;
     } else {
       this.dir.left = false;
+      this.dirs[3] = false;
     }
   }
 
