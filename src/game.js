@@ -51,7 +51,7 @@ function game() {
     this.scenes[this.currentScene].draw();
 
     // handle keyboard input for the current scene
-    this.scenes[this.currentScene].handleInput(this.Keyboard.activeKeys);
+    this.scenes[this.currentScene].handleInput(this.Keyboard);
 
     // maybe show debug info
     if (this.debug) {

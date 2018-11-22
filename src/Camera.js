@@ -5,9 +5,6 @@
  */
 class Camera {
   constructor(width, height) {
-    this.Canvas = Canvas;
-
-    // init property values 
     this.width = width;
     this.height = height;
     this.x = width / 2;
@@ -96,3 +93,5 @@ class Camera {
     return false;
   }
 }
+
+export default Camera;

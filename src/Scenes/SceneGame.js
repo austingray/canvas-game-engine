@@ -39,13 +39,13 @@ class SceneGame extends Scene {
    * @returns {void}
    * @memberof SceneMainMenu
    */
-  handleInput(activeKeys) {
+  handleInput(Keyboard) {
     // pause the game
-    if (activeKeys.indexOf(27) > -1) {
+    if (Keyboard.activeKeys.indexOf(27) > -1) {
       this.game.changeCurrentScene('pause');
     }
 
-    this.hero.handleInput(activeKeys, this.map);
+    this.hero.handleInput(Keyboard, this.map);
   }
 }
 

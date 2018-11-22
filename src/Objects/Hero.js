@@ -4,10 +4,10 @@ class Hero extends ObjectCircle {
   init() {
     // allows keyboard input to the character
     this.allowInput = true;
-    this.canMoveUp = true;
-    this.canMoveRight = true;
-    this.canMoveDown = true;
-    this.canMoveLeft = true;
+
+    // if the hero can move in a certain direction
+    // [ up, right, down, left ];
+    this.canMove = [true, true, true, true];
 
     // handle character's directional velocity
     this.velocities = [0, 0, 0, 0];
@@ -119,14 +119,14 @@ class Hero extends ObjectCircle {
    * @returns
    * @memberof Hero
    */
-  handleInput(activeKeys, map) {
+  handleInput(Keyboard, map) {
     // bail if input is disabled
     if (!this.allowInput) {
       return;
     }
 
     // bail if no key press
-    if (activeKeys.length === 0) {
+    if (Keyboard.activeKeys.length === 0) {
       // cooldown velocities
 
       // velocity cooldown
@@ -141,11 +141,12 @@ class Hero extends ObjectCircle {
 
         return velocity;
       });
+
       return;
     }
 
     // handle up
-    if (activeKeys.indexOf(38) > -1) {
+    if (Keyboard.dir.up) {
       this.velocities[0] = (this.velocities[0] + 1) * this.rateOfIncrease;
       if (this.velocities[0] > this.maxSpeed) {
         this.velocities[0] = this.maxSpeed;
@@ -157,11 +158,11 @@ class Hero extends ObjectCircle {
       // movement easing
       this.targetY = this.y - this.velocities[0];
       this.targetYTimerHandler('up', map);
-      this.canMoveUp = false;
+      this.canMove[0] = 0;
     }
 
     // handle right
-    if (activeKeys.indexOf(39) > -1) {
+    if (Keyboard.dir.right) {
       this.velocities[1] = (this.velocities[1] + 1) * this.rateOfIncrease;
       if (this.velocities[1] > this.maxSpeed) {
         this.velocities[1] = this.maxSpeed;
@@ -173,11 +174,11 @@ class Hero extends ObjectCircle {
       // movement easing
       this.targetX = this.x + this.velocities[1];
       this.targetXTimerHandler('right', map);
-      this.canMoveRight = false;
+      this.canMove[1] = 0;
     }
 
     // handle down
-    if (activeKeys.indexOf(40) > -1) {
+    if (Keyboard.dir.down) {
       this.velocities[2] = (this.velocities[2] + 1) * this.rateOfIncrease;
       if (this.velocities[2] > this.maxSpeed) {
         this.velocities[2] = this.maxSpeed;
@@ -189,11 +190,11 @@ class Hero extends ObjectCircle {
       // movement easing
       this.targetY = this.y + this.velocities[2];
       this.targetYTimerHandler('down', map);    
-      this.canMoveDown = false;
+      this.canMove[2] = 0;
     }
 
     // handle left
-    if (activeKeys.indexOf(37) > -1) {
+    if (Keyboard.dir.left) {
       this.velocities[3] = (this.velocities[3] + 1) * this.rateOfIncrease;
       if (this.velocities[3] > this.maxSpeed) {
         this.velocities[3] = this.maxSpeed;
@@ -205,17 +206,14 @@ class Hero extends ObjectCircle {
       // movement easing
       this.targetX = this.x - this.velocities[3];
       this.targetXTimerHandler('left', map);
-      this.canMoveLeft = false;
+      this.canMove[3] = 0;
     }
     
-    // set timeout to enable key press again
+    // set timeout to enable movement in the direction
     clearTimeout(this.keyboardCooldownTimer);
     const that = this;
     this.keyboardCooldownTimer = setTimeout(() => {
-      this.canMoveUp = true;
-      this.canMoveRight = true;
-      this.canMoveDown = true;
-      this.canMoveLeft = true;
+      this.canMove = [true, true, true, true]
     }, this.inputCooldown);
   }
 }

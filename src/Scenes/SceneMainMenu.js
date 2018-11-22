@@ -99,33 +99,33 @@ class SceneMainMenu extends Scene {
    * @returns {void}
    * @memberof SceneMainMenu
    */
-  handleInput(activeKeys) {
+  handleInput(Keyboard) {
     // bail if input is disabled
     if (!this.allowInput) {
       return;
     }
 
     // bail if no key press
-    if (activeKeys.length === 0) {
+    if (Keyboard.activeKeys.length === 0) {
       return;
     }
 
-    // handle down
-    if (activeKeys.indexOf(40) > -1) {
-      // increment the focused object
-      this.menu.incrementFocusMenuObject();
-      this.allowInput = false;
-    }
-
     // handle up
-    if (activeKeys.indexOf(38) > -1) {
+    if (Keyboard.dir.up) {
       // decrement the focused object
       this.menu.decrementFocusMenuObject();
       this.allowInput = false;
     }
 
+    // handle down
+    if (Keyboard.dir.down) {
+      // increment the focused object
+      this.menu.incrementFocusMenuObject();
+      this.allowInput = false;
+    }
+
     // handle enter
-    if (activeKeys.indexOf(13) > -1) {
+    if (Keyboard.activeKeys.indexOf(13) > -1) {
       // do the menu item callback
       this.menu.focusMenuObject.callback();
       this.allowInput = false;

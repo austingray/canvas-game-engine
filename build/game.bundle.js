@@ -5,11 +5,107 @@
 }(this, (function () { 'use strict';
 
   /**
+   * Calculates drawing x/y offsets
+   *
+   * @class Camera
+   */
+  class Camera {
+    constructor(width, height) {
+      this.width = width;
+      this.height = height;
+      this.x = width / 2;
+      this.y = height / 2;
+      this.offsetX = 0;
+      this.offsetY = 0;
+    }
+
+    /**
+     * Sets camera focus on an object
+     *
+     * @param {*} object
+     * @memberof Camera
+     */
+    setFocus(object) {
+      // if we're at the right edge of the viewport
+      if (
+        this.x > (this.width * .7) - this.offsetX
+        && object.x >= this.x
+      ) {
+        this.screenPushX = this.width * .7;
+        this.offsetX = this.screenPushX - this.x;
+      }
+
+      // left edge
+      if (
+        this.x < (this.width * .3) - this.offsetX
+        && object.x <= this.x
+      ) {
+        this.screenPushX = this.width * .3;
+        this.offsetX = this.screenPushX - this.x;
+      }
+
+      // top edge
+      if (
+        this.y < (this.height * .3) - this.offsetY
+        && object.y <= this.y
+      ) {
+        this.screenPushY = this.height * .3;
+        this.offsetY = this.screenPushY - this.y;
+      }
+
+      // bottom edge
+      if (
+        this.y > (this.height * .7) - this.offsetY
+        && object.y >= this.y
+      ) {
+        this.screenPushY = this.height * .7;
+        this.offsetY = this.screenPushY - this.y;
+      }
+
+      // update this
+      this.x = object.x;
+      this.y = object.y;
+    }
+
+    /**
+     * Checks if a set of coords is inside the camera viewport
+     * Note: the viewport is not 1:1 with what is visible, it is larger
+     *
+     * @param {*} x1
+     * @param {*} y1
+     * @param {*} x2
+     * @param {*} y2
+     * @returns
+     * @memberof Camera
+     */
+    inViewport(x1, y1, x2, y2) {
+      // calc the viewport
+      const vpX1 = this.x - this.width;
+      const vpX2 = this.x + this.width;
+      const vpY1 = this.y - this.height;
+      const vpY2 = this.y + this.height;
+
+      // if in viewport
+      if (
+        x2 > vpX1
+        && x1 < vpX2
+        && y2 > vpY1
+        && y1 < vpY2
+      ) {
+        return true;
+      }
+
+      // if not in viewport
+      return false;
+    }
+  }
+
+  /**
    * Creates a canvas and provides methods for drawing to it
    * @class Canvas
    */
   class Canvas {
-    constructor(args = {}, Camera) {
+    constructor(args = {}) {
       // id attribute of the canvas element
       this.id = (typeof args.id !== 'undefined') ? args.id : 'canvas';
       // canvas width
@@ -30,7 +126,7 @@
       this.ctx = this.element.getContext('2d');
       
       // camera
-      this.Camera = Camera;
+      this.Camera = new Camera(this.width, this.height);
     }
 
     /**
@@ -425,10 +521,10 @@
     init() {
       // allows keyboard input to the character
       this.allowInput = true;
-      this.canMoveUp = true;
-      this.canMoveRight = true;
-      this.canMoveDown = true;
-      this.canMoveLeft = true;
+
+      // if the hero can move in a certain direction
+      // [ up, right, down, left ];
+      this.canMove = [true, true, true, true];
 
       // handle character's directional velocity
       this.velocities = [0, 0, 0, 0];
@@ -540,14 +636,14 @@
      * @returns
      * @memberof Hero
      */
-    handleInput(activeKeys, map) {
+    handleInput(Keyboard, map) {
       // bail if input is disabled
       if (!this.allowInput) {
         return;
       }
 
       // bail if no key press
-      if (activeKeys.length === 0) {
+      if (Keyboard.activeKeys.length === 0) {
         // cooldown velocities
 
         // velocity cooldown
@@ -562,11 +658,12 @@
 
           return velocity;
         });
+
         return;
       }
 
       // handle up
-      if (activeKeys.indexOf(38) > -1) {
+      if (Keyboard.dir.up) {
         this.velocities[0] = (this.velocities[0] + 1) * this.rateOfIncrease;
         if (this.velocities[0] > this.maxSpeed) {
           this.velocities[0] = this.maxSpeed;
@@ -578,11 +675,11 @@
         // movement easing
         this.targetY = this.y - this.velocities[0];
         this.targetYTimerHandler('up', map);
-        this.canMoveUp = false;
+        this.canMove[0] = 0;
       }
 
       // handle right
-      if (activeKeys.indexOf(39) > -1) {
+      if (Keyboard.dir.right) {
         this.velocities[1] = (this.velocities[1] + 1) * this.rateOfIncrease;
         if (this.velocities[1] > this.maxSpeed) {
           this.velocities[1] = this.maxSpeed;
@@ -594,11 +691,11 @@
         // movement easing
         this.targetX = this.x + this.velocities[1];
         this.targetXTimerHandler('right', map);
-        this.canMoveRight = false;
+        this.canMove[1] = 0;
       }
 
       // handle down
-      if (activeKeys.indexOf(40) > -1) {
+      if (Keyboard.dir.down) {
         this.velocities[2] = (this.velocities[2] + 1) * this.rateOfIncrease;
         if (this.velocities[2] > this.maxSpeed) {
           this.velocities[2] = this.maxSpeed;
@@ -610,11 +707,11 @@
         // movement easing
         this.targetY = this.y + this.velocities[2];
         this.targetYTimerHandler('down', map);    
-        this.canMoveDown = false;
+        this.canMove[2] = 0;
       }
 
       // handle left
-      if (activeKeys.indexOf(37) > -1) {
+      if (Keyboard.dir.left) {
         this.velocities[3] = (this.velocities[3] + 1) * this.rateOfIncrease;
         if (this.velocities[3] > this.maxSpeed) {
           this.velocities[3] = this.maxSpeed;
@@ -626,16 +723,13 @@
         // movement easing
         this.targetX = this.x - this.velocities[3];
         this.targetXTimerHandler('left', map);
-        this.canMoveLeft = false;
+        this.canMove[3] = 0;
       }
       
-      // set timeout to enable key press again
+      // set timeout to enable movement in the direction
       clearTimeout(this.keyboardCooldownTimer);
       this.keyboardCooldownTimer = setTimeout(() => {
-        this.canMoveUp = true;
-        this.canMoveRight = true;
-        this.canMoveDown = true;
-        this.canMoveLeft = true;
+        this.canMove = [true, true, true, true];
       }, this.inputCooldown);
     }
   }
@@ -1031,33 +1125,33 @@
      * @returns {void}
      * @memberof SceneMainMenu
      */
-    handleInput(activeKeys) {
+    handleInput(Keyboard) {
       // bail if input is disabled
       if (!this.allowInput) {
         return;
       }
 
       // bail if no key press
-      if (activeKeys.length === 0) {
+      if (Keyboard.activeKeys.length === 0) {
         return;
       }
 
-      // handle down
-      if (activeKeys.indexOf(40) > -1) {
-        // increment the focused object
-        this.menu.incrementFocusMenuObject();
-        this.allowInput = false;
-      }
-
       // handle up
-      if (activeKeys.indexOf(38) > -1) {
+      if (Keyboard.dir.up) {
         // decrement the focused object
         this.menu.decrementFocusMenuObject();
         this.allowInput = false;
       }
 
+      // handle down
+      if (Keyboard.dir.down) {
+        // increment the focused object
+        this.menu.incrementFocusMenuObject();
+        this.allowInput = false;
+      }
+
       // handle enter
-      if (activeKeys.indexOf(13) > -1) {
+      if (Keyboard.activeKeys.indexOf(13) > -1) {
         // do the menu item callback
         this.menu.focusMenuObject.callback();
         this.allowInput = false;
@@ -1111,13 +1205,13 @@
      * @returns {void}
      * @memberof SceneMainMenu
      */
-    handleInput(activeKeys) {
+    handleInput(Keyboard) {
       // pause the game
-      if (activeKeys.indexOf(27) > -1) {
+      if (Keyboard.activeKeys.indexOf(27) > -1) {
         this.game.changeCurrentScene('pause');
       }
 
-      this.hero.handleInput(activeKeys, this.map);
+      this.hero.handleInput(Keyboard, this.map);
     }
   }
 
@@ -1259,28 +1353,108 @@
   };
 
   class KeyboardController {
+    /**
+     * Creates an instance of KeyboardController.
+     * @memberof KeyboardController
+     */
     constructor() {
+      // if disabled, keyboard input will not register
       this.disabled = false;
+
+      // an array of active key codes
       this.activeKeys = [];
+
+      // provide easy way to see which directions are active
+      this.dir = {
+        up: false,
+        right: false,
+        down: false,
+        left: false,
+      };
       
+      // add event listeners
+      this.addEventListeners();
+    }
+
+    /**
+     * Adds event listeners for keydown, keyup
+     *
+     * @memberof KeyboardController
+     */
+    addEventListeners() {
       document.addEventListener('keydown', (e) => {
+        // bail if disabled
         if (this.disabled) {
           return;
         }
 
+        // add the key to active keys
         if (this.activeKeys.indexOf(e.keyCode) === -1) {
           this.activeKeys.push(e.keyCode);
         }
+
+        this.updateReferences();
       });
 
       document.addEventListener('keyup', (e) => {
+        // bail if disabled
         if (this.disabled) {
           return;
         }
 
+        // remove the key from active keys
         const index = this.activeKeys.indexOf(e.keyCode);
         this.activeKeys.splice(index, 1);
+
+        this.updateReferences();
       });
+    }
+
+    /**
+     * Updates explicit references to active keys, specifically directions
+     *
+     * @memberof KeyboardController
+     */
+    updateReferences() {
+      // up
+      if (
+        this.activeKeys.indexOf(38) > -1 // up
+        || this.activeKeys.indexOf(87) > -1 // w
+      ) {
+        this.dir.up = true;
+      } else {
+        this.dir.up = false;
+      }
+
+      // right
+      if (
+        this.activeKeys.indexOf(39) > -1 // right
+        || this.activeKeys.indexOf(68) > -1 // d
+      ) {
+        this.dir.right = true;
+      } else {
+        this.dir.right = false;
+      }
+
+      // down
+      if (
+        this.activeKeys.indexOf(40) > -1 // down
+        || this.activeKeys.indexOf(83) > -1 // s
+      ) {
+        this.dir.down = true;
+      } else {
+        this.dir.down = false;
+      }
+
+      // left
+      if (
+        this.activeKeys.indexOf(37) > -1 // left
+        || this.activeKeys.indexOf(65) > -1 // a
+      ) {
+        this.dir.left = true;
+      } else {
+        this.dir.left = false;
+      }
     }
 
     /**
@@ -1350,7 +1524,7 @@
       this.scenes[this.currentScene].draw();
 
       // handle keyboard input for the current scene
-      this.scenes[this.currentScene].handleInput(this.Keyboard.activeKeys);
+      this.scenes[this.currentScene].handleInput(this.Keyboard);
 
       // maybe show debug info
       if (this.debug) {
