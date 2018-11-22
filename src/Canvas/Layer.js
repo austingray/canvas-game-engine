@@ -9,6 +9,7 @@ class Layer {
     // get width/height
     this.width = args.width;
     this.height = args.height;
+    this.name = args.name;
 
     // create the canvas element and add it to the document body
     const element = document.createElement('canvas');

@@ -56,6 +56,10 @@ class Camera {
       this.offsetY = this.screenPushY - this.y;
     }
 
+    // convert floats to integers
+    this.offsetX = Math.round(this.offsetX);
+    this.offsetY = Math.round(this.offsetY);
+
     // update this
     this.x = object.x;
     this.y = object.y;

@@ -15,6 +15,7 @@
       // get width/height
       this.width = args.width;
       this.height = args.height;
+      this.name = args.name;
 
       // create the canvas element and add it to the document body
       const element = document.createElement('canvas');
@@ -94,6 +95,10 @@
         this.offsetY = this.screenPushY - this.y;
       }
 
+      // convert floats to integers
+      this.offsetX = Math.round(this.offsetX);
+      this.offsetY = Math.round(this.offsetY);
+
       // update this
       this.x = object.x;
       this.y = object.y;
@@ -154,6 +159,12 @@
       this.createLayer('background');
       this.createLayer('primary');
       this.createLayer('hud');
+      this.createLayer('debug');
+
+      // get explicit reference to debug layer
+      this.debugLayer = this.getLayerByName('debug');
+      this.debugKeys = [];
+      this.debugText = [];
 
       // set a default ctx
       this.ctx = this.layers[1].context;
@@ -161,7 +172,27 @@
       // camera
       this.Camera = new Camera(this.width, this.height);
     }
+
+    /**
+     * Gets a layer by name
+     *
+     * @param {*} name
+     * @returns {Layer}
+     * @memberof Canvas
+     */
+    getLayerByName(name) {
+      const debugLayer = this.layers.filter(layer => layer.name === name)[0];
+      console.log(debugLayer);
+      return debugLayer;
+    }
     
+    /**
+     * Creates a new canvas layer
+     *
+     * @param {*} name
+     * @param {*} [args={}]
+     * @memberof Canvas
+     */
     createLayer(name, args = {}) {
       // assign a unique id
       this.canvasId++;
@@ -173,6 +204,7 @@
 
       // add 'er to the stack
       this.layers.push(new Layer(id, {
+        name,
         width,
         height,
       }));
@@ -203,15 +235,23 @@
       this.ctx.fillText(txt, x, y);
     }
 
+    pushDebugText(key, text) {
+      if (this.debugKeys.indexOf(key) === -1) {
+        this.debugKeys.push(key);
+      }
+      this.debugText[key] = text;
+    }
+
     /**
      * Draws debug text
      * @param {string} txt
      * @memberof Canvas
      */
     drawDebugText(txt) {
-      this.ctx.font = "18px Arial";
-      const txtWidth = this.ctx.measureText(txt).width; 
-      this.ctx.fillText(txt, this.width - txtWidth - this.padding, this.height - this.padding);
+      this.debugLayer.context.font = "18px Arial";
+      this.debugKeys.forEach((key, i) => {
+        this.debugLayer.context.fillText(this.debugText[key], this.padding, this.height - this.padding - i * 18);
+      });
     }
 
     /**
@@ -259,26 +299,32 @@
       // draw the tile
       const x = tile.x + this.Camera.offsetX;
       const y = tile.y + this.Camera.offsetY;
-      ctx.beginPath();
-      ctx.lineWidth = tile.lineWidth;
+      // ctx.beginPath();
+      // ctx.lineWidth = tile.lineWidth;
+      // ctx.lineWidth = 1;
       
       switch (tile.type) {
         case 'rock':
-          ctx.fillStyle='#888787';
+          ctx.fillStyle = '#888787';
           ctx.strokeStyle = '#464242';
+          break;
+        
+        case 'desert':
+          ctx.fillStyle = '#e2c55a';
+          ctx.strokeStyle = '#d0ab25';
           break;
 
         case 'grass':
         default:
-          ctx.fillStyle='#008000';
+          ctx.fillStyle = '#008000';
           ctx.strokeStyle = '#063c06';
           break;
       }
 
-      ctx.rect(x, y, tile.width, tile.height);
-      ctx.fill();
-      ctx.stroke();
-      ctx.closePath();
+      ctx.fillRect(x, y, tile.width, tile.height);
+      // ctx.fill();
+      // ctx.stroke();
+      // ctx.closePath();
     }
 
     /**
@@ -763,12 +809,15 @@
 
       // randomize the tiles for now
       const random = Math.random() * 10;
-      if (random < .5) {
-        this.type = 'rock';
-        this.blocking = true;
-      } else {
+      if (random > 9) {
+        this.type = 'desert';
+        this.blocking = false;
+      } else if (random <= 9 && random > .5) {
         this.type = 'grass';
         this.blocking = false;
+      } else {
+        this.type = 'rock';
+        this.blocking = true;
       }
     }
   }
@@ -1563,6 +1612,10 @@
       // clear the previous frame
       scene.clear();
 
+      if (this.debug) {
+        this.Canvas.debugLayer.clear();
+      }
+
       // draw the current frame
       scene.draw();
 
@@ -1571,12 +1624,10 @@
 
       // maybe show debug info
       if (this.debug) {
-        const debugText = `
-        Active Keys: [${this.Keyboard.activeKeys}]
-        Total frames: ${this.frameCount}
-      `;
         this.frameCount++;
-        this.Canvas.drawDebugText(debugText);
+        this.Canvas.pushDebugText('keys', `Active Keys: [${this.Keyboard.activeKeys}]`);
+        this.Canvas.pushDebugText('frames', `Total frames: ${this.frameCount}`);
+        this.Canvas.drawDebugText();
       }
     };
 

@@ -10,12 +10,15 @@ class MapTile {
 
     // randomize the tiles for now
     const random = Math.random() * 10;
-    if (random < .5) {
-      this.type = 'rock';
-      this.blocking = true;
-    } else {
+    if (random > 9) {
+      this.type = 'desert';
+      this.blocking = false;
+    } else if (random <= 9 && random > .5) {
       this.type = 'grass';
       this.blocking = false;
+    } else {
+      this.type = 'rock';
+      this.blocking = true;
     }
   }
 }

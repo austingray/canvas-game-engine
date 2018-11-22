@@ -23,6 +23,12 @@ class Canvas {
     this.createLayer('background');
     this.createLayer('primary');
     this.createLayer('hud');
+    this.createLayer('debug');
+
+    // get explicit reference to debug layer
+    this.debugLayer = this.getLayerByName('debug');
+    this.debugKeys = [];
+    this.debugText = [];
 
     // set a default ctx
     this.ctx = this.layers[1].context;
@@ -30,7 +36,27 @@ class Canvas {
     // camera
     this.Camera = new Camera(this.width, this.height);
   }
+
+  /**
+   * Gets a layer by name
+   *
+   * @param {*} name
+   * @returns {Layer}
+   * @memberof Canvas
+   */
+  getLayerByName(name) {
+    const debugLayer = this.layers.filter(layer => layer.name === name)[0];
+    console.log(debugLayer);
+    return debugLayer;
+  }
   
+  /**
+   * Creates a new canvas layer
+   *
+   * @param {*} name
+   * @param {*} [args={}]
+   * @memberof Canvas
+   */
   createLayer(name, args = {}) {
     // assign a unique id
     this.canvasId++;
@@ -42,6 +68,7 @@ class Canvas {
 
     // add 'er to the stack
     this.layers.push(new Layer(id, {
+      name,
       width,
       height,
     }));
@@ -72,15 +99,23 @@ class Canvas {
     this.ctx.fillText(txt, x, y);
   }
 
+  pushDebugText(key, text) {
+    if (this.debugKeys.indexOf(key) === -1) {
+      this.debugKeys.push(key);
+    }
+    this.debugText[key] = text;
+  }
+
   /**
    * Draws debug text
    * @param {string} txt
    * @memberof Canvas
    */
   drawDebugText(txt) {
-    this.ctx.font = "18px Arial";
-    const txtWidth = this.ctx.measureText(txt).width; 
-    this.ctx.fillText(txt, this.width - txtWidth - this.padding, this.height - this.padding);
+    this.debugLayer.context.font = "18px Arial";
+    this.debugKeys.forEach((key, i) => {
+      this.debugLayer.context.fillText(this.debugText[key], this.padding, this.height - this.padding - i * 18);
+    });
   }
 
   /**
@@ -128,26 +163,32 @@ class Canvas {
     // draw the tile
     const x = tile.x + this.Camera.offsetX;
     const y = tile.y + this.Camera.offsetY;
-    ctx.beginPath();
-    ctx.lineWidth = tile.lineWidth;
+    // ctx.beginPath();
+    // ctx.lineWidth = tile.lineWidth;
+    // ctx.lineWidth = 1;
     
     switch (tile.type) {
       case 'rock':
-        ctx.fillStyle='#888787';
+        ctx.fillStyle = '#888787';
         ctx.strokeStyle = '#464242';
+        break;
+      
+      case 'desert':
+        ctx.fillStyle = '#e2c55a';
+        ctx.strokeStyle = '#d0ab25';
         break;
 
       case 'grass':
       default:
-        ctx.fillStyle='#008000';
+        ctx.fillStyle = '#008000';
         ctx.strokeStyle = '#063c06';
         break;
     }
 
-    ctx.rect(x, y, tile.width, tile.height);
-    ctx.fill();
-    ctx.stroke();
-    ctx.closePath();
+    ctx.fillRect(x, y, tile.width, tile.height);
+    // ctx.fill();
+    // ctx.stroke();
+    // ctx.closePath();
   }
 
   /**

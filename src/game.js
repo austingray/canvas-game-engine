@@ -46,6 +46,10 @@ function game() {
     // clear the previous frame
     scene.clear();
 
+    if (this.debug) {
+      this.Canvas.debugLayer.clear();
+    }
+
     // draw the current frame
     scene.draw();
 
@@ -54,12 +58,10 @@ function game() {
 
     // maybe show debug info
     if (this.debug) {
-      const debugText = `
-        Active Keys: [${this.Keyboard.activeKeys}]
-        Total frames: ${this.frameCount}
-      `;
       this.frameCount++;
-      this.Canvas.drawDebugText(debugText);
+      this.Canvas.pushDebugText('keys', `Active Keys: [${this.Keyboard.activeKeys}]`);
+      this.Canvas.pushDebugText('frames', `Total frames: ${this.frameCount}`);
+      this.Canvas.drawDebugText();
     }
   }
 
