@@ -1,8 +1,7 @@
-import Canvas from './Canvas';
-import Camera from './Camera';
+import Canvas from './Canvas/Canvas';
 import Objects from './Objects/index';
 import Scenes from './Scenes/index';
-import KeyboardController from './KeyboardController';
+import Keyboard from './Inputs/Keyboard';
 
 function game() {
   // view state
@@ -13,13 +12,10 @@ function game() {
   this.frameCount = 0;
 
   // input handler
-  this.Keyboard = new KeyboardController();
-
-  // introducing the idea of a Camera
-  // TODO: move to standalone class file or roll into Canvas
+  this.Keyboard = new Keyboard();
 
   // create the canvas
-  this.Canvas = new Canvas({}, this.Camera);
+  this.Canvas = new Canvas();
 
   // the object factory
   this.Objects = new Objects(this);
@@ -44,14 +40,17 @@ function game() {
    * This is where the logic goes
    */
   this.update = () => {
-    // clear the canvas
-    this.Canvas.clear();
+    // get the current scene
+    const scene = this.scenes[this.currentScene];
 
-    // draw the current scene
-    this.scenes[this.currentScene].draw();
+    // clear the previous frame
+    scene.clear();
 
-    // handle keyboard input for the current scene
-    this.scenes[this.currentScene].handleInput(this.Keyboard);
+    // draw the current frame
+    scene.draw();
+
+    // handle keyboard input
+    scene.handleInput(this.Keyboard);
 
     // maybe show debug info
     if (this.debug) {

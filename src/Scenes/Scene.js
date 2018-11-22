@@ -89,6 +89,16 @@ class Scene {
 
   /**
    ** Should be overridden by subclass
+   *  Clears the previous frame
+   *
+   * @memberof Scene
+   */
+  clear() {
+    // hello from the other side
+  }
+
+  /**
+   ** Should be overridden by subclass
    *  Handles input from keyboard/mouse
    *
    * @memberof Scene
@@ -103,6 +113,9 @@ class Scene {
    * @memberof Scene
    */
   transitionIn() {
+    // clear all layers
+    this.game.Canvas.layers.forEach(layer => layer.clear());
+
     // disable and reenable keyboard on scene transition
     this.game.Keyboard.setDisabled();
     this.game.Keyboard.clear();

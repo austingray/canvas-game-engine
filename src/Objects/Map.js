@@ -40,7 +40,6 @@ class Map {
 
   // draw each tile
   draw(Canvas) {
-    // Canvas.drawMap(this.image);
     this.tiles.forEach(tile => Canvas.drawTile(tile));
   }
 

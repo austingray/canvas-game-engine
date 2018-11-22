@@ -32,6 +32,11 @@ class SceneGame extends Scene {
     this.pushToScene(this.hero);
   }
 
+  clear() {
+    // clear the primary layer
+    this.Canvas.layers[1].clear();
+  }
+
   /**
    * Handle input for the scene
    *

@@ -4,6 +4,38 @@
   (global.game = factory());
 }(this, (function () { 'use strict';
 
+  class Layer {
+    /**
+     * Creates an instance of Layer.
+     * @param {*} id
+     * @param {*} [args={}]
+     * @memberof Layer
+     */
+    constructor(id, args = {}) {
+      // get width/height
+      this.width = args.width;
+      this.height = args.height;
+
+      // create the canvas element and add it to the document body
+      const element = document.createElement('canvas');
+      element.id = id;
+      element.width = this.width;
+      element.height = this.height;
+      document.body.appendChild(element);
+
+      this.context = element.getContext('2d');
+    }
+
+    /**
+     * Clears the layer
+     *
+     * @memberof Layer
+     */
+    clear() {
+      this.context.clearRect(0, 0, this.width, this.height);
+    }
+  }
+
   /**
    * Calculates drawing x/y offsets
    *
@@ -106,35 +138,54 @@
    */
   class Canvas {
     constructor(args = {}) {
-      // id attribute of the canvas element
-      this.id = (typeof args.id !== 'undefined') ? args.id : 'canvas';
-      // canvas width
-      this.width = (typeof args.width !== 'undefined') ? args.width : 640;
-      // canvas height
-      this.height = (typeof args.height !== 'undefined') ? args.height : 640;
-      // define a padding to keep consistent spacing off the edge
-      this.padding = (typeof args.padding !== 'undefined') ? args.padding : 24;
+      // set constants
+      this.width = 640;
+      this.height = 640;
 
-      // create the canvas element and add it to the document body
-      this.element = document.createElement('canvas');
-      this.element.id = this.id;
-      this.element.width = this.width;
-      this.element.height = this.height;
-      document.body.appendChild(this.element);
+      // for consistent spacing off the canvas edge
+      this.padding = 24;
 
-      // get context
-      this.ctx = this.element.getContext('2d');
+      // different <canvas> elements will act as layers for render optimization
+      // each canvas will exist in the layers array
+      this.layers = [];
+      this.canvasId = 0;
+
+      // create canvas layers
+      this.createLayer('background');
+      this.createLayer('primary');
+      this.createLayer('hud');
+
+      // set a default ctx
+      this.ctx = this.layers[1].context;
       
       // camera
       this.Camera = new Camera(this.width, this.height);
     }
+    
+    createLayer(name, args = {}) {
+      // assign a unique id
+      this.canvasId++;
+      const id = `canvas-${this.canvasId}`;
+
+      // get width/height
+      const width = (typeof args.width === 'undefined') ? this.width : args.width;
+      const height = (typeof args.height === 'undefined') ? this.height : args.height;
+
+      // add 'er to the stack
+      this.layers.push(new Layer(id, {
+        width,
+        height,
+      }));
+    }
 
     /**
-     * Clears the canvas
+     * Clears a canvas
      * @memberof Canvas
      */
-    clear() {
-      this.ctx.clearRect(0, 0, this.width, this.height);
+    clear(index) {
+      const layer = this.layers[index];
+      const ctx = layer.context;
+      ctx.clearRect(0, 0, layer.width, layer.height);
     }
 
     /**
@@ -202,30 +253,32 @@
         return;
       }
 
+      // draw tiles to the primary layer
+      const ctx = this.layers[1].context;
+
       // draw the tile
       const x = tile.x + this.Camera.offsetX;
       const y = tile.y + this.Camera.offsetY;
-      this.ctx.beginPath();
-      this.ctx.lineWidth = tile.lineWidth;
+      ctx.beginPath();
+      ctx.lineWidth = tile.lineWidth;
       
       switch (tile.type) {
         case 'rock':
-          this.ctx.fillStyle='#888787';
-          this.ctx.strokeStyle = '#464242';
+          ctx.fillStyle='#888787';
+          ctx.strokeStyle = '#464242';
           break;
 
         case 'grass':
         default:
-          this.ctx.fillStyle='#008000';
-          this.ctx.strokeStyle = '#063c06';
+          ctx.fillStyle='#008000';
+          ctx.strokeStyle = '#063c06';
           break;
       }
 
-      
-      this.ctx.rect(x, y, tile.width, tile.height);
-      this.ctx.fill();
-      this.ctx.stroke();
-      this.ctx.closePath();
+      ctx.rect(x, y, tile.width, tile.height);
+      ctx.fill();
+      ctx.stroke();
+      ctx.closePath();
     }
 
     /**
@@ -596,9 +649,6 @@
      * @memberof Hero
      */
     targetYTimerHandler(dir, map) {
-      if (dir !== 0 && dir !== 2) {
-        console.log(dir);
-      }
       // clear the existing timer
       clearTimeout(this.targetYTimer);
 
@@ -763,7 +813,6 @@
 
     // draw each tile
     draw(Canvas) {
-      // Canvas.drawMap(this.image);
       this.tiles.forEach(tile => Canvas.drawTile(tile));
     }
 
@@ -967,6 +1016,16 @@
 
     /**
      ** Should be overridden by subclass
+     *  Clears the previous frame
+     *
+     * @memberof Scene
+     */
+    clear() {
+      // hello from the other side
+    }
+
+    /**
+     ** Should be overridden by subclass
      *  Handles input from keyboard/mouse
      *
      * @memberof Scene
@@ -981,6 +1040,9 @@
      * @memberof Scene
      */
     transitionIn() {
+      // clear all layers
+      this.game.Canvas.layers.forEach(layer => layer.clear());
+
       // disable and reenable keyboard on scene transition
       this.game.Keyboard.setDisabled();
       this.game.Keyboard.clear();
@@ -1161,6 +1223,11 @@
     prepareScene() {
       this.pushToScene(this.map);
       this.pushToScene(this.hero);
+    }
+
+    clear() {
+      // clear the primary layer
+      this.Canvas.layers[1].clear();
     }
 
     /**
@@ -1464,11 +1531,8 @@
     // input handler
     this.Keyboard = new KeyboardController();
 
-    // introducing the idea of a Camera
-    // TODO: move to standalone class file or roll into Canvas
-
     // create the canvas
-    this.Canvas = new Canvas({}, this.Camera);
+    this.Canvas = new Canvas();
 
     // the object factory
     this.Objects = new Objects(this);
@@ -1493,14 +1557,17 @@
      * This is where the logic goes
      */
     this.update = () => {
-      // clear the canvas
-      this.Canvas.clear();
+      // get the current scene
+      const scene = this.scenes[this.currentScene];
 
-      // draw the current scene
-      this.scenes[this.currentScene].draw();
+      // clear the previous frame
+      scene.clear();
 
-      // handle keyboard input for the current scene
-      this.scenes[this.currentScene].handleInput(this.Keyboard);
+      // draw the current frame
+      scene.draw();
+
+      // handle keyboard input
+      scene.handleInput(this.Keyboard);
 
       // maybe show debug info
       if (this.debug) {

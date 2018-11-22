@@ -1,3 +1,4 @@
+import Layer from './Layer';
 import Camera from './Camera';
 
 /**
@@ -6,35 +7,54 @@ import Camera from './Camera';
  */
 class Canvas {
   constructor(args = {}) {
-    // id attribute of the canvas element
-    this.id = (typeof args.id !== 'undefined') ? args.id : 'canvas';
-    // canvas width
-    this.width = (typeof args.width !== 'undefined') ? args.width : 640;
-    // canvas height
-    this.height = (typeof args.height !== 'undefined') ? args.height : 640;
-    // define a padding to keep consistent spacing off the edge
-    this.padding = (typeof args.padding !== 'undefined') ? args.padding : 24;
+    // set constants
+    this.width = 640;
+    this.height = 640;
 
-    // create the canvas element and add it to the document body
-    this.element = document.createElement('canvas');
-    this.element.id = this.id;
-    this.element.width = this.width;
-    this.element.height = this.height;
-    document.body.appendChild(this.element);
+    // for consistent spacing off the canvas edge
+    this.padding = 24;
 
-    // get context
-    this.ctx = this.element.getContext('2d');
+    // different <canvas> elements will act as layers for render optimization
+    // each canvas will exist in the layers array
+    this.layers = [];
+    this.canvasId = 0;
+
+    // create canvas layers
+    this.createLayer('background');
+    this.createLayer('primary');
+    this.createLayer('hud');
+
+    // set a default ctx
+    this.ctx = this.layers[1].context;
     
     // camera
     this.Camera = new Camera(this.width, this.height);
   }
+  
+  createLayer(name, args = {}) {
+    // assign a unique id
+    this.canvasId++;
+    const id = `canvas-${this.canvasId}`;
+
+    // get width/height
+    const width = (typeof args.width === 'undefined') ? this.width : args.width;
+    const height = (typeof args.height === 'undefined') ? this.height : args.height;
+
+    // add 'er to the stack
+    this.layers.push(new Layer(id, {
+      width,
+      height,
+    }));
+  }
 
   /**
-   * Clears the canvas
+   * Clears a canvas
    * @memberof Canvas
    */
-  clear() {
-    this.ctx.clearRect(0, 0, this.width, this.height);
+  clear(index) {
+    const layer = this.layers[index];
+    const ctx = layer.context;
+    ctx.clearRect(0, 0, layer.width, layer.height);
   }
 
   /**
@@ -102,30 +122,32 @@ class Canvas {
       return;
     }
 
+    // draw tiles to the primary layer
+    const ctx = this.layers[1].context;
+
     // draw the tile
     const x = tile.x + this.Camera.offsetX;
     const y = tile.y + this.Camera.offsetY;
-    this.ctx.beginPath();
-    this.ctx.lineWidth = tile.lineWidth;
+    ctx.beginPath();
+    ctx.lineWidth = tile.lineWidth;
     
     switch (tile.type) {
       case 'rock':
-        this.ctx.fillStyle='#888787';
-        this.ctx.strokeStyle = '#464242';
+        ctx.fillStyle='#888787';
+        ctx.strokeStyle = '#464242';
         break;
 
       case 'grass':
       default:
-        this.ctx.fillStyle='#008000';
-        this.ctx.strokeStyle = '#063c06';
+        ctx.fillStyle='#008000';
+        ctx.strokeStyle = '#063c06';
         break;
     }
 
-    
-    this.ctx.rect(x, y, tile.width, tile.height);
-    this.ctx.fill();
-    this.ctx.stroke();
-    this.ctx.closePath();
+    ctx.rect(x, y, tile.width, tile.height);
+    ctx.fill();
+    ctx.stroke();
+    ctx.closePath();
   }
 
   /**
