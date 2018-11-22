@@ -11,7 +11,7 @@ class Canvas {
     // canvas height
     this.height = (typeof args.height !== 'undefined') ? args.height : 640;
     // define a padding to keep consistent spacing off the edge
-    this.padding = (typeof args.padding !== 'undefined') ? args.padding : 24
+    this.padding = (typeof args.padding !== 'undefined') ? args.padding : 24;
 
     // create the canvas element and add it to the document body
     this.element = document.createElement('canvas');
@@ -31,13 +31,16 @@ class Canvas {
       y: this.height / 2,
       offsetX: 0,
       offsetY: 0,
+      screenPushX: 0,
+      screenPushY: 0,
       setFocus(object) {
         // if we're at the right edge of the viewport
         if (
           this.x > (that.width * .7) - this.offsetX
           && object.x >= this.x
         ) {
-          this.offsetX = (that.width * .7) - this.x;
+          this.screenPushX = that.width * .7;
+          this.offsetX = this.screenPushX - this.x;
         }
 
         // left edge
@@ -45,7 +48,8 @@ class Canvas {
           this.x < (that.width * .3) - this.offsetX
           && object.x <= this.x
         ) {
-          this.offsetX = (that.width * .3) - this.x;
+          this.screenPushX = that.width * .3;
+          this.offsetX = this.screenPushX - this.x;
         }
 
         // top edge
@@ -53,7 +57,8 @@ class Canvas {
           this.y < (that.height * .3) - this.offsetY
           && object.y <= this.y
         ) {
-          this.offsetY = (that.height * .3) - this.y;
+          this.screenPushY = that.height * .3;
+          this.offsetY = this.screenPushY - this.y;
         }
 
         // bottom edge
@@ -61,12 +66,32 @@ class Canvas {
           this.y > (that.height * .7) - this.offsetY
           && object.y >= this.y
         ) {
-          this.offsetY = (that.height * .7) - this.y;
+          this.screenPushY = that.height * .7;
+          this.offsetY = this.screenPushY - this.y;
         }
 
         // update this
         this.x = object.x;
         this.y = object.y;
+      },
+      inViewport(x1, y1, x2, y2) {
+        const vpX1 = this.x - that.width;
+        const vpX2 = this.x + that.width;
+        const vpY1 = this.y - that.height;
+        const vpY2 = this.y + that.height;
+
+        // if in viewport
+        if (
+          x2 > vpX1
+          && x1 < vpX2
+          && y2 > vpY1
+          && y1 < vpY2
+        ) {
+          return true;
+        }
+
+        // if not in viewport
+        return false;
       }
     };
   }
@@ -134,7 +159,17 @@ class Canvas {
     this.ctx.closePath();
   }
 
+  drawMap(image) {
+    this.ctx.drawImage(image, this.Camera.offsetX, this.Camera.offsetY);
+  }
+
   drawTile(tile) {
+    // bail if the tile is not in viewport
+    if (!this.Camera.inViewport(tile.x, tile.y, tile.x + tile.width, tile.y + tile.height)) {
+      return;
+    }
+
+    // draw the tile
     const x = tile.x + this.Camera.offsetX;
     const y = tile.y + this.Camera.offsetY;
     this.ctx.beginPath();

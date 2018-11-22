@@ -37,13 +37,16 @@
         y: this.height / 2,
         offsetX: 0,
         offsetY: 0,
+        screenPushX: 0,
+        screenPushY: 0,
         setFocus(object) {
           // if we're at the right edge of the viewport
           if (
             this.x > (that.width * .7) - this.offsetX
             && object.x >= this.x
           ) {
-            this.offsetX = (that.width * .7) - this.x;
+            this.screenPushX = that.width * .7;
+            this.offsetX = this.screenPushX - this.x;
           }
 
           // left edge
@@ -51,7 +54,8 @@
             this.x < (that.width * .3) - this.offsetX
             && object.x <= this.x
           ) {
-            this.offsetX = (that.width * .3) - this.x;
+            this.screenPushX = that.width * .3;
+            this.offsetX = this.screenPushX - this.x;
           }
 
           // top edge
@@ -59,7 +63,8 @@
             this.y < (that.height * .3) - this.offsetY
             && object.y <= this.y
           ) {
-            this.offsetY = (that.height * .3) - this.y;
+            this.screenPushY = that.height * .3;
+            this.offsetY = this.screenPushY - this.y;
           }
 
           // bottom edge
@@ -67,12 +72,32 @@
             this.y > (that.height * .7) - this.offsetY
             && object.y >= this.y
           ) {
-            this.offsetY = (that.height * .7) - this.y;
+            this.screenPushY = that.height * .7;
+            this.offsetY = this.screenPushY - this.y;
           }
 
           // update this
           this.x = object.x;
           this.y = object.y;
+        },
+        inViewport(x1, y1, x2, y2) {
+          const vpX1 = this.x - that.width;
+          const vpX2 = this.x + that.width;
+          const vpY1 = this.y - that.height;
+          const vpY2 = this.y + that.height;
+
+          // if in viewport
+          if (
+            x2 > vpX1
+            && x1 < vpX2
+            && y2 > vpY1
+            && y1 < vpY2
+          ) {
+            return true;
+          }
+
+          // if not in viewport
+          return false;
         }
       };
     }
@@ -140,7 +165,17 @@
       this.ctx.closePath();
     }
 
+    drawMap(image) {
+      this.ctx.drawImage(image, this.Camera.offsetX, this.Camera.offsetY);
+    }
+
     drawTile(tile) {
+      // bail if the tile is not in viewport
+      if (!this.Camera.inViewport(tile.x, tile.y, tile.x + tile.width, tile.y + tile.height)) {
+        return;
+      }
+
+      // draw the tile
       const x = tile.x + this.Camera.offsetX;
       const y = tile.y + this.Camera.offsetY;
       this.ctx.beginPath();
@@ -675,11 +710,13 @@
   }
 
   class MapTile {
-    constructor(x, y) {
-      this.x = x;
-      this.y = y;
-      this.width = 50;
-      this.height = 50;
+    constructor(args) {
+      this.x = args.x;
+      this.y = args.y;
+      this.width = args.width;
+      this.height = args.height;
+
+      // border
       this.lineWidth = '1';
 
       // randomize the tiles for now
@@ -695,7 +732,7 @@
   }
 
   class Map {
-    constructor() {
+    constructor(args, game) {
       this.tiles = [];
 
       // used for offsetting the map to follow the hero
@@ -716,13 +753,25 @@
       // crude tile creation
       for (let i = 0; i < this.width; i++) {
         for (let j = 0; j < this.height; j++) {
-          this.tiles.push(new MapTile(i * this.tileWidth, j * this.tileHeight));
+          this.tiles.push(new MapTile({
+            x: i * this.tileWidth,
+            y: j * this.tileHeight,
+            width: this.tileWidth,
+            height: this.tileHeight,
+          }));
         }
       }
+
+      // draw the map and convert to base64
+      // this.tiles.forEach(tile => game.Canvas.drawTile(tile));
+      // this.base64encoded = game.Canvas.element.toDataURL();
+      // this.image = new Image();
+      // this.image.src = this.base64encoded;
     }
 
     // draw each tile
     draw(Canvas) {
+      // Canvas.drawMap(this.image);
       this.tiles.forEach(tile => Canvas.drawTile(tile));
     }
 
@@ -735,7 +784,8 @@
      * @memberof Map
      */
     getCollision(x, y, dir) {
-      // TODO: convert to check against a x1, y1, x2, y2;
+      
+
       // hardcode the hero
       const heroRadius = 20;
       const x1 = x - heroRadius;
@@ -768,6 +818,7 @@
         }
       }
 
+      // let 'em pass
       return false;
     }
   }

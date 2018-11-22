@@ -1,7 +1,7 @@
 import MapTile from './MapTile';
 
 class Map {
-  constructor() {
+  constructor(args, game) {
     this.tiles = [];
 
     // used for offsetting the map to follow the hero
@@ -22,13 +22,25 @@ class Map {
     // crude tile creation
     for (let i = 0; i < this.width; i++) {
       for (let j = 0; j < this.height; j++) {
-        this.tiles.push(new MapTile(i * this.tileWidth, j * this.tileHeight));
+        this.tiles.push(new MapTile({
+          x: i * this.tileWidth,
+          y: j * this.tileHeight,
+          width: this.tileWidth,
+          height: this.tileHeight,
+        }));
       }
     }
+
+    // draw the map and convert to base64
+    // this.tiles.forEach(tile => game.Canvas.drawTile(tile));
+    // this.base64encoded = game.Canvas.element.toDataURL();
+    // this.image = new Image();
+    // this.image.src = this.base64encoded;
   }
 
   // draw each tile
   draw(Canvas) {
+    // Canvas.drawMap(this.image);
     this.tiles.forEach(tile => Canvas.drawTile(tile));
   }
 
@@ -41,7 +53,8 @@ class Map {
    * @memberof Map
    */
   getCollision(x, y, dir) {
-    // TODO: convert to check against a x1, y1, x2, y2;
+    
+
     // hardcode the hero
     const heroRadius = 20;
     const x1 = x - heroRadius;
@@ -74,6 +87,7 @@ class Map {
       }
     }
 
+    // let 'em pass
     return false;
   }
 }

@@ -1,9 +1,11 @@
 class MapTile {
-  constructor(x, y) {
-    this.x = x;
-    this.y = y;
-    this.width = 50;
-    this.height = 50;
+  constructor(args) {
+    this.x = args.x;
+    this.y = args.y;
+    this.width = args.width;
+    this.height = args.height;
+
+    // border
     this.lineWidth = '1';
 
     // randomize the tiles for now
