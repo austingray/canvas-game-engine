@@ -1,4 +1,5 @@
 import Canvas from './Canvas';
+import Camera from './Camera';
 import Objects from './Objects/index';
 import Scenes from './Scenes/index';
 import KeyboardController from './KeyboardController';

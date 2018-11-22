@@ -28,78 +28,9 @@
 
       // get context
       this.ctx = this.element.getContext('2d');
-
-      const that = this;
-
+      
       // camera
-      this.Camera = {
-        x: this.width / 2,
-        y: this.height / 2,
-        offsetX: 0,
-        offsetY: 0,
-        screenPushX: 0,
-        screenPushY: 0,
-        setFocus(object) {
-          // if we're at the right edge of the viewport
-          if (
-            this.x > (that.width * .7) - this.offsetX
-            && object.x >= this.x
-          ) {
-            this.screenPushX = that.width * .7;
-            this.offsetX = this.screenPushX - this.x;
-          }
-
-          // left edge
-          if (
-            this.x < (that.width * .3) - this.offsetX
-            && object.x <= this.x
-          ) {
-            this.screenPushX = that.width * .3;
-            this.offsetX = this.screenPushX - this.x;
-          }
-
-          // top edge
-          if (
-            this.y < (that.height * .3) - this.offsetY
-            && object.y <= this.y
-          ) {
-            this.screenPushY = that.height * .3;
-            this.offsetY = this.screenPushY - this.y;
-          }
-
-          // bottom edge
-          if (
-            this.y > (that.height * .7) - this.offsetY
-            && object.y >= this.y
-          ) {
-            this.screenPushY = that.height * .7;
-            this.offsetY = this.screenPushY - this.y;
-          }
-
-          // update this
-          this.x = object.x;
-          this.y = object.y;
-        },
-        inViewport(x1, y1, x2, y2) {
-          const vpX1 = this.x - that.width;
-          const vpX2 = this.x + that.width;
-          const vpY1 = this.y - that.height;
-          const vpY2 = this.y + that.height;
-
-          // if in viewport
-          if (
-            x2 > vpX1
-            && x1 < vpX2
-            && y2 > vpY1
-            && y1 < vpY2
-          ) {
-            return true;
-          }
-
-          // if not in viewport
-          return false;
-        }
-      };
+      this.Camera = Camera;
     }
 
     /**
