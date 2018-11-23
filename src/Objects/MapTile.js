@@ -21,17 +21,17 @@ class MapTile {
       this.type = 'grass';
       this.blocking = false;
       this.shadow = false;
-    } else if (random <= 1 && random > .3) {
+    } else if (random <= 1 && random > .2) {
       this.type = 'rock';
       this.blocking = true;
       this.shadow = true;
-    } else if (random <= .3 && random > .1) {
+    } else if (random <= .2 && random > .1) {
       this.type = 'tree';
       this.blocking = true;
-      this.shadow = true;
+      this.shadow = false;
     } else {
       this.type = 'torch';
-      this.blocking = true;
+      this.blocking = false;
       this.shadow = false;
       this.light = true;
     }

@@ -40,6 +40,7 @@ class SceneGame extends Scene {
     // clear the primary layer
     this.Canvas.primaryLayer.clear();
     this.Canvas.secondaryLayer.clear();
+    this.Canvas.overrideLayer.clear();
   }
 
   /**

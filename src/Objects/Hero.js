@@ -11,7 +11,7 @@ class Hero extends ObjectCircle {
 
     // handle character's directional velocity
     this.velocities = [0, 0, 0, 0];
-    this.maxSpeed = 12; 
+    this.maxSpeed = 18; 
     this.rateOfIncrease = 1 + this.maxSpeed / 100;
     this.rateOfDecrease = 1 + this.maxSpeed;
 

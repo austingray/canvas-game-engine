@@ -23,6 +23,7 @@ class Canvas {
     this.createLayer('background');
     this.createLayer('primary');
     this.createLayer('secondary');
+    this.createLayer('override');
     this.createLayer('shadow');
     this.createLayer('hud');
     this.createLayer('debug');
@@ -32,9 +33,10 @@ class Canvas {
     this.debugKeys = [];
     this.debugText = [];
 
-    // primary and secondary
+    // primary, secondary, override
     this.primaryLayer = this.getLayerByName('primary');
     this.secondaryLayer = this.getLayerByName('secondary');
+    this.overrideLayer = this.getLayerByName('override');
 
     // get reference to shadow layer
     this.shadowLayer = this.getLayerByName('shadow');
@@ -176,59 +178,41 @@ class Canvas {
   }
 
   drawTile(tile) {
-    // draw tiles to the primary layer
-    const ctx = this.primaryLayer.context;
-
     // draw the tile
     const x = tile.x + this.Camera.offsetX;
     const y = tile.y + this.Camera.offsetY;
-    // ctx.beginPath();
-    // ctx.lineWidth = tile.lineWidth;
-    // ctx.lineWidth = 1;
-    
+
+    this.ctx = this.primaryLayer.context
     switch (tile.type) {
       case 'rock':
-        ctx.fillStyle = '#888787';
-        ctx.strokeStyle = '#464242';
+        this.ctx = this.overrideLayer.context
+        this.ctx.fillStyle = '#888787';
+        this.ctx.strokeStyle = '#464242';
         break;
 
       case 'tree':
-        ctx.fillStyle = 'brown';
+        this.ctx.fillStyle = '#008000';
+        this.ctx.strokeStyle = '#063c06';
         break;
       
       case 'desert':
-        ctx.fillStyle = '#e2c55a';
-        ctx.strokeStyle = '#d0ab25';
+        this.ctx.fillStyle = '#e2c55a';
+        this.ctx.strokeStyle = '#d0ab25';
         break;
 
       case 'water':
-        ctx.fillStyle = 'blue';
+        this.ctx.fillStyle = 'blue';
         break;
 
       case 'grass':
       default:
-        ctx.fillStyle = '#008000';
-        ctx.strokeStyle = '#063c06';
+        this.ctx.fillStyle = '#008000';
+        this.ctx.strokeStyle = '#063c06';
         break;
     }
 
-    ctx.fillRect(x, y, tile.width, tile.height);
-
-    if (tile.type === 'tree') {
-      this.ctx = this.secondaryLayer.context
-      this.drawCircle({
-        x: tile.x + 25,
-        y: tile.y + 25,
-        radius: 30,
-        fillStyle: 'rgba(0, 188, 0, .8)',
-        startAngle: Math.PI / 180 * 0,
-        endAngle: Math.PI / 180 * 360,
-        anticlockwise: false,
-      });
-    }
-
     if (tile.type === 'torch') {
-      this.ctx = this.secondaryLayer.context
+      this.ctx = this.primaryLayer.context
       this.drawCircle({
         x: tile.x + 25,
         y: tile.y + 25,
@@ -240,11 +224,32 @@ class Canvas {
       });
     }
 
-    this.ctx = this.primaryLayer.context;
-    
-    // ctx.fill();
-    // ctx.stroke();
-    // ctx.closePath();
+    if (tile.type === 'tree') {
+      this.ctx.fillRect(x, y, tile.width, tile.height);
+      this.ctx = this.secondaryLayer.context;
+      this.drawCircle({
+        x: tile.x + 25,
+        y: tile.y + 25,
+        radius: 15,
+        fillStyle: 'brown',
+        startAngle: Math.PI / 180 * 0,
+        endAngle: Math.PI / 180 * 360,
+        anticlockwise: false,
+      });
+      this.drawCircle({
+        x: tile.x + 25,
+        y: tile.y + 25,
+        radius: 50,
+        fillStyle: 'rgba(40, 202, 0, .8)',
+        startAngle: Math.PI / 180 * 0,
+        endAngle: Math.PI / 180 * 360,
+        anticlockwise: false,
+      });
+    } else {
+      this.ctx.fillRect(x, y, tile.width, tile.height);
+    }
+
+    this.ctx = this.primaryLayer.context;    
   }
 
   /**

@@ -20,7 +20,6 @@ class Layer {
     document.body.appendChild(element);
 
     if (!this.visible) {
-      console.log('hide it');
       element.setAttribute('style', 'display: none;');
     }
 

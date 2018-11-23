@@ -80,7 +80,7 @@ class Map {
     };
 
     // set the amount of visible tiles in each direction
-    const visibleTiles = 10;
+    const visibleTiles = 15;
 
     // get a local matrix
     let x1 = tileX - visibleTiles;

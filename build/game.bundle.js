@@ -26,7 +26,6 @@
       document.body.appendChild(element);
 
       if (!this.visible) {
-        console.log('hide it');
         element.setAttribute('style', 'display: none;');
       }
 
@@ -168,6 +167,7 @@
       this.createLayer('background');
       this.createLayer('primary');
       this.createLayer('secondary');
+      this.createLayer('override');
       this.createLayer('shadow');
       this.createLayer('hud');
       this.createLayer('debug');
@@ -177,9 +177,10 @@
       this.debugKeys = [];
       this.debugText = [];
 
-      // primary and secondary
+      // primary, secondary, override
       this.primaryLayer = this.getLayerByName('primary');
       this.secondaryLayer = this.getLayerByName('secondary');
+      this.overrideLayer = this.getLayerByName('override');
 
       // get reference to shadow layer
       this.shadowLayer = this.getLayerByName('shadow');
@@ -321,59 +322,41 @@
     }
 
     drawTile(tile) {
-      // draw tiles to the primary layer
-      const ctx = this.primaryLayer.context;
-
       // draw the tile
       const x = tile.x + this.Camera.offsetX;
       const y = tile.y + this.Camera.offsetY;
-      // ctx.beginPath();
-      // ctx.lineWidth = tile.lineWidth;
-      // ctx.lineWidth = 1;
-      
+
+      this.ctx = this.primaryLayer.context;
       switch (tile.type) {
         case 'rock':
-          ctx.fillStyle = '#888787';
-          ctx.strokeStyle = '#464242';
+          this.ctx = this.overrideLayer.context;
+          this.ctx.fillStyle = '#888787';
+          this.ctx.strokeStyle = '#464242';
           break;
 
         case 'tree':
-          ctx.fillStyle = 'brown';
+          this.ctx.fillStyle = '#008000';
+          this.ctx.strokeStyle = '#063c06';
           break;
         
         case 'desert':
-          ctx.fillStyle = '#e2c55a';
-          ctx.strokeStyle = '#d0ab25';
+          this.ctx.fillStyle = '#e2c55a';
+          this.ctx.strokeStyle = '#d0ab25';
           break;
 
         case 'water':
-          ctx.fillStyle = 'blue';
+          this.ctx.fillStyle = 'blue';
           break;
 
         case 'grass':
         default:
-          ctx.fillStyle = '#008000';
-          ctx.strokeStyle = '#063c06';
+          this.ctx.fillStyle = '#008000';
+          this.ctx.strokeStyle = '#063c06';
           break;
       }
 
-      ctx.fillRect(x, y, tile.width, tile.height);
-
-      if (tile.type === 'tree') {
-        this.ctx = this.secondaryLayer.context;
-        this.drawCircle({
-          x: tile.x + 25,
-          y: tile.y + 25,
-          radius: 30,
-          fillStyle: 'rgba(0, 188, 0, .8)',
-          startAngle: Math.PI / 180 * 0,
-          endAngle: Math.PI / 180 * 360,
-          anticlockwise: false,
-        });
-      }
-
       if (tile.type === 'torch') {
-        this.ctx = this.secondaryLayer.context;
+        this.ctx = this.primaryLayer.context;
         this.drawCircle({
           x: tile.x + 25,
           y: tile.y + 25,
@@ -385,11 +368,32 @@
         });
       }
 
-      this.ctx = this.primaryLayer.context;
-      
-      // ctx.fill();
-      // ctx.stroke();
-      // ctx.closePath();
+      if (tile.type === 'tree') {
+        this.ctx.fillRect(x, y, tile.width, tile.height);
+        this.ctx = this.secondaryLayer.context;
+        this.drawCircle({
+          x: tile.x + 25,
+          y: tile.y + 25,
+          radius: 15,
+          fillStyle: 'brown',
+          startAngle: Math.PI / 180 * 0,
+          endAngle: Math.PI / 180 * 360,
+          anticlockwise: false,
+        });
+        this.drawCircle({
+          x: tile.x + 25,
+          y: tile.y + 25,
+          radius: 50,
+          fillStyle: 'rgba(40, 202, 0, .8)',
+          startAngle: Math.PI / 180 * 0,
+          endAngle: Math.PI / 180 * 360,
+          anticlockwise: false,
+        });
+      } else {
+        this.ctx.fillRect(x, y, tile.width, tile.height);
+      }
+
+      this.ctx = this.primaryLayer.context;    
     }
 
     /**
@@ -692,7 +696,7 @@
 
       // handle character's directional velocity
       this.velocities = [0, 0, 0, 0];
-      this.maxSpeed = 12; 
+      this.maxSpeed = 18; 
       this.rateOfIncrease = 1 + this.maxSpeed / 100;
       this.rateOfDecrease = 1 + this.maxSpeed;
 
@@ -893,17 +897,17 @@
         this.type = 'grass';
         this.blocking = false;
         this.shadow = false;
-      } else if (random <= 1 && random > .3) {
+      } else if (random <= 1 && random > .2) {
         this.type = 'rock';
         this.blocking = true;
         this.shadow = true;
-      } else if (random <= .3 && random > .1) {
+      } else if (random <= .2 && random > .1) {
         this.type = 'tree';
         this.blocking = true;
-        this.shadow = true;
+        this.shadow = false;
       } else {
         this.type = 'torch';
-        this.blocking = true;
+        this.blocking = false;
         this.shadow = false;
         this.light = true;
       }
@@ -994,7 +998,7 @@
       };
 
       // set the amount of visible tiles in each direction
-      const visibleTiles = 10;
+      const visibleTiles = 15;
 
       // get a local matrix
       let x1 = tileX - visibleTiles;
@@ -1716,6 +1720,7 @@
       // clear the primary layer
       this.Canvas.primaryLayer.clear();
       this.Canvas.secondaryLayer.clear();
+      this.Canvas.overrideLayer.clear();
     }
 
     /**
