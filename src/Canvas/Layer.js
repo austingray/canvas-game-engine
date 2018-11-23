@@ -10,6 +10,7 @@ class Layer {
     this.width = args.width;
     this.height = args.height;
     this.name = args.name;
+    this.visible = (typeof args.visible === 'undefined') ? true : args.visible;
 
     // create the canvas element and add it to the document body
     const element = document.createElement('canvas');
@@ -17,6 +18,11 @@ class Layer {
     element.width = this.width;
     element.height = this.height;
     document.body.appendChild(element);
+
+    if (!this.visible) {
+      console.log('hide it');
+      element.setAttribute('style', 'display: none;');
+    }
 
     // get the context
     this.context = element.getContext(args.context);

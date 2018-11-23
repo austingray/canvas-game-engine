@@ -16,6 +16,7 @@
       this.width = args.width;
       this.height = args.height;
       this.name = args.name;
+      this.visible = (typeof args.visible === 'undefined') ? true : args.visible;
 
       // create the canvas element and add it to the document body
       const element = document.createElement('canvas');
@@ -23,6 +24,11 @@
       element.width = this.width;
       element.height = this.height;
       document.body.appendChild(element);
+
+      if (!this.visible) {
+        console.log('hide it');
+        element.setAttribute('style', 'display: none;');
+      }
 
       // get the context
       this.context = element.getContext(args.context);
@@ -216,12 +222,16 @@
       // context
       const context = (typeof args.context === 'undefined') ? '2d' : args.context;
 
+      // visible
+      const visible = (typeof args.visible === 'undefined') ? true : args.visible;
+
       // add 'er to the stack
       this.layers.push(new Layer(id, {
         name,
         width,
         height,
         context,
+        visible,
       }));
     }
 

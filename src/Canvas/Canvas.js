@@ -77,12 +77,16 @@ class Canvas {
     // context
     const context = (typeof args.context === 'undefined') ? '2d' : args.context;
 
+    // visible
+    const visible = (typeof args.visible === 'undefined') ? true : args.visible;
+
     // add 'er to the stack
     this.layers.push(new Layer(id, {
       name,
       width,
       height,
       context,
+      visible,
     }));
   }
 
