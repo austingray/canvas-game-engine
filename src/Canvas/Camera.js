@@ -22,37 +22,37 @@ class Camera {
   setFocus(object) {
     // if we're at the right edge of the viewport
     if (
-      this.x > (this.width * .7) - this.offsetX
+      this.x > (this.width * .6) - this.offsetX
       && object.x >= this.x
     ) {
-      this.screenPushX = this.width * .7;
+      this.screenPushX = this.width * .6;
       this.offsetX = this.screenPushX - this.x;
     }
 
     // left edge
     if (
-      this.x < (this.width * .3) - this.offsetX
+      this.x < (this.width * .4) - this.offsetX
       && object.x <= this.x
     ) {
-      this.screenPushX = this.width * .3;
+      this.screenPushX = this.width * .4;
       this.offsetX = this.screenPushX - this.x;
     }
 
     // top edge
     if (
-      this.y < (this.height * .3) - this.offsetY
+      this.y < (this.height * .4) - this.offsetY
       && object.y <= this.y
     ) {
-      this.screenPushY = this.height * .3;
+      this.screenPushY = this.height * .4;
       this.offsetY = this.screenPushY - this.y;
     }
 
     // bottom edge
     if (
-      this.y > (this.height * .7) - this.offsetY
+      this.y > (this.height * .6) - this.offsetY
       && object.y >= this.y
     ) {
-      this.screenPushY = this.height * .7;
+      this.screenPushY = this.height * .6;
       this.offsetY = this.screenPushY - this.y;
     }
 

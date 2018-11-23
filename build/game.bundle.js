@@ -70,37 +70,37 @@
     setFocus(object) {
       // if we're at the right edge of the viewport
       if (
-        this.x > (this.width * .7) - this.offsetX
+        this.x > (this.width * .6) - this.offsetX
         && object.x >= this.x
       ) {
-        this.screenPushX = this.width * .7;
+        this.screenPushX = this.width * .6;
         this.offsetX = this.screenPushX - this.x;
       }
 
       // left edge
       if (
-        this.x < (this.width * .3) - this.offsetX
+        this.x < (this.width * .4) - this.offsetX
         && object.x <= this.x
       ) {
-        this.screenPushX = this.width * .3;
+        this.screenPushX = this.width * .4;
         this.offsetX = this.screenPushX - this.x;
       }
 
       // top edge
       if (
-        this.y < (this.height * .3) - this.offsetY
+        this.y < (this.height * .4) - this.offsetY
         && object.y <= this.y
       ) {
-        this.screenPushY = this.height * .3;
+        this.screenPushY = this.height * .4;
         this.offsetY = this.screenPushY - this.y;
       }
 
       // bottom edge
       if (
-        this.y > (this.height * .7) - this.offsetY
+        this.y > (this.height * .6) - this.offsetY
         && object.y >= this.y
       ) {
-        this.screenPushY = this.height * .7;
+        this.screenPushY = this.height * .6;
         this.offsetY = this.screenPushY - this.y;
       }
 
@@ -1507,7 +1507,6 @@
       });
 
       // object shadows
-      this.ctx.globalCompositeOperation = 'source-over';
       this.ctx.fillStyle = 'rgba(0, 0, 0, 1)';
       this.ctx.strokeStyle = 'red';
       this.ctx.lineWidth = '1px';
@@ -1521,13 +1520,26 @@
         ];
 
         // calculate the angle of each line
-        const angles = points.map(point => Object.assign({}, point, {
+        const raw = points.map(point => Object.assign({}, point, {
           angle: Math.atan2(point.y - this.origin.y, point.x - this.origin.x) * 180 / Math.PI,
           distance: this.calculateDistance({x: point.x, y: point.y}, {x: this.origin.x, y: this.origin.y}),
         }));
 
-        // sorty by angle
-        angles.sort((a, b) => {
+        const angles = raw.slice(0).sort((a, b) => {
+          // sort by angle
+          if (b.angle > a.angle) {
+            return 1;
+          }
+
+          if (b.angle < a.angle) {
+            return -1;
+          }
+
+          return 0;
+        });
+
+        const furthest = raw.slice(0).sort((a, b) => {
+          // sort by angle
           if (b.distance > a.distance) {
             return 1;
           }
@@ -1540,60 +1552,99 @@
         });
         
         // distance, lowest to highest
+        this.ctx.globalCompositeOperation = 'source-over';
         this.ctx.beginPath();
-        let min = null;
-        let max = null;
-        angles.forEach((obj, i) => {
+        if (
+          this.origin.x > pos.x2
+          && this.origin.y > pos.y1
+          && this.origin.y < pos.y2
+        ) {
+          let min = this.findNewPoint(angles[2].angle, 1000);
+          let max = this.findNewPoint(angles[1].angle, 1000);
+          this.ctx.moveTo(angles[1].x + offsetX, angles[1].y + offsetY);
+          this.ctx.lineTo(max.x + offsetX, max.y + offsetY);
+          this.ctx.lineTo(min.x + offsetX, min.y + offsetY);
+          this.ctx.lineTo(angles[2].x + offsetX, angles[2].y + offsetY);
+          if (this.origin.y > pos.y1 + pos.width / 2) {
+            this.ctx.lineTo(furthest[0].x + offsetX, furthest[0].y + offsetY);
+            this.ctx.lineTo(furthest[1].x + offsetX, furthest[1].y + offsetY);
+          } else {
+            this.ctx.lineTo(furthest[1].x + offsetX, furthest[1].y + offsetY);
+            this.ctx.lineTo(furthest[0].x + offsetX, furthest[0].y + offsetY);
+          }
+          this.ctx.lineTo(angles[1].x + offsetX, angles[1].y + offsetY);
+        } else {
           if (
-            i === 0
-            || i === 3
+            this.origin.y > pos.y1
+            && this.origin.y < pos.y2
           ) {
-            return;
-          }
-
-          if (i === 1) {
-            min = this.findNewPoint(obj.angle, 1000);
-          }
-
-          if (i === 2) {
-            this.ctx.lineTo(angles[0].x + offsetX, angles[0].y + offsetY);
-          }
-
-          this.ctx.lineTo(obj.x + offsetX, obj.y + offsetY);
-
-          // handle longest
-          if (i === 2) {
-            max = this.findNewPoint(obj.angle, 1000);
+            // handle being left of the object
+            const max = this.findNewPoint(angles[0].angle, 1000);
+            const min = this.findNewPoint(angles[3].angle, 1000);
+            this.ctx.moveTo(angles[0].x + offsetX, angles[0].y + offsetY);
             this.ctx.lineTo(max.x + offsetX, max.y + offsetY);
             this.ctx.lineTo(min.x + offsetX, min.y + offsetY);
+            this.ctx.lineTo(angles[3].x + offsetX, angles[3].y + offsetY);
+            if (this.origin.y > pos.y1 + pos.width / 2) {
+              this.ctx.lineTo(furthest[0].x + offsetX, furthest[0].y + offsetY);
+              this.ctx.lineTo(furthest[1].x + offsetX, furthest[1].y + offsetY);
+            } else {
+              this.ctx.lineTo(furthest[1].x + offsetX, furthest[1].y + offsetY);
+              this.ctx.lineTo(furthest[0].x + offsetX, furthest[0].y + offsetY);
+            }
+            this.ctx.lineTo(angles[0].x + offsetX, angles[0].y + offsetY);
+          } else if ( // above/beneath object
+            this.origin.x > pos.x1
+            && this.origin.x < pos.x2
+          ) {
+            // below the object
+            if (this.origin.y > pos.y1) {
+              // below the object
+              const max = this.findNewPoint(angles[0].angle, 1000);
+              const min = this.findNewPoint(angles[3].angle, 1000);
+              this.ctx.moveTo(angles[0].x + offsetX, angles[0].y + offsetY);
+              this.ctx.lineTo(max.x + offsetX, max.y + offsetY);
+              this.ctx.lineTo(min.x + offsetX, min.y + offsetY);
+              this.ctx.lineTo(angles[3].x + offsetX, angles[3].y + offsetY);
+              if (this.origin.x > pos.x1 + pos.width / 2) {
+                this.ctx.lineTo(furthest[0].x + offsetX, furthest[0].y + offsetY);
+                this.ctx.lineTo(furthest[1].x + offsetX, furthest[1].y + offsetY);
+              } else {
+                this.ctx.lineTo(furthest[1].x + offsetX, furthest[1].y + offsetY);
+                this.ctx.lineTo(furthest[0].x + offsetX, furthest[0].y + offsetY);
+              }
+              this.ctx.lineTo(angles[0].x + offsetX, angles[0].y + offsetY);
+            } else { // above the object
+              // below the object
+              const max = this.findNewPoint(angles[0].angle, 1000);
+              const min = this.findNewPoint(angles[3].angle, 1000);
+              this.ctx.moveTo(angles[0].x + offsetX, angles[0].y + offsetY);
+              this.ctx.lineTo(max.x + offsetX, max.y + offsetY);
+              this.ctx.lineTo(min.x + offsetX, min.y + offsetY);
+              this.ctx.lineTo(angles[3].x + offsetX, angles[3].y + offsetY);
+              if (this.origin.x > pos.x1 + pos.width / 2) {
+                this.ctx.lineTo(furthest[1].x + offsetX, furthest[1].y + offsetY);
+                this.ctx.lineTo(furthest[0].x + offsetX, furthest[0].y + offsetY);
+              } else {
+                this.ctx.lineTo(furthest[0].x + offsetX, furthest[0].y + offsetY);
+                this.ctx.lineTo(furthest[1].x + offsetX, furthest[1].y + offsetY);
+              }
+              this.ctx.lineTo(angles[0].x + offsetX, angles[0].y + offsetY);
+            }
+          } else { // northwest of object
+            const max = this.findNewPoint(angles[0].angle, 1000);
+            const min = this.findNewPoint(angles[3].angle, 1000);
+            this.ctx.moveTo(angles[0].x + offsetX, angles[0].y + offsetY);
+            this.ctx.lineTo(max.x + offsetX, max.y + offsetY);
+            this.ctx.lineTo(min.x + offsetX, min.y + offsetY);
+            this.ctx.lineTo(angles[3].x + offsetX, angles[3].y + offsetY);
+            this.ctx.lineTo(furthest[0].x + offsetX, furthest[0].y + offsetY);
+            this.ctx.lineTo(angles[0].x + offsetX, angles[0].y + offsetY);
           }
-        });
-
+        }
         this.ctx.closePath();
         this.ctx.fill();
-        // this.ctx.stroke();
-
-        // now draw them
-
-        // const drawAngles = [angles[min], angles[max]];
-        
-        // drawAngles.forEach((obj, i) => {
-        //   drawAngles[i].bounds = this.findNewPoint(obj.angle, 1000);
-        // });
-
-        // connect the biggest and smallest angles
-        // this.ctx.moveTo(drawAngles[0].bounds.x + offsetX, drawAngles[0].bounds.y + offsetY);
-        // this.ctx.lineTo(drawAngles[1].bounds.x + offsetX, drawAngles[1].bounds.y + offsetY);
-        // this.ctx.lineTo(drawAngles[1].x + offsetX, drawAngles[1].y + offsetY);
-        // this.ctx.lineTo(drawAngles[0].x + offsetX, drawAngles[0].y + offsetY);
-        // this.ctx.lineTo(drawAngles[0].bounds.x + offsetX, drawAngles[0].bounds.y + offsetY);
       });
-      // this.ctx.stroke();
-
-      // clip blocks
-      // this.ctx.globalCompositeOperation = 'destination-out';
-      // this.ctx.fillStyle = 'black';
-      // this.blocks.forEach(block => this.ctx.fillRect(block.x1 + offsetX, block.y1 + offsetY, block.width, block.height));
     }
 
     findNewPoint(angle, distance) {
