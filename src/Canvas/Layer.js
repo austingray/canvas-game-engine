@@ -18,7 +18,8 @@ class Layer {
     element.height = this.height;
     document.body.appendChild(element);
 
-    this.context = element.getContext('2d');
+    // get the context
+    this.context = element.getContext(args.context);
   }
 
   /**
@@ -27,7 +28,9 @@ class Layer {
    * @memberof Layer
    */
   clear() {
-    this.context.clearRect(0, 0, this.width, this.height);
+    if (typeof this.context.clearRect !== 'undefined') {
+      this.context.clearRect(0, 0, this.width, this.height);
+    }
   }
 }
 

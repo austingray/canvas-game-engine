@@ -8,7 +8,7 @@ import Camera from './Camera';
 class Canvas {
   constructor(args = {}) {
     // set constants
-    this.width = 640;
+    this.width = 1024;
     this.height = 640;
 
     // for consistent spacing off the canvas edge
@@ -22,6 +22,8 @@ class Canvas {
     // create canvas layers
     this.createLayer('background');
     this.createLayer('primary');
+    this.createLayer('secondary');
+    this.createLayer('shadow');
     this.createLayer('hud');
     this.createLayer('debug');
 
@@ -29,6 +31,13 @@ class Canvas {
     this.debugLayer = this.getLayerByName('debug');
     this.debugKeys = [];
     this.debugText = [];
+
+    // primary and secondary
+    this.primaryLayer = this.getLayerByName('primary');
+    this.secondaryLayer = this.getLayerByName('secondary');
+
+    // get reference to shadow layer
+    this.shadowLayer = this.getLayerByName('shadow');
 
     // set a default ctx
     this.ctx = this.layers[1].context;
@@ -46,7 +55,6 @@ class Canvas {
    */
   getLayerByName(name) {
     const debugLayer = this.layers.filter(layer => layer.name === name)[0];
-    console.log(debugLayer);
     return debugLayer;
   }
   
@@ -66,11 +74,15 @@ class Canvas {
     const width = (typeof args.width === 'undefined') ? this.width : args.width;
     const height = (typeof args.height === 'undefined') ? this.height : args.height;
 
+    // context
+    const context = (typeof args.context === 'undefined') ? '2d' : args.context;
+
     // add 'er to the stack
     this.layers.push(new Layer(id, {
       name,
       width,
       height,
+      context,
     }));
   }
 
@@ -128,6 +140,7 @@ class Canvas {
     // offset for camera
     const x = args.x + this.Camera.offsetX;
     const y = args.y + this.Camera.offsetY;
+    const radius = args.radius;
 
     // draw
     this.ctx.fillStyle = args.fillStyle;
@@ -135,16 +148,23 @@ class Canvas {
     this.ctx.arc(
       x,
       y,
-      args.radius,
+      radius,
       args.startAngle,
       args.endAngle,
       args.anticlockwise,
     );
     this.ctx.fill();
-    this.ctx.strokeStyle = '#500050';
-    this.ctx.lineWidth = 1;
-    this.ctx.stroke();
+    // this.ctx.strokeStyle = '#500050';
+    // this.ctx.lineWidth = 1;
+    // this.ctx.stroke();
     this.ctx.closePath();
+  }
+
+  drawDebugLine(p1, p2) {
+    ctx.beginPath();
+    ctx.moveTo(0,0);
+    ctx.lineTo(300,150);
+    ctx.stroke();
   }
 
   drawMap(image) {
@@ -152,13 +172,8 @@ class Canvas {
   }
 
   drawTile(tile) {
-    // bail if the tile is not in viewport
-    if (!this.Camera.inViewport(tile.x, tile.y, tile.x + tile.width, tile.y + tile.height)) {
-      return;
-    }
-
     // draw tiles to the primary layer
-    const ctx = this.layers[1].context;
+    const ctx = this.primaryLayer.context;
 
     // draw the tile
     const x = tile.x + this.Camera.offsetX;
@@ -172,10 +187,18 @@ class Canvas {
         ctx.fillStyle = '#888787';
         ctx.strokeStyle = '#464242';
         break;
+
+      case 'tree':
+        ctx.fillStyle = 'brown';
+        break;
       
       case 'desert':
         ctx.fillStyle = '#e2c55a';
         ctx.strokeStyle = '#d0ab25';
+        break;
+
+      case 'water':
+        ctx.fillStyle = 'blue';
         break;
 
       case 'grass':
@@ -186,6 +209,35 @@ class Canvas {
     }
 
     ctx.fillRect(x, y, tile.width, tile.height);
+
+    if (tile.type === 'tree') {
+      this.ctx = this.secondaryLayer.context
+      this.drawCircle({
+        x: tile.x + 25,
+        y: tile.y + 25,
+        radius: 30,
+        fillStyle: 'rgba(0, 188, 0, .8)',
+        startAngle: Math.PI / 180 * 0,
+        endAngle: Math.PI / 180 * 360,
+        anticlockwise: false,
+      });
+    }
+
+    if (tile.type === 'torch') {
+      this.ctx = this.secondaryLayer.context
+      this.drawCircle({
+        x: tile.x + 25,
+        y: tile.y + 25,
+        radius: 5,
+        fillStyle: 'rgba(255, 155, 0, .5)',
+        startAngle: Math.PI / 180 * 0,
+        endAngle: Math.PI / 180 * 360,
+        anticlockwise: false,
+      });
+    }
+
+    this.ctx = this.primaryLayer.context;
+    
     // ctx.fill();
     // ctx.stroke();
     // ctx.closePath();

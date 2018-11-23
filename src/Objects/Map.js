@@ -2,14 +2,15 @@ import MapTile from './MapTile';
 
 class Map {
   constructor(args, game) {
+    // the tile matrix
     this.tiles = [];
 
     // used for offsetting the map to follow the hero
     this.x = this.y = 0;
 
     // map width and height in tiles
-    this.width = 50;
-    this.height = 50;
+    this.width = 500;
+    this.height = 500;
 
     // single tile width and height in pixels
     this.tileWidth = 50;
@@ -21,15 +22,22 @@ class Map {
 
     // crude tile creation
     for (let i = 0; i < this.width; i++) {
+      const row = [];
       for (let j = 0; j < this.height; j++) {
-        this.tiles.push(new MapTile({
+        row.push(new MapTile({
           x: i * this.tileWidth,
           y: j * this.tileHeight,
           width: this.tileWidth,
           height: this.tileHeight,
         }));
       }
+      this.tiles.push(row);
     }
+
+    // keep track of visible tiles
+    this.visibleTilePos = { x: null, y: null }
+    this.visibleTiles = [];
+    this.updateVisibleTiles(0, 0);
 
     // draw the map and convert to base64
     // this.tiles.forEach(tile => game.Canvas.drawTile(tile));
@@ -40,7 +48,70 @@ class Map {
 
   // draw each tile
   draw(Canvas) {
-    this.tiles.forEach(tile => Canvas.drawTile(tile));
+    this.visibleTiles.forEach(row => {
+      row.forEach(tile => Canvas.drawTile(tile));
+    });
+  }
+
+  /**
+   * Updates the visible tile matrix based off x, y coords
+   *
+   * @param {*} x
+   * @param {*} y
+   * @memberof Map
+   */
+  updateVisibleTiles(x, y) {
+    // get the pixel to tile number
+    const tileX = Math.round(x / this.tileWidth);
+    const tileY = Math.round(y / this.tileHeight);
+
+    // don't update if we haven't changed tiles
+    if (
+      this.visibleTilePos.x === tileX
+      && this.visibleTilePos.y === tileY
+    ) {
+      return;
+    }
+
+    // update to the new tile positions
+    this.visibleTilePos = {
+      x: tileX,
+      y: tileY,
+    };
+
+    // set the amount of visible tiles in each direction
+    const visibleTiles = 10;
+
+    // get a local matrix
+    let x1 = tileX - visibleTiles;
+    let x2 = tileX + visibleTiles;
+    let y1 = tileY - visibleTiles;
+    let y2 = tileY + visibleTiles;
+
+    // clamp
+    if (x1 < 1) {
+      x1 = 0;
+    }
+    if (x2 > this.width) {
+      x2 = this.width;
+    }
+    if (y1 < 1) {
+      y1 = 0;
+    }
+    if (y2 > this.height) {
+      y2 = this.height;
+    }
+
+    // create visible tile matrix
+    this.visibleTiles = [];
+    for (let i = y1; i < y2; i++) {
+      let row = [];
+      for (let j = x1; j < x2; j++) {
+        const tile = this.tiles[j][i];
+        row.push(tile);
+      }
+      this.visibleTiles.push(row);
+    }
   }
 
   /**
@@ -70,16 +141,19 @@ class Map {
     }
 
     // tile blocking
-    for (let i = 0; i < this.tiles.length; i++) {
-      let tile = this.tiles[i];
-      if (tile.blocking) {
-        if (
-          x2 > tile.x
-          && x1 < tile.x + tile.width
-          && y2 > tile.y
-          && y1 < tile.y + tile.height
-        ) {
-          return true;
+    for (let i = 0; i < this.visibleTiles.length; i++) {
+      const row = this.visibleTiles[i];
+      for (let j = 0; j < row.length; j++) {
+        let tile = row[j];
+        if (tile.blocking) {
+          if (
+            x2 > tile.x
+            && x1 < tile.x + tile.width
+            && y2 > tile.y
+            && y1 < tile.y + tile.height
+          ) {
+            return true;
+          }
         }
       }
     }

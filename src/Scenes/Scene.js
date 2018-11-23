@@ -114,7 +114,9 @@ class Scene {
    */
   transitionIn() {
     // clear all layers
-    this.game.Canvas.layers.forEach(layer => layer.clear());
+    this.game.Canvas.layers.forEach(layer => {
+      layer.clear()
+    });
 
     // disable and reenable keyboard on scene transition
     this.game.Keyboard.setDisabled();

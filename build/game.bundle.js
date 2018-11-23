@@ -24,7 +24,8 @@
       element.height = this.height;
       document.body.appendChild(element);
 
-      this.context = element.getContext('2d');
+      // get the context
+      this.context = element.getContext(args.context);
     }
 
     /**
@@ -33,7 +34,9 @@
      * @memberof Layer
      */
     clear() {
-      this.context.clearRect(0, 0, this.width, this.height);
+      if (typeof this.context.clearRect !== 'undefined') {
+        this.context.clearRect(0, 0, this.width, this.height);
+      }
     }
   }
 
@@ -144,7 +147,7 @@
   class Canvas {
     constructor(args = {}) {
       // set constants
-      this.width = 640;
+      this.width = 1024;
       this.height = 640;
 
       // for consistent spacing off the canvas edge
@@ -158,6 +161,8 @@
       // create canvas layers
       this.createLayer('background');
       this.createLayer('primary');
+      this.createLayer('secondary');
+      this.createLayer('shadow');
       this.createLayer('hud');
       this.createLayer('debug');
 
@@ -165,6 +170,13 @@
       this.debugLayer = this.getLayerByName('debug');
       this.debugKeys = [];
       this.debugText = [];
+
+      // primary and secondary
+      this.primaryLayer = this.getLayerByName('primary');
+      this.secondaryLayer = this.getLayerByName('secondary');
+
+      // get reference to shadow layer
+      this.shadowLayer = this.getLayerByName('shadow');
 
       // set a default ctx
       this.ctx = this.layers[1].context;
@@ -182,7 +194,6 @@
      */
     getLayerByName(name) {
       const debugLayer = this.layers.filter(layer => layer.name === name)[0];
-      console.log(debugLayer);
       return debugLayer;
     }
     
@@ -202,11 +213,15 @@
       const width = (typeof args.width === 'undefined') ? this.width : args.width;
       const height = (typeof args.height === 'undefined') ? this.height : args.height;
 
+      // context
+      const context = (typeof args.context === 'undefined') ? '2d' : args.context;
+
       // add 'er to the stack
       this.layers.push(new Layer(id, {
         name,
         width,
         height,
+        context,
       }));
     }
 
@@ -264,6 +279,7 @@
       // offset for camera
       const x = args.x + this.Camera.offsetX;
       const y = args.y + this.Camera.offsetY;
+      const radius = args.radius;
 
       // draw
       this.ctx.fillStyle = args.fillStyle;
@@ -271,16 +287,23 @@
       this.ctx.arc(
         x,
         y,
-        args.radius,
+        radius,
         args.startAngle,
         args.endAngle,
         args.anticlockwise,
       );
       this.ctx.fill();
-      this.ctx.strokeStyle = '#500050';
-      this.ctx.lineWidth = 1;
-      this.ctx.stroke();
+      // this.ctx.strokeStyle = '#500050';
+      // this.ctx.lineWidth = 1;
+      // this.ctx.stroke();
       this.ctx.closePath();
+    }
+
+    drawDebugLine(p1, p2) {
+      ctx.beginPath();
+      ctx.moveTo(0,0);
+      ctx.lineTo(300,150);
+      ctx.stroke();
     }
 
     drawMap(image) {
@@ -288,13 +311,8 @@
     }
 
     drawTile(tile) {
-      // bail if the tile is not in viewport
-      if (!this.Camera.inViewport(tile.x, tile.y, tile.x + tile.width, tile.y + tile.height)) {
-        return;
-      }
-
       // draw tiles to the primary layer
-      const ctx = this.layers[1].context;
+      const ctx = this.primaryLayer.context;
 
       // draw the tile
       const x = tile.x + this.Camera.offsetX;
@@ -308,10 +326,18 @@
           ctx.fillStyle = '#888787';
           ctx.strokeStyle = '#464242';
           break;
+
+        case 'tree':
+          ctx.fillStyle = 'brown';
+          break;
         
         case 'desert':
           ctx.fillStyle = '#e2c55a';
           ctx.strokeStyle = '#d0ab25';
+          break;
+
+        case 'water':
+          ctx.fillStyle = 'blue';
           break;
 
         case 'grass':
@@ -322,6 +348,35 @@
       }
 
       ctx.fillRect(x, y, tile.width, tile.height);
+
+      if (tile.type === 'tree') {
+        this.ctx = this.secondaryLayer.context;
+        this.drawCircle({
+          x: tile.x + 25,
+          y: tile.y + 25,
+          radius: 30,
+          fillStyle: 'rgba(0, 188, 0, .8)',
+          startAngle: Math.PI / 180 * 0,
+          endAngle: Math.PI / 180 * 360,
+          anticlockwise: false,
+        });
+      }
+
+      if (tile.type === 'torch') {
+        this.ctx = this.secondaryLayer.context;
+        this.drawCircle({
+          x: tile.x + 25,
+          y: tile.y + 25,
+          radius: 5,
+          fillStyle: 'rgba(255, 155, 0, .5)',
+          startAngle: Math.PI / 180 * 0,
+          endAngle: Math.PI / 180 * 360,
+          anticlockwise: false,
+        });
+      }
+
+      this.ctx = this.primaryLayer.context;
+      
       // ctx.fill();
       // ctx.stroke();
       // ctx.closePath();
@@ -627,7 +682,7 @@
 
       // handle character's directional velocity
       this.velocities = [0, 0, 0, 0];
-      this.maxSpeed = 22; 
+      this.maxSpeed = 12; 
       this.rateOfIncrease = 1 + this.maxSpeed / 100;
       this.rateOfDecrease = 1 + this.maxSpeed;
 
@@ -674,14 +729,18 @@
           this.x = newX;
         }
 
+        // this.x = Math.round(this.x);
+
         // calculate
         this.game.Canvas.Camera.setFocus({
           x: this.x,
           y: this.y,
         });
 
+        map.updateVisibleTiles(this.x, this.y);
+
         // if we're not close enough to the target Y, keep moving
-        if (difference > 1) {
+        if (difference >= 1) {
           this.targetXTimerHandler(dir, map);
         }
       }, difference / this.inputCooldown);
@@ -718,11 +777,15 @@
           this.y = newY;
         }
 
+        // this.y = Math.round(this.y);
+
         // calculate
         this.game.Canvas.Camera.setFocus({
           x: this.x,
           y: this.y,
         });
+
+        map.updateVisibleTiles(this.x, this.y);
 
         // if we're not close enough to the target Y, keep moving
         if (difference > 1) {
@@ -807,31 +870,51 @@
       // border
       this.lineWidth = '1';
 
+      // is this a light source?
+      this.light = false;
+
       // randomize the tiles for now
       const random = Math.random() * 10;
-      if (random > 9) {
-        this.type = 'desert';
-        this.blocking = false;
-      } else if (random <= 9 && random > .5) {
+      if (random > 9.5) {
+        this.type = 'water';
+        this.blocking = true;
+        this.shadow = false;
+      } else if (random <= 9.5 && random > 1) {
         this.type = 'grass';
         this.blocking = false;
-      } else {
+        this.shadow = false;
+      } else if (random <= 1 && random > .3) {
         this.type = 'rock';
         this.blocking = true;
+        this.shadow = true;
+      } else if (random <= .3 && random > .1) {
+        this.type = 'tree';
+        this.blocking = true;
+        this.shadow = true;
+      } else {
+        this.type = 'torch';
+        this.blocking = true;
+        this.shadow = false;
+        this.light = true;
       }
+    }
+
+    draw(Canvas) {
+      Canvas.drawTile(this);
     }
   }
 
   class Map {
     constructor(args, game) {
+      // the tile matrix
       this.tiles = [];
 
       // used for offsetting the map to follow the hero
       this.x = this.y = 0;
 
       // map width and height in tiles
-      this.width = 50;
-      this.height = 50;
+      this.width = 500;
+      this.height = 500;
 
       // single tile width and height in pixels
       this.tileWidth = 50;
@@ -843,15 +926,22 @@
 
       // crude tile creation
       for (let i = 0; i < this.width; i++) {
+        const row = [];
         for (let j = 0; j < this.height; j++) {
-          this.tiles.push(new MapTile({
+          row.push(new MapTile({
             x: i * this.tileWidth,
             y: j * this.tileHeight,
             width: this.tileWidth,
             height: this.tileHeight,
           }));
         }
+        this.tiles.push(row);
       }
+
+      // keep track of visible tiles
+      this.visibleTilePos = { x: null, y: null };
+      this.visibleTiles = [];
+      this.updateVisibleTiles(0, 0);
 
       // draw the map and convert to base64
       // this.tiles.forEach(tile => game.Canvas.drawTile(tile));
@@ -862,7 +952,70 @@
 
     // draw each tile
     draw(Canvas) {
-      this.tiles.forEach(tile => Canvas.drawTile(tile));
+      this.visibleTiles.forEach(row => {
+        row.forEach(tile => Canvas.drawTile(tile));
+      });
+    }
+
+    /**
+     * Updates the visible tile matrix based off x, y coords
+     *
+     * @param {*} x
+     * @param {*} y
+     * @memberof Map
+     */
+    updateVisibleTiles(x, y) {
+      // get the pixel to tile number
+      const tileX = Math.round(x / this.tileWidth);
+      const tileY = Math.round(y / this.tileHeight);
+
+      // don't update if we haven't changed tiles
+      if (
+        this.visibleTilePos.x === tileX
+        && this.visibleTilePos.y === tileY
+      ) {
+        return;
+      }
+
+      // update to the new tile positions
+      this.visibleTilePos = {
+        x: tileX,
+        y: tileY,
+      };
+
+      // set the amount of visible tiles in each direction
+      const visibleTiles = 10;
+
+      // get a local matrix
+      let x1 = tileX - visibleTiles;
+      let x2 = tileX + visibleTiles;
+      let y1 = tileY - visibleTiles;
+      let y2 = tileY + visibleTiles;
+
+      // clamp
+      if (x1 < 1) {
+        x1 = 0;
+      }
+      if (x2 > this.width) {
+        x2 = this.width;
+      }
+      if (y1 < 1) {
+        y1 = 0;
+      }
+      if (y2 > this.height) {
+        y2 = this.height;
+      }
+
+      // create visible tile matrix
+      this.visibleTiles = [];
+      for (let i = y1; i < y2; i++) {
+        let row = [];
+        for (let j = x1; j < x2; j++) {
+          const tile = this.tiles[j][i];
+          row.push(tile);
+        }
+        this.visibleTiles.push(row);
+      }
     }
 
     /**
@@ -892,16 +1045,19 @@
       }
 
       // tile blocking
-      for (let i = 0; i < this.tiles.length; i++) {
-        let tile = this.tiles[i];
-        if (tile.blocking) {
-          if (
-            x2 > tile.x
-            && x1 < tile.x + tile.width
-            && y2 > tile.y
-            && y1 < tile.y + tile.height
-          ) {
-            return true;
+      for (let i = 0; i < this.visibleTiles.length; i++) {
+        const row = this.visibleTiles[i];
+        for (let j = 0; j < row.length; j++) {
+          let tile = row[j];
+          if (tile.blocking) {
+            if (
+              x2 > tile.x
+              && x1 < tile.x + tile.width
+              && y2 > tile.y
+              && y1 < tile.y + tile.height
+            ) {
+              return true;
+            }
           }
         }
       }
@@ -1090,7 +1246,9 @@
      */
     transitionIn() {
       // clear all layers
-      this.game.Canvas.layers.forEach(layer => layer.clear());
+      this.game.Canvas.layers.forEach(layer => {
+        layer.clear();
+      });
 
       // disable and reenable keyboard on scene transition
       this.game.Keyboard.setDisabled();
@@ -1242,6 +1400,169 @@
     }
   }
 
+  class Shadows {
+    constructor(Canvas, startPos, objects) {
+      this.Canvas = Canvas;
+
+      // where the light will emit from
+      this.origin = {
+        x: startPos.x,
+        y: startPos.y,
+      };
+
+      // get all blocking objects
+      this.blocks = [];
+      this.lights = [];
+      objects.forEach(object => {
+        const obj = {
+          x1: object.x,
+          y1: object.y,
+          x2: object.x + object.width,
+          y2: object.y + object.height,
+          width: object.width,
+          height: object.height,
+        };
+
+        if (object.shadow === true) {
+          this.blocks.push(obj);
+        }
+
+        if (object.light === true) {
+          this.lights.push(obj);
+        }
+      });
+
+      this.ctx = this.Canvas.shadowLayer.context;
+    }
+
+    draw() {
+      this.Canvas.shadowLayer.clear();
+
+      // get the camera offset
+      const offsetX = this.Canvas.Camera.offsetX;
+      const offsetY = this.Canvas.Camera.offsetY;
+
+      this.ctx.globalCompositeOperation = 'source-over';
+
+      // gradient 1
+      const grd = this.ctx.createRadialGradient(
+        this.origin.x + offsetX,
+        this.origin.y + offsetY,
+        0,
+        this.origin.x + offsetX,
+        this.origin.y + offsetY,
+        360
+      );
+      
+      grd.addColorStop(0, 'rgba(0, 0, 0, .1)');
+      grd.addColorStop(0.9, 'rgba(0, 0, 0, .5');
+      this.ctx.fillStyle = grd;
+      this.ctx.fillRect(0, 0, this.Canvas.width, this.Canvas.height);
+
+      // gradient 2
+      this.ctx.globalCompositeOperation = 'source-over';
+      const grd2 = this.ctx.createRadialGradient(
+        this.origin.x + offsetX,
+        this.origin.y + offsetY,
+        0,
+        this.origin.x + offsetX,
+        this.origin.y + offsetY,
+        360
+      );
+      grd2.addColorStop(0, 'rgba(0, 0, 0, .1)');
+      grd2.addColorStop(0.9, 'rgba(0, 0, 0, 1');
+      this.ctx.fillStyle = grd2;
+      this.ctx.fillRect(0, 0, this.Canvas.width, this.Canvas.height);
+
+      // lights
+      this.ctx.globalCompositeOperation = 'destination-out';
+      this.lights.forEach(light => {
+        const gradient = this.ctx.createRadialGradient(
+          light.x1 + offsetX + light.width / 2,
+          light.y1 + offsetY + light.height / 2,
+          0,
+          light.x1 + offsetX + light.width / 2,
+          light.y1 + offsetY + light.height / 2,
+          100
+        );
+        gradient.addColorStop(0, 'rgba(0, 0, 0, .8)');
+        gradient.addColorStop(0.9, 'rgba(0, 0, 0, 0');
+        this.ctx.fillStyle = gradient;
+        this.ctx.fillRect(
+          light.x1 + offsetX - 100 + light.width / 2,
+          light.y1 + offsetY - 100 + light.height / 2,
+          200,
+          200
+        );
+      });
+
+      this.ctx.globalCompositeOperation = 'source-over';
+      
+      this.ctx.beginPath();
+      this.ctx.fillStyle = 'rgba(0, 0, 0, 1)';
+      this.ctx.strokeStyle = 'red';
+      this.ctx.lineWidth = '1px';
+      this.blocks.forEach(pos => {
+        // get all 4 corners
+        const points = [
+          { x: pos.x1, y: pos.y1 },
+          { x: pos.x2, y: pos.y1 },
+          { x: pos.x1, y: pos.y2 },
+          { x: pos.x2, y: pos.y2 },
+        ];
+
+        // calculate the angle of each line
+        const angles = points.map(point => Object.assign({}, point, {
+          angle: Math.atan2(point.y - this.origin.y, point.x - this.origin.x) * 180 / Math.PI,
+        }));
+
+        // get the min and max angles
+        let min = 0;
+        let max = 0;
+        angles.forEach((obj, i) => {
+          if (obj.angle < angles[min].angle) {
+            min = i;
+          }
+
+          if (obj.angle > angles[max].angle) {
+            max = i;
+          }
+        });
+        const drawAngles = [angles[min], angles[max]];
+        
+        drawAngles.forEach((obj, i) => {
+          drawAngles[i].bounds = this.findNewPoint(obj.angle, 1000);
+        });
+
+        // connect the closest and furthest
+        this.ctx.moveTo(drawAngles[0].bounds.x + offsetX, drawAngles[0].bounds.y + offsetY);
+        this.ctx.lineTo(drawAngles[1].bounds.x + offsetX, drawAngles[1].bounds.y + offsetY);
+        this.ctx.lineTo(drawAngles[1].x + offsetX, drawAngles[1].y + offsetY);
+        this.ctx.lineTo(drawAngles[0].x + offsetX, drawAngles[0].y + offsetY);
+        this.ctx.lineTo(drawAngles[0].bounds.x + offsetX, drawAngles[0].bounds.y + offsetY);
+      });
+      this.ctx.closePath();
+      this.ctx.fill();
+
+      // clip blocks
+      // this.ctx.globalCompositeOperation = 'destination-out';
+      // this.ctx.fillStyle = 'black';
+      // this.blocks.forEach(block => this.ctx.fillRect(block.x1 + offsetX, block.y1 + offsetY, block.width, block.height));
+    }
+
+    findNewPoint(angle, distance) {
+      var result = {};
+
+      const x = this.origin.x;
+      const y = this.origin.y;
+
+      result.x = Math.round(Math.cos(angle * Math.PI / 180) * distance + x);
+      result.y = Math.round(Math.sin(angle * Math.PI / 180) * distance + y);
+
+      return result;
+    }
+  }
+
   class SceneGame extends Scene {
     init() {
       this.createMap();
@@ -1270,13 +1591,17 @@
     }
 
     prepareScene() {
-      this.pushToScene(this.map);
+      this.Canvas.ctx.fillStyle = 'black';
+      this.Canvas.ctx.fillRect(0, 0, this.Canvas.width, this.Canvas.height);
+      this.map.visibleTiles.forEach(row => row.forEach(tile => this.pushToScene(tile)));
       this.pushToScene(this.hero);
+      this.pushToScene(new Shadows(this.Canvas, this.hero, this.scene));
     }
 
     clear() {
       // clear the primary layer
-      this.Canvas.layers[1].clear();
+      this.Canvas.primaryLayer.clear();
+      this.Canvas.secondaryLayer.clear();
     }
 
     /**

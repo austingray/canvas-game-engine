@@ -11,7 +11,7 @@ class Hero extends ObjectCircle {
 
     // handle character's directional velocity
     this.velocities = [0, 0, 0, 0];
-    this.maxSpeed = 22; 
+    this.maxSpeed = 12; 
     this.rateOfIncrease = 1 + this.maxSpeed / 100;
     this.rateOfDecrease = 1 + this.maxSpeed;
 
@@ -58,14 +58,18 @@ class Hero extends ObjectCircle {
         this.x = newX;
       }
 
+      // this.x = Math.round(this.x);
+
       // calculate
       this.game.Canvas.Camera.setFocus({
         x: this.x,
         y: this.y,
       });
 
+      map.updateVisibleTiles(this.x, this.y);
+
       // if we're not close enough to the target Y, keep moving
-      if (difference > 1) {
+      if (difference >= 1) {
         this.targetXTimerHandler(dir, map);
       }
     }, difference / this.inputCooldown)
@@ -102,11 +106,15 @@ class Hero extends ObjectCircle {
         this.y = newY;
       }
 
+      // this.y = Math.round(this.y);
+
       // calculate
       this.game.Canvas.Camera.setFocus({
         x: this.x,
         y: this.y,
       });
+
+      map.updateVisibleTiles(this.x, this.y);
 
       // if we're not close enough to the target Y, keep moving
       if (difference > 1) {

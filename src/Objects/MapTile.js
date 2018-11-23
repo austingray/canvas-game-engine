@@ -8,18 +8,37 @@ class MapTile {
     // border
     this.lineWidth = '1';
 
+    // is this a light source?
+    this.light = false;
+
     // randomize the tiles for now
     const random = Math.random() * 10;
-    if (random > 9) {
-      this.type = 'desert';
-      this.blocking = false;
-    } else if (random <= 9 && random > .5) {
+    if (random > 9.5) {
+      this.type = 'water';
+      this.blocking = true;
+      this.shadow = false;
+    } else if (random <= 9.5 && random > 1) {
       this.type = 'grass';
       this.blocking = false;
-    } else {
+      this.shadow = false;
+    } else if (random <= 1 && random > .3) {
       this.type = 'rock';
       this.blocking = true;
+      this.shadow = true;
+    } else if (random <= .3 && random > .1) {
+      this.type = 'tree';
+      this.blocking = true;
+      this.shadow = true;
+    } else {
+      this.type = 'torch';
+      this.blocking = true;
+      this.shadow = false;
+      this.light = true;
     }
+  }
+
+  draw(Canvas) {
+    Canvas.drawTile(this);
   }
 }
 
