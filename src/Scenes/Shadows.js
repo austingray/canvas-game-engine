@@ -94,9 +94,8 @@ class Shadows {
       );
     });
 
+    // object shadows
     this.ctx.globalCompositeOperation = 'source-over';
-    
-    this.ctx.beginPath();
     this.ctx.fillStyle = 'rgba(0, 0, 0, 1)';
     this.ctx.strokeStyle = 'red';
     this.ctx.lineWidth = '1px';
@@ -112,35 +111,72 @@ class Shadows {
       // calculate the angle of each line
       const angles = points.map(point => Object.assign({}, point, {
         angle: Math.atan2(point.y - this.origin.y, point.x - this.origin.x) * 180 / Math.PI,
+        distance: this.calculateDistance({x: point.x, y: point.y}, {x: this.origin.x, y: this.origin.y}),
       }));
 
-      // get the min and max angles
-      let min = 0
-      let max = 0;
-      angles.forEach((obj, i) => {
-        if (obj.angle < angles[min].angle) {
-          min = i;
+      // sorty by angle
+      angles.sort((a, b) => {
+        if (b.distance > a.distance) {
+          return 1;
         }
 
-        if (obj.angle > angles[max].angle) {
-          max = i;
+        if (b.distance < a.distance) {
+          return -1;
         }
+
+        return 0;
       });
-      const drawAngles = [angles[min], angles[max]];
       
-      drawAngles.forEach((obj, i) => {
-        drawAngles[i].bounds = this.findNewPoint(obj.angle, 1000);
+      // distance, lowest to highest
+      this.ctx.beginPath();
+      let min = null;
+      let max = null;
+      angles.forEach((obj, i) => {
+        if (
+          i === 0
+          || i === 3
+        ) {
+          return;
+        }
+
+        if (i === 1) {
+          min = this.findNewPoint(obj.angle, 1000);
+        }
+
+        if (i === 2) {
+          this.ctx.lineTo(angles[0].x + offsetX, angles[0].y + offsetY);
+        }
+
+        this.ctx.lineTo(obj.x + offsetX, obj.y + offsetY);
+
+        // handle longest
+        if (i === 2) {
+          max = this.findNewPoint(obj.angle, 1000);
+          this.ctx.lineTo(max.x + offsetX, max.y + offsetY);
+          this.ctx.lineTo(min.x + offsetX, min.y + offsetY);
+        }
       });
 
-      // connect the closest and furthest
-      this.ctx.moveTo(drawAngles[0].bounds.x + offsetX, drawAngles[0].bounds.y + offsetY);
-      this.ctx.lineTo(drawAngles[1].bounds.x + offsetX, drawAngles[1].bounds.y + offsetY);
-      this.ctx.lineTo(drawAngles[1].x + offsetX, drawAngles[1].y + offsetY);
-      this.ctx.lineTo(drawAngles[0].x + offsetX, drawAngles[0].y + offsetY);
-      this.ctx.lineTo(drawAngles[0].bounds.x + offsetX, drawAngles[0].bounds.y + offsetY);
+      this.ctx.closePath();
+      this.ctx.fill();
+      // this.ctx.stroke();
+
+      // now draw them
+
+      // const drawAngles = [angles[min], angles[max]];
+      
+      // drawAngles.forEach((obj, i) => {
+      //   drawAngles[i].bounds = this.findNewPoint(obj.angle, 1000);
+      // });
+
+      // connect the biggest and smallest angles
+      // this.ctx.moveTo(drawAngles[0].bounds.x + offsetX, drawAngles[0].bounds.y + offsetY);
+      // this.ctx.lineTo(drawAngles[1].bounds.x + offsetX, drawAngles[1].bounds.y + offsetY);
+      // this.ctx.lineTo(drawAngles[1].x + offsetX, drawAngles[1].y + offsetY);
+      // this.ctx.lineTo(drawAngles[0].x + offsetX, drawAngles[0].y + offsetY);
+      // this.ctx.lineTo(drawAngles[0].bounds.x + offsetX, drawAngles[0].bounds.y + offsetY);
     });
-    this.ctx.closePath();
-    this.ctx.fill();
+    // this.ctx.stroke();
 
     // clip blocks
     // this.ctx.globalCompositeOperation = 'destination-out';
@@ -158,6 +194,23 @@ class Shadows {
     result.y = Math.round(Math.sin(angle * Math.PI / 180) * distance + y);
 
     return result;
+  }
+
+  /**
+   * Pythagorean theorem
+   * AKA calculate the distance between two points
+   *
+   * @param {*} pos1
+   * @param {*} pos2
+   * @returns
+   * @memberof Shadows
+   */
+  calculateDistance(pos1, pos2) {
+    const a = pos1.x - pos2.x;
+    const b = pos1.y - pos2.y;
+
+    // return the distance
+    return Math.sqrt(a * a + b * b);
   }
 }
 
