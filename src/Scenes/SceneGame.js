@@ -1,5 +1,4 @@
 import Scene from './Scene';
-import Shadows from './Shadows';
 
 class SceneGame extends Scene {
   init() {
@@ -29,18 +28,22 @@ class SceneGame extends Scene {
   }
 
   prepareScene() {
-    this.Canvas.ctx.fillStyle = 'black';
-    this.Canvas.ctx.fillRect(0, 0, this.Canvas.width, this.Canvas.height);
-    this.map.visibleTiles.forEach(row => row.forEach(tile => this.pushToScene(tile)));
+    // this.Canvas.ctx.fillStyle = 'black';
+    // this.Canvas.ctx.fillRect(0, 0, this.Canvas.width, this.Canvas.height);
+    if (this.map.needsUpdate) {
+      this.map.needsUpdate = false;
+      this.map.visibleTileArray.flat().forEach(tile => this.pushToScene(tile));
+    }
     this.pushToScene(this.hero);
-    this.pushToScene(new Shadows(this.Canvas, this.hero, this.scene));
   }
 
   clear() {
     // clear the primary layer
-    this.Canvas.primaryLayer.clear();
-    this.Canvas.secondaryLayer.clear();
-    this.Canvas.overrideLayer.clear();
+    if (this.map.needsUpdate) {
+      this.Canvas.primaryLayer.clear();
+      this.Canvas.secondaryLayer.clear();
+      this.Canvas.overrideLayer.clear();
+    }
   }
 
   /**

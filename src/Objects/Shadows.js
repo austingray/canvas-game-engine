@@ -1,12 +1,13 @@
 class Shadows {
-  constructor(Canvas, startPos, objects) {
+  constructor(Canvas, origin, objects) {
     this.Canvas = Canvas;
 
     // where the light will emit from
     this.origin = {
-      x: startPos.x,
-      y: startPos.y,
+      x: origin.x,
+      y: origin.y,
     };
+
 
     // get all blocking objects
     this.blocks = [];
@@ -83,7 +84,7 @@ class Shadows {
         light.y1 + offsetY + light.height / 2,
         100
       );
-      gradient.addColorStop(0, 'rgba(0, 0, 0, .8)');
+      gradient.addColorStop(0, `rgba(0, 0, 0, ${Math.random() + .7})`);
       gradient.addColorStop(0.9, 'rgba(0, 0, 0, 0');
       this.ctx.fillStyle = gradient;
       this.ctx.fillRect(

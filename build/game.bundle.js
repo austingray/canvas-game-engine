@@ -158,8 +158,25 @@
       // for consistent spacing off the canvas edge
       this.padding = 24;
 
-      // different <canvas> elements will act as layers for render optimization
-      // each canvas will exist in the layers array
+      // generate all the <canvas> elements
+      this.generateLayers();
+
+      // generate object caches
+      this.generateObjectCaches();
+
+      // set a default ctx
+      this.ctx = this.primaryLayer.context;
+      
+      // camera
+      this.Camera = new Camera(this.width, this.height);
+    }
+
+    /**
+     * Generates all the layers, called in constructor
+     *
+     * @memberof Canvas
+     */
+    generateLayers() {
       this.layers = [];
       this.canvasId = 0;
 
@@ -184,12 +201,15 @@
 
       // get reference to shadow layer
       this.shadowLayer = this.getLayerByName('shadow');
+    }
 
-      // set a default ctx
-      this.ctx = this.layers[1].context;
-      
-      // camera
-      this.Camera = new Camera(this.width, this.height);
+    /**
+     * Generates all object types
+     *
+     * @memberof Canvas
+     */
+    generateObjectCaches() {
+
     }
 
     /**
@@ -275,6 +295,7 @@
      */
     drawDebugText(txt) {
       this.debugLayer.context.font = "18px Arial";
+      this.debugLayer.context.fillStyle = 'white';
       this.debugKeys.forEach((key, i) => {
         this.debugLayer.context.fillText(this.debugText[key], this.padding, this.height - this.padding - i * 18);
       });
@@ -743,8 +764,6 @@
           this.x = newX;
         }
 
-        // this.x = Math.round(this.x);
-
         // calculate
         this.game.Canvas.Camera.setFocus({
           x: this.x,
@@ -752,6 +771,7 @@
         });
 
         map.updateVisibleTiles(this.x, this.y);
+        map.drawShadows();
 
         // if we're not close enough to the target Y, keep moving
         if (difference >= 1) {
@@ -791,8 +811,6 @@
           this.y = newY;
         }
 
-        // this.y = Math.round(this.y);
-
         // calculate
         this.game.Canvas.Camera.setFocus({
           x: this.x,
@@ -800,6 +818,7 @@
         });
 
         map.updateVisibleTiles(this.x, this.y);
+        map.drawShadows();
 
         // if we're not close enough to the target Y, keep moving
         if (difference > 1) {
@@ -876,41 +895,15 @@
 
   class MapTile {
     constructor(args) {
+      this.type = args.type;
       this.x = args.x;
       this.y = args.y;
       this.width = args.width;
       this.height = args.height;
-
-      // border
-      this.lineWidth = '1';
-
-      // is this a light source?
-      this.light = false;
-
-      // randomize the tiles for now
-      const random = Math.random() * 10;
-      if (random > 9.5) {
-        this.type = 'water';
-        this.blocking = true;
-        this.shadow = false;
-      } else if (random <= 9.5 && random > 1) {
-        this.type = 'grass';
-        this.blocking = false;
-        this.shadow = false;
-      } else if (random <= 1 && random > .2) {
-        this.type = 'rock';
-        this.blocking = true;
-        this.shadow = true;
-      } else if (random <= .2 && random > .1) {
-        this.type = 'tree';
-        this.blocking = true;
-        this.shadow = false;
-      } else {
-        this.type = 'torch';
-        this.blocking = false;
-        this.shadow = false;
-        this.light = true;
-      }
+      this.blocking = args.blocking;
+      this.shadow = args.shadow;
+      this.light = args.light;
+      this.objects = [];
     }
 
     draw(Canvas) {
@@ -918,67 +911,421 @@
     }
   }
 
+  class Shadows {
+    constructor(Canvas, origin, objects) {
+      this.Canvas = Canvas;
+
+      // where the light will emit from
+      this.origin = {
+        x: origin.x,
+        y: origin.y,
+      };
+
+
+      // get all blocking objects
+      this.blocks = [];
+      this.lights = [];
+      objects.forEach(object => {
+        const obj = {
+          x1: object.x,
+          y1: object.y,
+          x2: object.x + object.width,
+          y2: object.y + object.height,
+          width: object.width,
+          height: object.height,
+        };
+
+        if (object.shadow === true) {
+          this.blocks.push(obj);
+        }
+
+        if (object.light === true) {
+          this.lights.push(obj);
+        }
+      });
+
+      this.ctx = this.Canvas.shadowLayer.context;
+    }
+
+    draw() {
+      this.Canvas.shadowLayer.clear();
+
+      // get the camera offset
+      const offsetX = this.Canvas.Camera.offsetX;
+      const offsetY = this.Canvas.Camera.offsetY;
+
+      this.ctx.globalCompositeOperation = 'source-over';
+
+      // gradient 1
+      const grd = this.ctx.createRadialGradient(
+        this.origin.x + offsetX,
+        this.origin.y + offsetY,
+        0,
+        this.origin.x + offsetX,
+        this.origin.y + offsetY,
+        360
+      );
+      
+      grd.addColorStop(0, 'rgba(0, 0, 0, .1)');
+      grd.addColorStop(0.9, 'rgba(0, 0, 0, .5');
+      this.ctx.fillStyle = grd;
+      this.ctx.fillRect(0, 0, this.Canvas.width, this.Canvas.height);
+
+      // gradient 2
+      this.ctx.globalCompositeOperation = 'source-over';
+      const grd2 = this.ctx.createRadialGradient(
+        this.origin.x + offsetX,
+        this.origin.y + offsetY,
+        0,
+        this.origin.x + offsetX,
+        this.origin.y + offsetY,
+        360
+      );
+      grd2.addColorStop(0, 'rgba(0, 0, 0, .1)');
+      grd2.addColorStop(0.9, 'rgba(0, 0, 0, 1');
+      this.ctx.fillStyle = grd2;
+      this.ctx.fillRect(0, 0, this.Canvas.width, this.Canvas.height);
+
+      // lights
+      this.ctx.globalCompositeOperation = 'destination-out';
+      this.lights.forEach(light => {
+        const gradient = this.ctx.createRadialGradient(
+          light.x1 + offsetX + light.width / 2,
+          light.y1 + offsetY + light.height / 2,
+          0,
+          light.x1 + offsetX + light.width / 2,
+          light.y1 + offsetY + light.height / 2,
+          100
+        );
+        gradient.addColorStop(0, `rgba(0, 0, 0, ${Math.random() + .7})`);
+        gradient.addColorStop(0.9, 'rgba(0, 0, 0, 0');
+        this.ctx.fillStyle = gradient;
+        this.ctx.fillRect(
+          light.x1 + offsetX - 100 + light.width / 2,
+          light.y1 + offsetY - 100 + light.height / 2,
+          200,
+          200
+        );
+      });
+
+      // object shadows
+      this.ctx.fillStyle = 'rgba(0, 0, 0, 1)';
+      this.ctx.strokeStyle = 'red';
+      this.ctx.lineWidth = '1px';
+      this.blocks.forEach(pos => {
+        // get all 4 corners
+        const points = [
+          { x: pos.x1, y: pos.y1 },
+          { x: pos.x2, y: pos.y1 },
+          { x: pos.x1, y: pos.y2 },
+          { x: pos.x2, y: pos.y2 },
+        ];
+
+        // calculate the angle of each line
+        const raw = points.map(point => Object.assign({}, point, {
+          angle: Math.atan2(point.y - this.origin.y, point.x - this.origin.x) * 180 / Math.PI,
+          distance: this.calculateDistance({x: point.x, y: point.y}, {x: this.origin.x, y: this.origin.y}),
+        }));
+
+        const angles = raw.slice(0).sort((a, b) => {
+          // sort by angle
+          if (b.angle > a.angle) {
+            return 1;
+          }
+
+          if (b.angle < a.angle) {
+            return -1;
+          }
+
+          return 0;
+        });
+
+        const furthest = raw.slice(0).sort((a, b) => {
+          // sort by angle
+          if (b.distance > a.distance) {
+            return 1;
+          }
+
+          if (b.distance < a.distance) {
+            return -1;
+          }
+
+          return 0;
+        });
+        
+        // distance, lowest to highest
+        this.ctx.globalCompositeOperation = 'source-over';
+        this.ctx.beginPath();
+        if (
+          this.origin.x > pos.x2
+          && this.origin.y > pos.y1
+          && this.origin.y < pos.y2
+        ) {
+          let min = this.findNewPoint(angles[2].angle, 1000);
+          let max = this.findNewPoint(angles[1].angle, 1000);
+          this.ctx.moveTo(angles[1].x + offsetX, angles[1].y + offsetY);
+          this.ctx.lineTo(max.x + offsetX, max.y + offsetY);
+          this.ctx.lineTo(min.x + offsetX, min.y + offsetY);
+          this.ctx.lineTo(angles[2].x + offsetX, angles[2].y + offsetY);
+          if (this.origin.y > pos.y1 + pos.width / 2) {
+            this.ctx.lineTo(furthest[0].x + offsetX, furthest[0].y + offsetY);
+            this.ctx.lineTo(furthest[1].x + offsetX, furthest[1].y + offsetY);
+          } else {
+            this.ctx.lineTo(furthest[1].x + offsetX, furthest[1].y + offsetY);
+            this.ctx.lineTo(furthest[0].x + offsetX, furthest[0].y + offsetY);
+          }
+          this.ctx.lineTo(angles[1].x + offsetX, angles[1].y + offsetY);
+        } else {
+          if (
+            this.origin.y > pos.y1
+            && this.origin.y < pos.y2
+          ) {
+            // handle being left of the object
+            const max = this.findNewPoint(angles[0].angle, 1000);
+            const min = this.findNewPoint(angles[3].angle, 1000);
+            this.ctx.moveTo(angles[0].x + offsetX, angles[0].y + offsetY);
+            this.ctx.lineTo(max.x + offsetX, max.y + offsetY);
+            this.ctx.lineTo(min.x + offsetX, min.y + offsetY);
+            this.ctx.lineTo(angles[3].x + offsetX, angles[3].y + offsetY);
+            if (this.origin.y > pos.y1 + pos.width / 2) {
+              this.ctx.lineTo(furthest[0].x + offsetX, furthest[0].y + offsetY);
+              this.ctx.lineTo(furthest[1].x + offsetX, furthest[1].y + offsetY);
+            } else {
+              this.ctx.lineTo(furthest[1].x + offsetX, furthest[1].y + offsetY);
+              this.ctx.lineTo(furthest[0].x + offsetX, furthest[0].y + offsetY);
+            }
+            this.ctx.lineTo(angles[0].x + offsetX, angles[0].y + offsetY);
+          } else if ( // above/beneath object
+            this.origin.x > pos.x1
+            && this.origin.x < pos.x2
+          ) {
+            // below the object
+            if (this.origin.y > pos.y1) {
+              // below the object
+              const max = this.findNewPoint(angles[0].angle, 1000);
+              const min = this.findNewPoint(angles[3].angle, 1000);
+              this.ctx.moveTo(angles[0].x + offsetX, angles[0].y + offsetY);
+              this.ctx.lineTo(max.x + offsetX, max.y + offsetY);
+              this.ctx.lineTo(min.x + offsetX, min.y + offsetY);
+              this.ctx.lineTo(angles[3].x + offsetX, angles[3].y + offsetY);
+              if (this.origin.x > pos.x1 + pos.width / 2) {
+                this.ctx.lineTo(furthest[0].x + offsetX, furthest[0].y + offsetY);
+                this.ctx.lineTo(furthest[1].x + offsetX, furthest[1].y + offsetY);
+              } else {
+                this.ctx.lineTo(furthest[1].x + offsetX, furthest[1].y + offsetY);
+                this.ctx.lineTo(furthest[0].x + offsetX, furthest[0].y + offsetY);
+              }
+              this.ctx.lineTo(angles[0].x + offsetX, angles[0].y + offsetY);
+            } else { // above the object
+              // below the object
+              const max = this.findNewPoint(angles[0].angle, 1000);
+              const min = this.findNewPoint(angles[3].angle, 1000);
+              this.ctx.moveTo(angles[0].x + offsetX, angles[0].y + offsetY);
+              this.ctx.lineTo(max.x + offsetX, max.y + offsetY);
+              this.ctx.lineTo(min.x + offsetX, min.y + offsetY);
+              this.ctx.lineTo(angles[3].x + offsetX, angles[3].y + offsetY);
+              if (this.origin.x > pos.x1 + pos.width / 2) {
+                this.ctx.lineTo(furthest[1].x + offsetX, furthest[1].y + offsetY);
+                this.ctx.lineTo(furthest[0].x + offsetX, furthest[0].y + offsetY);
+              } else {
+                this.ctx.lineTo(furthest[0].x + offsetX, furthest[0].y + offsetY);
+                this.ctx.lineTo(furthest[1].x + offsetX, furthest[1].y + offsetY);
+              }
+              this.ctx.lineTo(angles[0].x + offsetX, angles[0].y + offsetY);
+            }
+          } else { // northwest of object
+            const max = this.findNewPoint(angles[0].angle, 1000);
+            const min = this.findNewPoint(angles[3].angle, 1000);
+            this.ctx.moveTo(angles[0].x + offsetX, angles[0].y + offsetY);
+            this.ctx.lineTo(max.x + offsetX, max.y + offsetY);
+            this.ctx.lineTo(min.x + offsetX, min.y + offsetY);
+            this.ctx.lineTo(angles[3].x + offsetX, angles[3].y + offsetY);
+            this.ctx.lineTo(furthest[0].x + offsetX, furthest[0].y + offsetY);
+            this.ctx.lineTo(angles[0].x + offsetX, angles[0].y + offsetY);
+          }
+        }
+        this.ctx.closePath();
+        this.ctx.fill();
+      });
+    }
+
+    findNewPoint(angle, distance) {
+      var result = {};
+
+      const x = this.origin.x;
+      const y = this.origin.y;
+
+      result.x = Math.round(Math.cos(angle * Math.PI / 180) * distance + x);
+      result.y = Math.round(Math.sin(angle * Math.PI / 180) * distance + y);
+
+      return result;
+    }
+
+    /**
+     * Pythagorean theorem
+     * AKA calculate the distance between two points
+     *
+     * @param {*} pos1
+     * @param {*} pos2
+     * @returns
+     * @memberof Shadows
+     */
+    calculateDistance(pos1, pos2) {
+      const a = pos1.x - pos2.x;
+      const b = pos1.y - pos2.y;
+
+      // return the distance
+      return Math.sqrt(a * a + b * b);
+    }
+  }
+
   class Map {
     constructor(args, game) {
-      // the tile matrix
-      this.tiles = [];
+      this.game = game;
 
-      // used for offsetting the map to follow the hero
-      this.x = this.y = 0;
+      // tiles that will be seen on this map
+      this.tileTypes = [
+        {
+          id: 1,
+          type: 'grass',
+          blocking: false,
+          shadow: false,
+          light: false,
+        },
+        {
+          id: 2,
+          type: 'water',
+          blocking: true,
+          shadow: false,
+          light: false,
+        },
+        {
+          id: 3,
+          type: 'rock',
+          blocking: true,
+          shadow: true,
+          light: false,
+        },
+      ];
+
+      // objects that will be seen on this map
+      this.objects = [
+        {
+          id: 1,
+          type: 'tree',
+          blocking: true,
+          shadow: false,
+          light: false,
+          width: 25,
+          height: 25,
+        },
+        {
+          id: 2,
+          type: 'torch',
+          blocking: false,
+          shadow: false,
+          light: true,
+          width: 10,
+          height: 10,
+        },
+      ];
+
+      // the object array
+      this.objectArray = [];
+
+      // the tile array
+      this.tileArray = [];
 
       // map width and height in tiles
-      this.width = 500;
-      this.height = 500;
+      this.xTotalTiles = 500;
+      this.yTotalTiles = 500;
 
       // single tile width and height in pixels
       this.tileWidth = 50;
       this.tileHeight = 50;
 
       // get the width and height of the map in total pixels
-      this.pixelWidth = this.width * this.tileWidth;
-      this.pixelHeight = this.height * this.tileHeight;
+      this.pixelWidth = this.xTotalTiles * this.tileWidth;
+      this.pixelHeight = this.yTotalTiles * this.tileHeight;
 
-      // crude tile creation
-      for (let i = 0; i < this.width; i++) {
-        const row = [];
-        for (let j = 0; j < this.height; j++) {
-          row.push(new MapTile({
-            x: i * this.tileWidth,
-            y: j * this.tileHeight,
-            width: this.tileWidth,
-            height: this.tileHeight,
-          }));
-        }
-        this.tiles.push(row);
-      }
+      this.generateMap();
 
       // keep track of visible tiles
+      this.visibleTilesPerDirection = 8;
       this.visibleTilePos = { x: null, y: null };
-      this.visibleTiles = [];
+      this.visibleTileArray = [];
       this.updateVisibleTiles(0, 0);
 
       // draw the map and convert to base64
-      // this.tiles.forEach(tile => game.Canvas.drawTile(tile));
+      // this.tileArray.forEach(tile => game.Canvas.drawTile(tile));
       // this.base64encoded = game.Canvas.element.toDataURL();
       // this.image = new Image();
       // this.image.src = this.base64encoded;
     }
 
+    // generates a random map
+    generateMap() {
+      // generate the tiles and objects
+      for (let i = 0; i < this.xTotalTiles; i++) {
+        const row = [];
+        for (let j = 0; j < this.yTotalTiles; j++) {
+          let random = Math.random();
+          let tileIndex = 0;
+          if (random > .1) {
+            // grass
+            tileIndex = 0;
+          } else if (random > .08) {
+            // water
+            tileIndex = 1;
+          } else {
+            // rock
+            tileIndex = 2;
+          }
+          const tile = new MapTile(Object.assign({}, this.tileTypes[tileIndex], {
+            x: i * this.tileWidth,
+            y: j * this.tileHeight,
+            width: this.tileWidth,
+            height: this.tileHeight,
+          }));
+
+          // generate objects
+          random = Math.random();
+          if (!tile.blocking && random < .05) {
+            const x = tile.x; // + random * tile.width;
+            const y = tile.y; // + random * tile.height;
+            let objectIndex = random > .3 ? 0 : 1;
+            const object = new MapTile(Object.assign({}, this.objects[objectIndex], { x, y }));
+            tile.objects.push(object);
+          }
+
+          row.push(tile);
+        }
+        this.tileArray.push(row);
+      }
+    }
+
     // draw each tile
     draw(Canvas) {
-      this.visibleTiles.forEach(row => {
-        row.forEach(tile => Canvas.drawTile(tile));
-      });
+      this.visibleTileArray.flat().forEach(tile => tile.draw(this.game.Canvas));
+    }
+
+    drawShadows() {
+      const scene = this.game.scenes[this.game.currentScene];
+      const origin = { x: scene.hero.x, y: scene.hero.y };
+      const shadows = new Shadows(this.game.Canvas, origin, this.visibleTileArray.flat());
+      shadows.draw();
     }
 
     /**
-     * Updates the visible tile matrix based off x, y coords
+     * Updates the visible tile array based off x, y coords
      *
      * @param {*} x
      * @param {*} y
      * @memberof Map
      */
     updateVisibleTiles(x, y) {
+      this.needsUpdate = true;
+      // TODO: Look into capturing this x,y and setting it as a focus point to be used when drawing shadows??
       // get the pixel to tile number
       const tileX = Math.round(x / this.tileWidth);
       const tileY = Math.round(y / this.tileHeight);
@@ -997,38 +1344,35 @@
         y: tileY,
       };
 
-      // set the amount of visible tiles in each direction
-      const visibleTiles = 15;
-
-      // get a local matrix
-      let x1 = tileX - visibleTiles;
-      let x2 = tileX + visibleTiles;
-      let y1 = tileY - visibleTiles;
-      let y2 = tileY + visibleTiles;
+      // get a local array
+      let x1 = tileX - this.visibleTilesPerDirection;
+      let x2 = tileX + this.visibleTilesPerDirection;
+      let y1 = tileY - this.visibleTilesPerDirection;
+      let y2 = tileY + this.visibleTilesPerDirection;
 
       // clamp
       if (x1 < 1) {
         x1 = 0;
       }
-      if (x2 > this.width) {
-        x2 = this.width;
+      if (x2 > this.xTotalTiles) {
+        x2 = this.xTotalTiles;
       }
       if (y1 < 1) {
         y1 = 0;
       }
-      if (y2 > this.height) {
-        y2 = this.height;
+      if (y2 > this.yTotalTiles) {
+        y2 = this.yTotalTiles;
       }
 
-      // create visible tile matrix
-      this.visibleTiles = [];
+      // create visible tile array
+      this.visibleTileArray = [];
       for (let i = y1; i < y2; i++) {
         let row = [];
         for (let j = x1; j < x2; j++) {
-          const tile = this.tiles[j][i];
+          const tile = this.tileArray[j][i];
           row.push(tile);
         }
-        this.visibleTiles.push(row);
+        this.visibleTileArray.push(row);
       }
     }
 
@@ -1059,8 +1403,8 @@
       }
 
       // tile blocking
-      for (let i = 0; i < this.visibleTiles.length; i++) {
-        const row = this.visibleTiles[i];
+      for (let i = 0; i < this.visibleTileArray.length; i++) {
+        const row = this.visibleTileArray[i];
         for (let j = 0; j < row.length; j++) {
           let tile = row[j];
           if (tile.blocking) {
@@ -1414,273 +1758,6 @@
     }
   }
 
-  class Shadows {
-    constructor(Canvas, startPos, objects) {
-      this.Canvas = Canvas;
-
-      // where the light will emit from
-      this.origin = {
-        x: startPos.x,
-        y: startPos.y,
-      };
-
-      // get all blocking objects
-      this.blocks = [];
-      this.lights = [];
-      objects.forEach(object => {
-        const obj = {
-          x1: object.x,
-          y1: object.y,
-          x2: object.x + object.width,
-          y2: object.y + object.height,
-          width: object.width,
-          height: object.height,
-        };
-
-        if (object.shadow === true) {
-          this.blocks.push(obj);
-        }
-
-        if (object.light === true) {
-          this.lights.push(obj);
-        }
-      });
-
-      this.ctx = this.Canvas.shadowLayer.context;
-    }
-
-    draw() {
-      this.Canvas.shadowLayer.clear();
-
-      // get the camera offset
-      const offsetX = this.Canvas.Camera.offsetX;
-      const offsetY = this.Canvas.Camera.offsetY;
-
-      this.ctx.globalCompositeOperation = 'source-over';
-
-      // gradient 1
-      const grd = this.ctx.createRadialGradient(
-        this.origin.x + offsetX,
-        this.origin.y + offsetY,
-        0,
-        this.origin.x + offsetX,
-        this.origin.y + offsetY,
-        360
-      );
-      
-      grd.addColorStop(0, 'rgba(0, 0, 0, .1)');
-      grd.addColorStop(0.9, 'rgba(0, 0, 0, .5');
-      this.ctx.fillStyle = grd;
-      this.ctx.fillRect(0, 0, this.Canvas.width, this.Canvas.height);
-
-      // gradient 2
-      this.ctx.globalCompositeOperation = 'source-over';
-      const grd2 = this.ctx.createRadialGradient(
-        this.origin.x + offsetX,
-        this.origin.y + offsetY,
-        0,
-        this.origin.x + offsetX,
-        this.origin.y + offsetY,
-        360
-      );
-      grd2.addColorStop(0, 'rgba(0, 0, 0, .1)');
-      grd2.addColorStop(0.9, 'rgba(0, 0, 0, 1');
-      this.ctx.fillStyle = grd2;
-      this.ctx.fillRect(0, 0, this.Canvas.width, this.Canvas.height);
-
-      // lights
-      this.ctx.globalCompositeOperation = 'destination-out';
-      this.lights.forEach(light => {
-        const gradient = this.ctx.createRadialGradient(
-          light.x1 + offsetX + light.width / 2,
-          light.y1 + offsetY + light.height / 2,
-          0,
-          light.x1 + offsetX + light.width / 2,
-          light.y1 + offsetY + light.height / 2,
-          100
-        );
-        gradient.addColorStop(0, 'rgba(0, 0, 0, .8)');
-        gradient.addColorStop(0.9, 'rgba(0, 0, 0, 0');
-        this.ctx.fillStyle = gradient;
-        this.ctx.fillRect(
-          light.x1 + offsetX - 100 + light.width / 2,
-          light.y1 + offsetY - 100 + light.height / 2,
-          200,
-          200
-        );
-      });
-
-      // object shadows
-      this.ctx.fillStyle = 'rgba(0, 0, 0, 1)';
-      this.ctx.strokeStyle = 'red';
-      this.ctx.lineWidth = '1px';
-      this.blocks.forEach(pos => {
-        // get all 4 corners
-        const points = [
-          { x: pos.x1, y: pos.y1 },
-          { x: pos.x2, y: pos.y1 },
-          { x: pos.x1, y: pos.y2 },
-          { x: pos.x2, y: pos.y2 },
-        ];
-
-        // calculate the angle of each line
-        const raw = points.map(point => Object.assign({}, point, {
-          angle: Math.atan2(point.y - this.origin.y, point.x - this.origin.x) * 180 / Math.PI,
-          distance: this.calculateDistance({x: point.x, y: point.y}, {x: this.origin.x, y: this.origin.y}),
-        }));
-
-        const angles = raw.slice(0).sort((a, b) => {
-          // sort by angle
-          if (b.angle > a.angle) {
-            return 1;
-          }
-
-          if (b.angle < a.angle) {
-            return -1;
-          }
-
-          return 0;
-        });
-
-        const furthest = raw.slice(0).sort((a, b) => {
-          // sort by angle
-          if (b.distance > a.distance) {
-            return 1;
-          }
-
-          if (b.distance < a.distance) {
-            return -1;
-          }
-
-          return 0;
-        });
-        
-        // distance, lowest to highest
-        this.ctx.globalCompositeOperation = 'source-over';
-        this.ctx.beginPath();
-        if (
-          this.origin.x > pos.x2
-          && this.origin.y > pos.y1
-          && this.origin.y < pos.y2
-        ) {
-          let min = this.findNewPoint(angles[2].angle, 1000);
-          let max = this.findNewPoint(angles[1].angle, 1000);
-          this.ctx.moveTo(angles[1].x + offsetX, angles[1].y + offsetY);
-          this.ctx.lineTo(max.x + offsetX, max.y + offsetY);
-          this.ctx.lineTo(min.x + offsetX, min.y + offsetY);
-          this.ctx.lineTo(angles[2].x + offsetX, angles[2].y + offsetY);
-          if (this.origin.y > pos.y1 + pos.width / 2) {
-            this.ctx.lineTo(furthest[0].x + offsetX, furthest[0].y + offsetY);
-            this.ctx.lineTo(furthest[1].x + offsetX, furthest[1].y + offsetY);
-          } else {
-            this.ctx.lineTo(furthest[1].x + offsetX, furthest[1].y + offsetY);
-            this.ctx.lineTo(furthest[0].x + offsetX, furthest[0].y + offsetY);
-          }
-          this.ctx.lineTo(angles[1].x + offsetX, angles[1].y + offsetY);
-        } else {
-          if (
-            this.origin.y > pos.y1
-            && this.origin.y < pos.y2
-          ) {
-            // handle being left of the object
-            const max = this.findNewPoint(angles[0].angle, 1000);
-            const min = this.findNewPoint(angles[3].angle, 1000);
-            this.ctx.moveTo(angles[0].x + offsetX, angles[0].y + offsetY);
-            this.ctx.lineTo(max.x + offsetX, max.y + offsetY);
-            this.ctx.lineTo(min.x + offsetX, min.y + offsetY);
-            this.ctx.lineTo(angles[3].x + offsetX, angles[3].y + offsetY);
-            if (this.origin.y > pos.y1 + pos.width / 2) {
-              this.ctx.lineTo(furthest[0].x + offsetX, furthest[0].y + offsetY);
-              this.ctx.lineTo(furthest[1].x + offsetX, furthest[1].y + offsetY);
-            } else {
-              this.ctx.lineTo(furthest[1].x + offsetX, furthest[1].y + offsetY);
-              this.ctx.lineTo(furthest[0].x + offsetX, furthest[0].y + offsetY);
-            }
-            this.ctx.lineTo(angles[0].x + offsetX, angles[0].y + offsetY);
-          } else if ( // above/beneath object
-            this.origin.x > pos.x1
-            && this.origin.x < pos.x2
-          ) {
-            // below the object
-            if (this.origin.y > pos.y1) {
-              // below the object
-              const max = this.findNewPoint(angles[0].angle, 1000);
-              const min = this.findNewPoint(angles[3].angle, 1000);
-              this.ctx.moveTo(angles[0].x + offsetX, angles[0].y + offsetY);
-              this.ctx.lineTo(max.x + offsetX, max.y + offsetY);
-              this.ctx.lineTo(min.x + offsetX, min.y + offsetY);
-              this.ctx.lineTo(angles[3].x + offsetX, angles[3].y + offsetY);
-              if (this.origin.x > pos.x1 + pos.width / 2) {
-                this.ctx.lineTo(furthest[0].x + offsetX, furthest[0].y + offsetY);
-                this.ctx.lineTo(furthest[1].x + offsetX, furthest[1].y + offsetY);
-              } else {
-                this.ctx.lineTo(furthest[1].x + offsetX, furthest[1].y + offsetY);
-                this.ctx.lineTo(furthest[0].x + offsetX, furthest[0].y + offsetY);
-              }
-              this.ctx.lineTo(angles[0].x + offsetX, angles[0].y + offsetY);
-            } else { // above the object
-              // below the object
-              const max = this.findNewPoint(angles[0].angle, 1000);
-              const min = this.findNewPoint(angles[3].angle, 1000);
-              this.ctx.moveTo(angles[0].x + offsetX, angles[0].y + offsetY);
-              this.ctx.lineTo(max.x + offsetX, max.y + offsetY);
-              this.ctx.lineTo(min.x + offsetX, min.y + offsetY);
-              this.ctx.lineTo(angles[3].x + offsetX, angles[3].y + offsetY);
-              if (this.origin.x > pos.x1 + pos.width / 2) {
-                this.ctx.lineTo(furthest[1].x + offsetX, furthest[1].y + offsetY);
-                this.ctx.lineTo(furthest[0].x + offsetX, furthest[0].y + offsetY);
-              } else {
-                this.ctx.lineTo(furthest[0].x + offsetX, furthest[0].y + offsetY);
-                this.ctx.lineTo(furthest[1].x + offsetX, furthest[1].y + offsetY);
-              }
-              this.ctx.lineTo(angles[0].x + offsetX, angles[0].y + offsetY);
-            }
-          } else { // northwest of object
-            const max = this.findNewPoint(angles[0].angle, 1000);
-            const min = this.findNewPoint(angles[3].angle, 1000);
-            this.ctx.moveTo(angles[0].x + offsetX, angles[0].y + offsetY);
-            this.ctx.lineTo(max.x + offsetX, max.y + offsetY);
-            this.ctx.lineTo(min.x + offsetX, min.y + offsetY);
-            this.ctx.lineTo(angles[3].x + offsetX, angles[3].y + offsetY);
-            this.ctx.lineTo(furthest[0].x + offsetX, furthest[0].y + offsetY);
-            this.ctx.lineTo(angles[0].x + offsetX, angles[0].y + offsetY);
-          }
-        }
-        this.ctx.closePath();
-        this.ctx.fill();
-      });
-    }
-
-    findNewPoint(angle, distance) {
-      var result = {};
-
-      const x = this.origin.x;
-      const y = this.origin.y;
-
-      result.x = Math.round(Math.cos(angle * Math.PI / 180) * distance + x);
-      result.y = Math.round(Math.sin(angle * Math.PI / 180) * distance + y);
-
-      return result;
-    }
-
-    /**
-     * Pythagorean theorem
-     * AKA calculate the distance between two points
-     *
-     * @param {*} pos1
-     * @param {*} pos2
-     * @returns
-     * @memberof Shadows
-     */
-    calculateDistance(pos1, pos2) {
-      const a = pos1.x - pos2.x;
-      const b = pos1.y - pos2.y;
-
-      // return the distance
-      return Math.sqrt(a * a + b * b);
-    }
-  }
-
   class SceneGame extends Scene {
     init() {
       this.createMap();
@@ -1709,18 +1786,22 @@
     }
 
     prepareScene() {
-      this.Canvas.ctx.fillStyle = 'black';
-      this.Canvas.ctx.fillRect(0, 0, this.Canvas.width, this.Canvas.height);
-      this.map.visibleTiles.forEach(row => row.forEach(tile => this.pushToScene(tile)));
+      // this.Canvas.ctx.fillStyle = 'black';
+      // this.Canvas.ctx.fillRect(0, 0, this.Canvas.width, this.Canvas.height);
+      if (this.map.needsUpdate) {
+        this.map.needsUpdate = false;
+        this.map.visibleTileArray.flat().forEach(tile => this.pushToScene(tile));
+      }
       this.pushToScene(this.hero);
-      this.pushToScene(new Shadows(this.Canvas, this.hero, this.scene));
     }
 
     clear() {
       // clear the primary layer
-      this.Canvas.primaryLayer.clear();
-      this.Canvas.secondaryLayer.clear();
-      this.Canvas.overrideLayer.clear();
+      if (this.map.needsUpdate) {
+        this.Canvas.primaryLayer.clear();
+        this.Canvas.secondaryLayer.clear();
+        this.Canvas.overrideLayer.clear();
+      }
     }
 
     /**
@@ -2020,6 +2101,8 @@
     // debug stuff
     this.debug = true;
     this.frameCount = 0;
+    this.timestamp = 0;
+    this.fps = 0;
 
     // input handler
     this.Keyboard = new KeyboardController();
@@ -2040,16 +2123,16 @@
     /**
      * Calls request animation frame and the update function
      */
-    this.loop = () => {
+    this.loop = (timestamp) => {
       window.requestAnimationFrame( this.loop );
-      this.update();
+      this.update(timestamp);
     };
 
     /**
      * Gets called once per frame
      * This is where the logic goes
      */
-    this.update = () => {
+    this.update = (timestamp) => {
       // get the current scene
       const scene = this.scenes[this.currentScene];
 
@@ -2069,8 +2152,10 @@
       // maybe show debug info
       if (this.debug) {
         this.frameCount++;
+        const delta = (timestamp - this.timestamp) / 1000;
+        this.timestamp = timestamp;
         this.Canvas.pushDebugText('keys', `Active Keys: [${this.Keyboard.activeKeys}]`);
-        this.Canvas.pushDebugText('frames', `Total frames: ${this.frameCount}`);
+        this.Canvas.pushDebugText('fps', `FPS: ${1 / delta}`);
         this.Canvas.drawDebugText();
       }
     };

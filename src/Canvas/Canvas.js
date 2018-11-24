@@ -14,8 +14,25 @@ class Canvas {
     // for consistent spacing off the canvas edge
     this.padding = 24;
 
-    // different <canvas> elements will act as layers for render optimization
-    // each canvas will exist in the layers array
+    // generate all the <canvas> elements
+    this.generateLayers();
+
+    // generate object caches
+    this.generateObjectCaches();
+
+    // set a default ctx
+    this.ctx = this.primaryLayer.context;
+    
+    // camera
+    this.Camera = new Camera(this.width, this.height);
+  }
+
+  /**
+   * Generates all the layers, called in constructor
+   *
+   * @memberof Canvas
+   */
+  generateLayers() {
     this.layers = [];
     this.canvasId = 0;
 
@@ -40,12 +57,15 @@ class Canvas {
 
     // get reference to shadow layer
     this.shadowLayer = this.getLayerByName('shadow');
+  }
 
-    // set a default ctx
-    this.ctx = this.layers[1].context;
-    
-    // camera
-    this.Camera = new Camera(this.width, this.height);
+  /**
+   * Generates all object types
+   *
+   * @memberof Canvas
+   */
+  generateObjectCaches() {
+
   }
 
   /**
@@ -131,6 +151,7 @@ class Canvas {
    */
   drawDebugText(txt) {
     this.debugLayer.context.font = "18px Arial";
+    this.debugLayer.context.fillStyle = 'white';
     this.debugKeys.forEach((key, i) => {
       this.debugLayer.context.fillText(this.debugText[key], this.padding, this.height - this.padding - i * 18);
     });

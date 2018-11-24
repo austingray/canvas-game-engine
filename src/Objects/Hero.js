@@ -58,8 +58,6 @@ class Hero extends ObjectCircle {
         this.x = newX;
       }
 
-      // this.x = Math.round(this.x);
-
       // calculate
       this.game.Canvas.Camera.setFocus({
         x: this.x,
@@ -67,6 +65,7 @@ class Hero extends ObjectCircle {
       });
 
       map.updateVisibleTiles(this.x, this.y);
+      map.drawShadows();
 
       // if we're not close enough to the target Y, keep moving
       if (difference >= 1) {
@@ -106,8 +105,6 @@ class Hero extends ObjectCircle {
         this.y = newY;
       }
 
-      // this.y = Math.round(this.y);
-
       // calculate
       this.game.Canvas.Camera.setFocus({
         x: this.x,
@@ -115,6 +112,7 @@ class Hero extends ObjectCircle {
       });
 
       map.updateVisibleTiles(this.x, this.y);
+      map.drawShadows();
 
       // if we're not close enough to the target Y, keep moving
       if (difference > 1) {

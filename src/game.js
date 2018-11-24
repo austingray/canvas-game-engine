@@ -10,6 +10,8 @@ function game() {
   // debug stuff
   this.debug = true;
   this.frameCount = 0;
+  this.timestamp = 0;
+  this.fps = 0;
 
   // input handler
   this.Keyboard = new Keyboard();
@@ -30,16 +32,16 @@ function game() {
   /**
    * Calls request animation frame and the update function
    */
-  this.loop = () => {
+  this.loop = (timestamp) => {
     window.requestAnimationFrame( this.loop );
-    this.update();
+    this.update(timestamp);
   }
 
   /**
    * Gets called once per frame
    * This is where the logic goes
    */
-  this.update = () => {
+  this.update = (timestamp) => {
     // get the current scene
     const scene = this.scenes[this.currentScene];
 
@@ -59,8 +61,10 @@ function game() {
     // maybe show debug info
     if (this.debug) {
       this.frameCount++;
+      const delta = (timestamp - this.timestamp) / 1000;
+      this.timestamp = timestamp;
       this.Canvas.pushDebugText('keys', `Active Keys: [${this.Keyboard.activeKeys}]`);
-      this.Canvas.pushDebugText('frames', `Total frames: ${this.frameCount}`);
+      this.Canvas.pushDebugText('fps', `FPS: ${1 / delta}`);
       this.Canvas.drawDebugText();
     }
   }
