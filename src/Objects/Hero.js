@@ -121,8 +121,6 @@ class Hero extends ObjectCircle {
     });
 
     this.map.needsUpdate = true;
-    this.map.calculateVisibleTiles(this.x, this.y);
-    this.map.drawShadows();
   }
 
   /**

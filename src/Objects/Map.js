@@ -96,9 +96,12 @@ class Map {
     // create a map array the length of the total tiles
     // start a -1. Any tile that tries reference that position
     // in the map array will create the "not a tile" tile...
-    for (let i = -1; i < this.totalTiles; i++) {
-      this.mapArray[i] = -1;
-    }
+    // for (let i = -1; i < this.totalTiles; i++) {
+    //   this.mapArray[i] = -1;
+    // }
+
+    //
+    this.mapArray = [];
 
     // stores references to indexes in the tile array
     for (let i = 0; i < this.visibleTilesPerDirection * this.visibleTilesPerDirection; i++) {
@@ -112,9 +115,16 @@ class Map {
 
   draw(Canvas) {
     if (this.needsUpdate) {
+      // calculate the visible tiles
+      this.calculateVisibleTiles();
+
+      // draw the tiles
       for (var i = 0; i < this.visibleTileArray.length; i++) {
         Canvas.drawTile(this.visibleTileArray[i]);
       }
+
+      // cast the shadows
+      this.drawShadows();
     }
   }
 
@@ -144,11 +154,7 @@ class Map {
    * @param {*} y
    * @memberof Map
    */
-  calculateVisibleTiles(x, y) {
-    // signal to the scene that we need to draw the visible tiles
-    // TODO: Look into capturing this x,y and setting it as a focus point to be used when drawing shadows??
-    // TODO: Streamline the drawing logic, it's getting tangled up and convoluted
-    
+  calculateVisibleTiles(x = this.game.Canvas.Camera.x, y = this.game.Canvas.Camera.y) {    
     // get the pixel to tile number
     const tileX = Math.round(x / this.tileWidth);
     const tileY = Math.round(y / this.tileHeight);
@@ -195,7 +201,7 @@ class Map {
         // if the map array value is -1
         // then it has not been visible yet
         // create a tile at that index
-        if ( -1 === this.mapArray[mapIndex] ) {
+        if (typeof this.mapArray[mapIndex] === 'undefined') {
           const tile = this.TileUtil.create({
             x: i,
             y: j,
