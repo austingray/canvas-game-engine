@@ -19,6 +19,7 @@ class SceneGame extends Scene {
       y: 25,
       radius: 25,
       fillStyle: '#800080',
+      map: this.map,
     });
 
     // set focus to hero

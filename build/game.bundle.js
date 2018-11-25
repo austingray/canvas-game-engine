@@ -554,7 +554,7 @@
       this.endAngle = Math.PI / 180 * 360;
       this.anticlockwise = false;
 
-      this.init();
+      this.init(args.map);
     }
 
     draw(Canvas) {
@@ -707,7 +707,9 @@
   }
 
   class Hero extends ObjectCircle {
-    init() {
+    init(map) {
+      this.map = map;
+
       // allows keyboard input to the character
       this.allowInput = true;
 
@@ -735,15 +737,15 @@
      * Handles easing on the X axis
      *
      * @param {*} dir
-     * @param {*} map
+     * @param {*} this.map
      * @memberof Hero
      */
-    targetXTimerHandler(dir, map) {
+    targetXTimerHandler(dir) {
       // clear the existing timer
       clearTimeout(this.targetXTimer);
 
       // get the difference between the current y and the target y
-      const difference = Math.abs(this.x - this.targetX);
+      let difference = Math.abs(this.x - this.targetX);
 
       // set a new timer
       this.targetXTimer = setTimeout(() => {
@@ -753,29 +755,20 @@
           : this.x - (difference / this.inputCooldown); 
 
         // handle collision
-        const collision = map.getCollision(newX, this.y);
+        const collision = this.map.getCollision(newX, this.y);
 
         if (collision) {
           this.targetX = this.x;
-          // reset velocity on collision
-          // this.velocities[1] = 0;
-          // this.velocities[3] = 0;
+          difference = 0;
         } else {
           this.x = newX;
         }
 
-        // calculate
-        this.game.Canvas.Camera.setFocus({
-          x: this.x,
-          y: this.y,
-        });
-
-        map.calculateVisibleTiles(this.x, this.y);
-        map.drawShadows();
+        this.afterEaseMovement();
 
         // if we're not close enough to the target Y, keep moving
-        if (difference >= 1) {
-          this.targetXTimerHandler(dir, map);
+        if (difference > 1) {
+          this.targetXTimerHandler(dir, this.map);
         }
       }, difference / this.inputCooldown);
     }
@@ -784,15 +777,14 @@
      * Handles easing on the Y axis
      *
      * @param {*} dir
-     * @param {*} map
      * @memberof Hero
      */
-    targetYTimerHandler(dir, map) {
+    targetYTimerHandler(dir) {
       // clear the existing timer
       clearTimeout(this.targetYTimer);
 
       // get the difference between the current y and the target y
-      const difference = Math.abs(this.y - this.targetY);
+      let difference = Math.abs(this.y - this.targetY);
 
       // set a new timer
       this.targetYTimer = setTimeout(() => {
@@ -802,40 +794,52 @@
           : this.y + (difference / this.inputCooldown);
 
         // handle collision
-        const collision = map.getCollision(this.x, newY);
+        const collision = this.map.getCollision(this.x, newY);
 
         if (collision) {
           this.targetY = this.y;
+          difference = 0;
         } else {
-          // update the y
           this.y = newY;
         }
 
-        // calculate
-        this.game.Canvas.Camera.setFocus({
-          x: this.x,
-          y: this.y,
-        });
-
-        map.calculateVisibleTiles(this.x, this.y);
-        map.drawShadows();
+        this.afterEaseMovement();
 
         // if we're not close enough to the target Y, keep moving
         if (difference > 1) {
-          this.targetYTimerHandler(dir, map);
+          this.targetYTimerHandler(dir, this.map);
+        } else {
+          this.map.needsUpdate = false;
         }
       }, difference / this.inputCooldown);
+    }
+
+    /**
+     * Additional actions to perform after movement easing is calculated
+     *
+     * @memberof Hero
+     */
+    afterEaseMovement() {
+      // calculate
+      this.game.Canvas.Camera.setFocus({
+        x: this.x,
+        y: this.y,
+      });
+
+      this.map.needsUpdate = true;
+      this.map.calculateVisibleTiles(this.x, this.y);
+      this.map.drawShadows();
     }
 
     /**
      * Handle input for the hero
      *
      * @param {*} activeKeys
-     * @param {*} map
+     * @param {*} this.map
      * @returns
      * @memberof Hero
      */
-    handleInput(Keyboard, map) {
+    handleInput(Keyboard) {
       // bail if input is disabled
       if (!this.allowInput) {
         return;
@@ -860,7 +864,7 @@
                 ? this.y - this.velocities[i] // up
                 : this.y + this.velocities[i]; // down
               
-              this.targetYTimerHandler(i, map);
+              this.targetYTimerHandler(i);
             } else {
               this.velocities[i] = 0;
             }
@@ -874,7 +878,7 @@
                 ? this.x + this.velocities[i] // right
                 : this.x - this.velocities[i]; // left
               
-              this.targetXTimerHandler(i, map);
+              this.targetXTimerHandler(i);
             } else {
               this.velocities[i] = 0;
             }
@@ -997,7 +1001,10 @@
       this.ctx.fillStyle = 'rgba(0, 0, 0, 1)';
       this.ctx.strokeStyle = 'red';
       this.ctx.lineWidth = '1px';
-      this.blocks.forEach(pos => {
+
+      for (let i = 0; i < this.blocks.length; i++) {
+        const pos = this.blocks[i];
+
         // get all 4 corners
         const points = [
           { x: pos.x1, y: pos.y1 },
@@ -1006,52 +1013,83 @@
           { x: pos.x2, y: pos.y2 },
         ];
 
-        // calculate the angle of each line
-        const raw = points.map(point => Object.assign({}, point, {
-          angle: Math.atan2(point.y - this.origin.y, point.x - this.origin.x) * 180 / Math.PI,
-          distance: this.calculateDistance({x: point.x, y: point.y}, {x: this.origin.x, y: this.origin.y}),
-        }));
+        this.drawShadows(points, pos, offsetX, offsetY);
+      }
+    }
 
-        const angles = raw.slice(0).sort((a, b) => {
-          // sort by angle
-          if (b.angle > a.angle) {
-            return 1;
-          }
+    drawShadows(points, pos, offsetX, offsetY) {
+      
+      this.ctx.globalCompositeOperation = 'source-over';
+      
+      // calculate the angle of each line
+      const raw = points.map(point => Object.assign({}, point, {
+        angle: this.calculateAngle(point),
+        distance: this.calculateDistance(point),
+      }));
 
-          if (b.angle < a.angle) {
-            return -1;
-          }
+      const minMaxDistance = 500;
 
-          return 0;
-        });
+      const angles = raw.slice(0).sort((a, b) => {
+        // sort by angle
+        if (b.angle > a.angle) {
+          return 1;
+        }
 
-        const furthest = raw.slice(0).sort((a, b) => {
-          // sort by angle
-          if (b.distance > a.distance) {
-            return 1;
-          }
+        if (b.angle < a.angle) {
+          return -1;
+        }
 
-          if (b.distance < a.distance) {
-            return -1;
-          }
+        return 0;
+      });
 
-          return 0;
-        });
-        
-        // distance, lowest to highest
-        this.ctx.globalCompositeOperation = 'source-over';
-        this.ctx.beginPath();
+      const furthest = raw.slice(0).sort((a, b) => {
+        // sort by angle
+        if (b.distance > a.distance) {
+          return 1;
+        }
+
+        if (b.distance < a.distance) {
+          return -1;
+        }
+
+        return 0;
+      });
+      
+      // TODO: Don't read this next block of code
+      // TODO: it's just a bunch of spaghett
+      this.ctx.fillStyle = `rgb(0, 0, 0)`;
+      this.ctx.beginPath();
+      if (
+        this.origin.x > pos.x2
+        && this.origin.y > pos.y1
+        && this.origin.y < pos.y2
+      ) {
+        let min = this.calculatePoint(angles[2].angle, minMaxDistance);
+        let max = this.calculatePoint(angles[1].angle, minMaxDistance);
+        this.ctx.moveTo(angles[1].x + offsetX, angles[1].y + offsetY);
+        this.ctx.lineTo(max.x + offsetX, max.y + offsetY);
+        this.ctx.lineTo(min.x + offsetX, min.y + offsetY);
+        this.ctx.lineTo(angles[2].x + offsetX, angles[2].y + offsetY);
+        if (this.origin.y > pos.y1 + pos.width / 2) {
+          this.ctx.lineTo(furthest[0].x + offsetX, furthest[0].y + offsetY);
+          this.ctx.lineTo(furthest[1].x + offsetX, furthest[1].y + offsetY);
+        } else {
+          this.ctx.lineTo(furthest[1].x + offsetX, furthest[1].y + offsetY);
+          this.ctx.lineTo(furthest[0].x + offsetX, furthest[0].y + offsetY);
+        }
+        this.ctx.lineTo(angles[1].x + offsetX, angles[1].y + offsetY);
+      } else {
         if (
-          this.origin.x > pos.x2
-          && this.origin.y > pos.y1
+          this.origin.y > pos.y1
           && this.origin.y < pos.y2
         ) {
-          let min = this.findNewPoint(angles[2].angle, 1000);
-          let max = this.findNewPoint(angles[1].angle, 1000);
-          this.ctx.moveTo(angles[1].x + offsetX, angles[1].y + offsetY);
+          // handle being left of the object
+          const max = this.calculatePoint(angles[0].angle, minMaxDistance);
+          const min = this.calculatePoint(angles[3].angle, minMaxDistance);
+          this.ctx.moveTo(angles[0].x + offsetX, angles[0].y + offsetY);
           this.ctx.lineTo(max.x + offsetX, max.y + offsetY);
           this.ctx.lineTo(min.x + offsetX, min.y + offsetY);
-          this.ctx.lineTo(angles[2].x + offsetX, angles[2].y + offsetY);
+          this.ctx.lineTo(angles[3].x + offsetX, angles[3].y + offsetY);
           if (this.origin.y > pos.y1 + pos.width / 2) {
             this.ctx.lineTo(furthest[0].x + offsetX, furthest[0].y + offsetY);
             this.ctx.lineTo(furthest[1].x + offsetX, furthest[1].y + offsetY);
@@ -1059,20 +1097,21 @@
             this.ctx.lineTo(furthest[1].x + offsetX, furthest[1].y + offsetY);
             this.ctx.lineTo(furthest[0].x + offsetX, furthest[0].y + offsetY);
           }
-          this.ctx.lineTo(angles[1].x + offsetX, angles[1].y + offsetY);
-        } else {
-          if (
-            this.origin.y > pos.y1
-            && this.origin.y < pos.y2
-          ) {
-            // handle being left of the object
-            const max = this.findNewPoint(angles[0].angle, 1000);
-            const min = this.findNewPoint(angles[3].angle, 1000);
+          this.ctx.lineTo(angles[0].x + offsetX, angles[0].y + offsetY);
+        } else if ( // above/beneath object
+          this.origin.x > pos.x1
+          && this.origin.x < pos.x2
+        ) {
+          // below the object
+          if (this.origin.y > pos.y1) {
+            // below the object
+            const max = this.calculatePoint(angles[0].angle, minMaxDistance);
+            const min = this.calculatePoint(angles[3].angle, minMaxDistance);
             this.ctx.moveTo(angles[0].x + offsetX, angles[0].y + offsetY);
             this.ctx.lineTo(max.x + offsetX, max.y + offsetY);
             this.ctx.lineTo(min.x + offsetX, min.y + offsetY);
             this.ctx.lineTo(angles[3].x + offsetX, angles[3].y + offsetY);
-            if (this.origin.y > pos.y1 + pos.width / 2) {
+            if (this.origin.x > pos.x1 + pos.width / 2) {
               this.ctx.lineTo(furthest[0].x + offsetX, furthest[0].y + offsetY);
               this.ctx.lineTo(furthest[1].x + offsetX, furthest[1].y + offsetY);
             } else {
@@ -1080,82 +1119,75 @@
               this.ctx.lineTo(furthest[0].x + offsetX, furthest[0].y + offsetY);
             }
             this.ctx.lineTo(angles[0].x + offsetX, angles[0].y + offsetY);
-          } else if ( // above/beneath object
-            this.origin.x > pos.x1
-            && this.origin.x < pos.x2
-          ) {
+          } else { // above the object
             // below the object
-            if (this.origin.y > pos.y1) {
-              // below the object
-              const max = this.findNewPoint(angles[0].angle, 1000);
-              const min = this.findNewPoint(angles[3].angle, 1000);
-              this.ctx.moveTo(angles[0].x + offsetX, angles[0].y + offsetY);
-              this.ctx.lineTo(max.x + offsetX, max.y + offsetY);
-              this.ctx.lineTo(min.x + offsetX, min.y + offsetY);
-              this.ctx.lineTo(angles[3].x + offsetX, angles[3].y + offsetY);
-              if (this.origin.x > pos.x1 + pos.width / 2) {
-                this.ctx.lineTo(furthest[0].x + offsetX, furthest[0].y + offsetY);
-                this.ctx.lineTo(furthest[1].x + offsetX, furthest[1].y + offsetY);
-              } else {
-                this.ctx.lineTo(furthest[1].x + offsetX, furthest[1].y + offsetY);
-                this.ctx.lineTo(furthest[0].x + offsetX, furthest[0].y + offsetY);
-              }
-              this.ctx.lineTo(angles[0].x + offsetX, angles[0].y + offsetY);
-            } else { // above the object
-              // below the object
-              const max = this.findNewPoint(angles[0].angle, 1000);
-              const min = this.findNewPoint(angles[3].angle, 1000);
-              this.ctx.moveTo(angles[0].x + offsetX, angles[0].y + offsetY);
-              this.ctx.lineTo(max.x + offsetX, max.y + offsetY);
-              this.ctx.lineTo(min.x + offsetX, min.y + offsetY);
-              this.ctx.lineTo(angles[3].x + offsetX, angles[3].y + offsetY);
-              if (this.origin.x > pos.x1 + pos.width / 2) {
-                this.ctx.lineTo(furthest[1].x + offsetX, furthest[1].y + offsetY);
-                this.ctx.lineTo(furthest[0].x + offsetX, furthest[0].y + offsetY);
-              } else {
-                this.ctx.lineTo(furthest[0].x + offsetX, furthest[0].y + offsetY);
-                this.ctx.lineTo(furthest[1].x + offsetX, furthest[1].y + offsetY);
-              }
-              this.ctx.lineTo(angles[0].x + offsetX, angles[0].y + offsetY);
-            }
-          } else { // northwest of object
-            const max = this.findNewPoint(angles[0].angle, 1000);
-            const min = this.findNewPoint(angles[3].angle, 1000);
+            const max = this.calculatePoint(angles[0].angle, minMaxDistance);
+            const min = this.calculatePoint(angles[3].angle, minMaxDistance);
             this.ctx.moveTo(angles[0].x + offsetX, angles[0].y + offsetY);
             this.ctx.lineTo(max.x + offsetX, max.y + offsetY);
             this.ctx.lineTo(min.x + offsetX, min.y + offsetY);
             this.ctx.lineTo(angles[3].x + offsetX, angles[3].y + offsetY);
-            this.ctx.lineTo(furthest[0].x + offsetX, furthest[0].y + offsetY);
+            if (this.origin.x > pos.x1 + pos.width / 2) {
+              this.ctx.lineTo(furthest[1].x + offsetX, furthest[1].y + offsetY);
+              this.ctx.lineTo(furthest[0].x + offsetX, furthest[0].y + offsetY);
+            } else {
+              this.ctx.lineTo(furthest[0].x + offsetX, furthest[0].y + offsetY);
+              this.ctx.lineTo(furthest[1].x + offsetX, furthest[1].y + offsetY);
+            }
             this.ctx.lineTo(angles[0].x + offsetX, angles[0].y + offsetY);
           }
+        } else { // northwest of object
+          const max = this.calculatePoint(angles[0].angle, minMaxDistance);
+          const min = this.calculatePoint(angles[3].angle, minMaxDistance);
+          this.ctx.moveTo(angles[0].x + offsetX, angles[0].y + offsetY);
+          this.ctx.lineTo(max.x + offsetX, max.y + offsetY);
+          this.ctx.lineTo(min.x + offsetX, min.y + offsetY);
+          this.ctx.lineTo(angles[3].x + offsetX, angles[3].y + offsetY);
+          this.ctx.lineTo(furthest[0].x + offsetX, furthest[0].y + offsetY);
+          this.ctx.lineTo(angles[0].x + offsetX, angles[0].y + offsetY);
         }
-        this.ctx.closePath();
-        this.ctx.fill();
-      });
-    }
-
-    findNewPoint(angle, distance) {
-      var result = {};
-
-      const x = this.origin.x;
-      const y = this.origin.y;
-
-      result.x = Math.round(Math.cos(angle * Math.PI / 180) * distance + x);
-      result.y = Math.round(Math.sin(angle * Math.PI / 180) * distance + y);
-
-      return result;
+      }
+      this.ctx.closePath();
+      this.ctx.fill();
     }
 
     /**
-     * Pythagorean theorem
-     * AKA calculate the distance between two points
+     * Calculates the angle between 2 points
+     *
+     * @param {*} point
+     * @param {*} [origin={ x: this.origin.x, y: this.origin,y }]
+     * @returns
+     * @memberof Shadows
+     */
+    calculateAngle(point, origin = { x: this.origin.x, y: this.origin.y }) {
+      return Math.atan2(point.y - origin.y, point.x - origin.x) * 180 / Math.PI;
+    }
+
+    /**
+     * Calculates a new point given an angle, distance from, and starting point
+     *
+     * @param {*} angle
+     * @param {*} distance
+     * @returns {object} x, y
+     * @memberof Shadows
+     */
+    calculatePoint(angle, distanceFrom, point = { x: this.origin.x, y: this.origin.y }) {
+      return {
+        x: Math.round(Math.cos(angle * Math.PI / 180) * distanceFrom + point.x),
+        y: Math.round(Math.sin(angle * Math.PI / 180) * distanceFrom + point.y),
+      };
+    }
+
+    /**
+     * Calculate the distance between two points
+     * AKA Pythagorean theorem
      *
      * @param {*} pos1
      * @param {*} pos2
      * @returns
      * @memberof Shadows
      */
-    calculateDistance(pos1, pos2) {
+    calculateDistance(pos1, pos2 = { x: this.origin.x, y: this.origin.y }) {
       const a = pos1.x - pos2.x;
       const b = pos1.y - pos2.y;
 
@@ -1402,6 +1434,8 @@
       // keep track of visible tiles
       this.visibleTilesPerDirection = 8;
       this.visibleTileArray = [];
+      this.visibleTileX = 0;
+      this.visibleTileY = 0;
 
       // tile util needs to know:
       //  width/height of a tile in pixels
@@ -1503,9 +1537,19 @@
       // TODO: Streamline the drawing logic, it's getting tangled up and convoluted
       
       // get the pixel to tile number
-      // TODO: Don't proceed if the tileX/tileY is the same as the last time this was called
       const tileX = Math.round(x / this.tileWidth);
       const tileY = Math.round(y / this.tileHeight);
+
+      // bail if the tiles are the same as the last time
+      if (
+        this.visibleTileX === tileX
+        && this.visibleTileY === tileY
+      ) {
+        return;
+      }
+
+      this.visibleTileX = tileX;
+      this.visibleTileY = tileY;
 
       // get the bounds of the visible tiles
       let x1 = tileX - this.visibleTilesPerDirection;
@@ -1550,8 +1594,6 @@
           this.visibleTileArray[visibleIndex++] = this.TileUtil.unpack(this.mapArray[mapIndex]);
         }
       }
-
-      this.needsUpdate = true;
     }
 
     /**
@@ -1952,6 +1994,7 @@
         y: 25,
         radius: 25,
         fillStyle: '#800080',
+        map: this.map,
       });
 
       // set focus to hero

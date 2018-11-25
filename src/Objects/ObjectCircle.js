@@ -17,7 +17,7 @@ class ObjectCircle {
     this.endAngle = Math.PI / 180 * 360;
     this.anticlockwise = false;
 
-    this.init();
+    this.init(args.map);
   }
 
   draw(Canvas) {

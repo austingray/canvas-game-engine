@@ -47,6 +47,8 @@ class Map {
     // keep track of visible tiles
     this.visibleTilesPerDirection = 8;
     this.visibleTileArray = [];
+    this.visibleTileX = 0;
+    this.visibleTileY = 0;
 
     // tile util needs to know:
     //  width/height of a tile in pixels
@@ -148,9 +150,19 @@ class Map {
     // TODO: Streamline the drawing logic, it's getting tangled up and convoluted
     
     // get the pixel to tile number
-    // TODO: Don't proceed if the tileX/tileY is the same as the last time this was called
     const tileX = Math.round(x / this.tileWidth);
     const tileY = Math.round(y / this.tileHeight);
+
+    // bail if the tiles are the same as the last time
+    if (
+      this.visibleTileX === tileX
+      && this.visibleTileY === tileY
+    ) {
+      return;
+    }
+
+    this.visibleTileX = tileX;
+    this.visibleTileY = tileY;
 
     // get the bounds of the visible tiles
     let x1 = tileX - this.visibleTilesPerDirection;
@@ -195,8 +207,6 @@ class Map {
         this.visibleTileArray[visibleIndex++] = this.TileUtil.unpack(this.mapArray[mapIndex]);
       }
     }
-
-    this.needsUpdate = true;
   }
 
   /**

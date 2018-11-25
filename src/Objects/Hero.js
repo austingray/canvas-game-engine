@@ -1,7 +1,9 @@
 import ObjectCircle from './ObjectCircle';
 
 class Hero extends ObjectCircle {
-  init() {
+  init(map) {
+    this.map = map;
+
     // allows keyboard input to the character
     this.allowInput = true;
 
@@ -29,15 +31,15 @@ class Hero extends ObjectCircle {
    * Handles easing on the X axis
    *
    * @param {*} dir
-   * @param {*} map
+   * @param {*} this.map
    * @memberof Hero
    */
-  targetXTimerHandler(dir, map) {
+  targetXTimerHandler(dir) {
     // clear the existing timer
     clearTimeout(this.targetXTimer);
 
     // get the difference between the current y and the target y
-    const difference = Math.abs(this.x - this.targetX);
+    let difference = Math.abs(this.x - this.targetX);
 
     // set a new timer
     this.targetXTimer = setTimeout(() => {
@@ -47,46 +49,36 @@ class Hero extends ObjectCircle {
         : this.x - (difference / this.inputCooldown); 
 
       // handle collision
-      const collision = map.getCollision(newX, this.y);
+      const collision = this.map.getCollision(newX, this.y);
 
       if (collision) {
         this.targetX = this.x;
-        // reset velocity on collision
-        // this.velocities[1] = 0;
-        // this.velocities[3] = 0;
+        difference = 0;
       } else {
         this.x = newX;
       }
 
-      // calculate
-      this.game.Canvas.Camera.setFocus({
-        x: this.x,
-        y: this.y,
-      });
-
-      map.calculateVisibleTiles(this.x, this.y);
-      map.drawShadows();
+      this.afterEaseMovement();
 
       // if we're not close enough to the target Y, keep moving
-      if (difference >= 1) {
-        this.targetXTimerHandler(dir, map);
+      if (difference > 1) {
+        this.targetXTimerHandler(dir, this.map);
       }
-    }, difference / this.inputCooldown)
+    }, difference / this.inputCooldown);
   }
 
   /**
    * Handles easing on the Y axis
    *
    * @param {*} dir
-   * @param {*} map
    * @memberof Hero
    */
-  targetYTimerHandler(dir, map) {
+  targetYTimerHandler(dir) {
     // clear the existing timer
     clearTimeout(this.targetYTimer);
 
     // get the difference between the current y and the target y
-    const difference = Math.abs(this.y - this.targetY);
+    let difference = Math.abs(this.y - this.targetY);
 
     // set a new timer
     this.targetYTimer = setTimeout(() => {
@@ -96,40 +88,52 @@ class Hero extends ObjectCircle {
         : this.y + (difference / this.inputCooldown);
 
       // handle collision
-      const collision = map.getCollision(this.x, newY);
+      const collision = this.map.getCollision(this.x, newY);
 
       if (collision) {
         this.targetY = this.y
+        difference = 0;
       } else {
-        // update the y
         this.y = newY;
       }
 
-      // calculate
-      this.game.Canvas.Camera.setFocus({
-        x: this.x,
-        y: this.y,
-      });
-
-      map.calculateVisibleTiles(this.x, this.y);
-      map.drawShadows();
+      this.afterEaseMovement();
 
       // if we're not close enough to the target Y, keep moving
       if (difference > 1) {
-        this.targetYTimerHandler(dir, map);
+        this.targetYTimerHandler(dir, this.map);
+      } else {
+        this.map.needsUpdate = false;
       }
     }, difference / this.inputCooldown)
+  }
+
+  /**
+   * Additional actions to perform after movement easing is calculated
+   *
+   * @memberof Hero
+   */
+  afterEaseMovement() {
+    // calculate
+    this.game.Canvas.Camera.setFocus({
+      x: this.x,
+      y: this.y,
+    });
+
+    this.map.needsUpdate = true;
+    this.map.calculateVisibleTiles(this.x, this.y);
+    this.map.drawShadows();
   }
 
   /**
    * Handle input for the hero
    *
    * @param {*} activeKeys
-   * @param {*} map
+   * @param {*} this.map
    * @returns
    * @memberof Hero
    */
-  handleInput(Keyboard, map) {
+  handleInput(Keyboard) {
     // bail if input is disabled
     if (!this.allowInput) {
       return;
@@ -154,7 +158,7 @@ class Hero extends ObjectCircle {
               ? this.y - this.velocities[i] // up
               : this.y + this.velocities[i] // down
             
-            this.targetYTimerHandler(i, map);
+            this.targetYTimerHandler(i);
           } else {
             this.velocities[i] = 0;
           }
@@ -168,7 +172,7 @@ class Hero extends ObjectCircle {
               ? this.x + this.velocities[i] // right
               : this.x - this.velocities[i]; // left
             
-            this.targetXTimerHandler(i, map);
+            this.targetXTimerHandler(i);
           } else {
             this.velocities[i] = 0;
           }
