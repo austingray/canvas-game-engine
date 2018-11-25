@@ -59,9 +59,6 @@ class Map {
       xMax: this.xTotalTiles.toString().length,
       yMax: this.yTotalTiles.toString().length,
     });
-
-    // generate the map
-    this.generateMap();
   }
 
   /**
@@ -87,32 +84,12 @@ class Map {
   }
 
   /**
-   * Generates empty arrays the size of the map
-   * Map tiles get created as needed when they are visible
+   * Draws the map tiles and shawdows
+   * only if the map needs an update
    *
+   * @param {*} Canvas
    * @memberof Map
    */
-  generateMap() {
-    // create a map array the length of the total tiles
-    // start a -1. Any tile that tries reference that position
-    // in the map array will create the "not a tile" tile...
-    // for (let i = -1; i < this.totalTiles; i++) {
-    //   this.mapArray[i] = -1;
-    // }
-
-    //
-    this.mapArray = [];
-
-    // stores references to indexes in the tile array
-    for (let i = 0; i < this.visibleTilesPerDirection * this.visibleTilesPerDirection; i++) {
-      this.visibleTileArray[i] = -1;
-    }
-
-    // calculate the first set of visible tiles
-    // tiles get created here
-    this.calculateVisibleTiles(0, 0);
-  }
-
   draw(Canvas) {
     if (this.needsUpdate) {
       // calculate the visible tiles
@@ -123,11 +100,16 @@ class Map {
         Canvas.drawTile(this.visibleTileArray[i]);
       }
 
-      // cast the shadows
+      // draw the shadows
       this.drawShadows();
     }
   }
 
+  /**
+   * Draws the shadows
+   *
+   * @memberof Map
+   */
   drawShadows() {
     // get the origin
     const scene = this.game.scenes[this.game.currentScene];
