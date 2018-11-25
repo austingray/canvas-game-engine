@@ -28,12 +28,7 @@ class SceneGame extends Scene {
   }
 
   prepareScene() {
-    // this.Canvas.ctx.fillStyle = 'black';
-    // this.Canvas.ctx.fillRect(0, 0, this.Canvas.width, this.Canvas.height);
-    if (this.map.needsUpdate) {
-      this.map.needsUpdate = false;
-      this.map.visibleTileArray.flat().forEach(tile => this.pushToScene(tile));
-    }
+    this.pushToScene(this.map);
     this.pushToScene(this.hero);
   }
 

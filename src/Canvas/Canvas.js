@@ -200,8 +200,8 @@ class Canvas {
 
   drawTile(tile) {
     // draw the tile
-    const x = tile.x + this.Camera.offsetX;
-    const y = tile.y + this.Camera.offsetY;
+    const x = tile.xPixel + this.Camera.offsetX;
+    const y = tile.yPixel + this.Camera.offsetY;
 
     this.ctx = this.primaryLayer.context
     switch (tile.type) {
@@ -270,7 +270,7 @@ class Canvas {
       this.ctx.fillRect(x, y, tile.width, tile.height);
     }
 
-    this.ctx = this.primaryLayer.context;    
+    this.ctx = this.primaryLayer.context;
   }
 
   /**

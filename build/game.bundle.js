@@ -344,8 +344,8 @@
 
     drawTile(tile) {
       // draw the tile
-      const x = tile.x + this.Camera.offsetX;
-      const y = tile.y + this.Camera.offsetY;
+      const x = tile.xPixel + this.Camera.offsetX;
+      const y = tile.yPixel + this.Camera.offsetY;
 
       this.ctx = this.primaryLayer.context;
       switch (tile.type) {
@@ -414,7 +414,7 @@
         this.ctx.fillRect(x, y, tile.width, tile.height);
       }
 
-      this.ctx = this.primaryLayer.context;    
+      this.ctx = this.primaryLayer.context;
     }
 
     /**
@@ -770,7 +770,7 @@
           y: this.y,
         });
 
-        map.updateVisibleTiles(this.x, this.y);
+        map.calculateVisibleTiles(this.x, this.y);
         map.drawShadows();
 
         // if we're not close enough to the target Y, keep moving
@@ -817,7 +817,7 @@
           y: this.y,
         });
 
-        map.updateVisibleTiles(this.x, this.y);
+        map.calculateVisibleTiles(this.x, this.y);
         map.drawShadows();
 
         // if we're not close enough to the target Y, keep moving
@@ -893,58 +893,43 @@
     }
   }
 
-  class MapTile {
-    constructor(args) {
-      this.type = args.type;
-      this.x = args.x;
-      this.y = args.y;
-      this.width = args.width;
-      this.height = args.height;
-      this.blocking = args.blocking;
-      this.shadow = args.shadow;
-      this.light = args.light;
-      this.objects = [];
-    }
-
-    draw(Canvas) {
-      Canvas.drawTile(this);
-    }
-  }
-
   class Shadows {
     constructor(Canvas, origin, objects) {
       this.Canvas = Canvas;
 
-      // where the light will emit from
+      // set the context to the shadow layer
+      this.ctx = this.Canvas.shadowLayer.context;
+
+      // origin point where lighting is based off of, which is always the hero x/y
       this.origin = {
         x: origin.x,
         y: origin.y,
       };
 
-
       // get all blocking objects
       this.blocks = [];
       this.lights = [];
-      objects.forEach(object => {
-        const obj = {
-          x1: object.x,
-          y1: object.y,
-          x2: object.x + object.width,
-          y2: object.y + object.height,
+
+      for (let i = 0; i < objects.length; i++) {
+        const object = objects[i];
+        const x1 = object.xPixel;
+        const y1 = object.yPixel;
+        const block = {
+          x1: object.xPixel,
+          y1: object.yPixel,
+          x2: object.xPixel + object.width,
+          y2: object.yPixel + object.height,
           width: object.width,
           height: object.height,
         };
+        this.blocks.push(block);
+      }
 
-        if (object.shadow === true) {
-          this.blocks.push(obj);
-        }
-
-        if (object.light === true) {
-          this.lights.push(obj);
-        }
-      });
-
-      this.ctx = this.Canvas.shadowLayer.context;
+      // TODO: All blocks currently have shadow,
+      // TODO: Add light handling
+      // if (object.light === true) {
+      //   this.lights.push(obj);
+      // }
     }
 
     draw() {
@@ -1179,66 +1164,229 @@
     }
   }
 
+  const tileTypes = [
+    {
+      id: 1,
+      type: 'grass',
+      blocking: false,
+      shadow: false,
+      light: false,
+    },
+    {
+      id: 2,
+      type: 'water',
+      blocking: true,
+      shadow: false,
+      light: false,
+    },
+    {
+      id: 3,
+      type: 'rock',
+      blocking: true,
+      shadow: true,
+      light: false,
+    },
+  ];
+
+  /**
+   * Provides utility methods for tiles
+   *
+   * @class TileUtil
+   */
+  class TileUtil {
+    /**
+     * Creates an instance of TileUtil.
+     * @param {number} [tileInt=0]
+     * @memberof TileUtil
+     */
+    constructor(args) {
+      // width of tiles in pixels
+      this.tileWidth = args.tileWidth;
+      this.tileHeight = args.tileHeight;
+
+      // max x / y positions
+      this.xMax = args.xMax;
+      this.yMax = args.yMax;
+
+      // define substr positions for extracting tile data
+      this.substr = {
+        type: 1,
+        blocking: 2,
+        light: 3,
+        shadow: 4,
+        x: 5,
+        y: 5 + this.xMax,
+      };
+    }
+
+    /**
+     * Creates a map tile
+     *
+     * @param {*} args
+     * @returns
+     * @memberof TileUtil
+     */
+    create(args) {
+      // defaults
+      let type = 0;
+      let blocking = 0;
+      let light = 0;
+      let shadow = 0;
+
+      // randomize the tile type
+      let random = Math.random();
+      if (random > .1) {
+        type = 0; // grass
+      } else if (random > .08) {
+        type = 1; // water;
+        blocking = 1;
+      } else {
+        type = 2; // rock
+        blocking = 1;
+        shadow = 1;
+      }
+
+      // left pad x so tiles are consistent lengths
+      let xString = args.x += '';
+      while (xString.length < this.xMax) {
+        xString = '0' + xString;
+      }
+
+      // left pad y so tiles are consistent lengths
+      let yString = args.y += '';
+      while (yString.length < this.yMax) {
+        yString = '0' + yString;
+      }
+
+      // create and return the string
+      const string = '1' + type + '' + blocking + '' + light + '' + shadow + '' + xString + '' + yString + '';
+      return Number(string);
+    }
+
+    /**
+     * Converts a packed tile integer into a verbose object
+     *
+     * @param {*} int
+     * @returns
+     * @memberof TileUtil
+     */
+    unpack(int) {
+      // convert the int to a string
+      const raw = this.toString(int);
+
+      // get the properties
+      const type = tileTypes[raw.substr(this.substr.type, 1)].type;
+      const blocking = Number(raw.substr(this.substr.blocking, 1)) === 1;
+      const light = Number(raw.substr(this.substr.light, 1)) === 1;
+      const shadow = Number(raw.substr(this.substr.shadow, 1)) === 1;
+      const x = Number(raw.substr(this.substr.x, this.xMax));
+      const y = Number(raw.substr(this.substr.y, this.yMax));
+      const xPixel = x * this.tileWidth;
+      const yPixel = y * this.tileHeight;
+      const width = this.tileWidth;
+      const height = this.tileHeight;
+
+      const tile = {
+        type,
+        blocking,
+        light,
+        shadow,
+        x,
+        y,
+        xPixel,
+        yPixel,
+        width,
+        height,
+      };
+
+      return tile;
+    }
+
+    /**
+     * Converts an int to string
+     *
+     * @param {*} int
+     * @returns
+     * @memberof TileUtil
+     */
+    toString(int) {
+      return int + "";
+    }
+
+    /**
+     * Get the type integer
+     *
+     * @returns {integer} type
+     * @memberof TileUtil
+     */
+    typeInt(int) {
+      return Number(this.toString(int).substr(this.substr.type, 1));
+    }
+
+    /**
+     * Get the human readable tile type
+     *
+     * @returns
+     * @memberof TileUtil
+     */
+    typeText(int) {
+      const index = this.typeInt(int);
+      return tileTypes[index].type;
+    }
+
+    /**
+     * Get the X map position
+     *
+     * @returns
+     * @memberof TileUtil
+     */
+    x(int) {
+      const x = Number(this.toString(int).substr(this.substr.x, this.xMax));
+      return x;
+    }
+
+    /**
+     * * Get the Y map position
+     *
+     * @returns
+     * @memberof TileUtil
+     */
+    y(int) {
+      const y = Number(this.toString(int).substr(this.substr.y, this.yMax));
+      return y;
+    }
+
+    /**
+     * Check if the tile is blocking
+     *
+     * @returns {boolean} is blocking
+     * @memberof TileUtil
+     */
+    blocking(int) {
+      return Number(this.toString(int).substr(this.substr.blocking, 1)) === 1;
+    }
+
+    /**
+     * Check if the tile casts a shadow
+     *
+     * @returns
+     * @memberof TileUtil
+     */
+    shadow(int) {
+      return Number(this.toString(int).substr(this.substr.shadow, 1)) === 1;
+    }
+  }
+
   class Map {
     constructor(args, game) {
       this.game = game;
 
-      // tiles that will be seen on this map
-      this.tileTypes = [
-        {
-          id: 1,
-          type: 'grass',
-          blocking: false,
-          shadow: false,
-          light: false,
-        },
-        {
-          id: 2,
-          type: 'water',
-          blocking: true,
-          shadow: false,
-          light: false,
-        },
-        {
-          id: 3,
-          type: 'rock',
-          blocking: true,
-          shadow: true,
-          light: false,
-        },
-      ];
-
-      // objects that will be seen on this map
-      this.objects = [
-        {
-          id: 1,
-          type: 'tree',
-          blocking: true,
-          shadow: false,
-          light: false,
-          width: 25,
-          height: 25,
-        },
-        {
-          id: 2,
-          type: 'torch',
-          blocking: false,
-          shadow: false,
-          light: true,
-          width: 10,
-          height: 10,
-        },
-      ];
-
-      // the object array
-      this.objectArray = [];
-
-      // the tile array
-      this.tileArray = [];
-
       // map width and height in tiles
       this.xTotalTiles = 500;
       this.yTotalTiles = 500;
+      
+      // total amount of tiles
+      this.totalTiles = this.xTotalTiles * this.yTotalTiles;
 
       // single tile width and height in pixels
       this.tileWidth = 50;
@@ -1248,109 +1396,124 @@
       this.pixelWidth = this.xTotalTiles * this.tileWidth;
       this.pixelHeight = this.yTotalTiles * this.tileHeight;
 
-      this.generateMap();
+      // stores the data about what exists at a particular position
+      this.mapArray = [];
 
       // keep track of visible tiles
       this.visibleTilesPerDirection = 8;
-      this.visibleTilePos = { x: null, y: null };
       this.visibleTileArray = [];
-      this.updateVisibleTiles(0, 0);
 
-      // draw the map and convert to base64
-      // this.tileArray.forEach(tile => game.Canvas.drawTile(tile));
-      // this.base64encoded = game.Canvas.element.toDataURL();
-      // this.image = new Image();
-      // this.image.src = this.base64encoded;
+      // tile util needs to know:
+      //  width/height of a tile in pixels
+      //  x / y total tile length
+      this.TileUtil = new TileUtil({
+        tileWidth: this.tileWidth,
+        tileHeight: this.tileHeight,
+        xMax: this.xTotalTiles.toString().length,
+        yMax: this.yTotalTiles.toString().length,
+      });
+
+      // generate the map
+      this.generateMap();
     }
 
-    // generates a random map
+    /**
+     * Converts x, y position to map array index
+     *
+     * @param {*} x
+     * @param {*} y
+     * @param {boolean} [convertPixels=false]
+     * @returns
+     * @memberof Map
+     */
+    convertPosToIndex(x, y, convertPixels = false) {
+      let tileX = x;
+      let tileY = y;
+      
+      if (convertPixels) {
+        tileX = Math.round(x / this.tileWidth);
+        tileY = Math.round(y / this.tileHeight);
+      }
+
+      const index = tileX + tileY * this.yTotalTiles;
+      return index;
+    }
+
+    /**
+     * Generates empty arrays the size of the map
+     * Map tiles get created as needed when they are visible
+     *
+     * @memberof Map
+     */
     generateMap() {
-      // generate the tiles and objects
-      for (let i = 0; i < this.xTotalTiles; i++) {
-        const row = [];
-        for (let j = 0; j < this.yTotalTiles; j++) {
-          let random = Math.random();
-          let tileIndex = 0;
-          if (random > .1) {
-            // grass
-            tileIndex = 0;
-          } else if (random > .08) {
-            // water
-            tileIndex = 1;
-          } else {
-            // rock
-            tileIndex = 2;
-          }
-          const tile = new MapTile(Object.assign({}, this.tileTypes[tileIndex], {
-            x: i * this.tileWidth,
-            y: j * this.tileHeight,
-            width: this.tileWidth,
-            height: this.tileHeight,
-          }));
+      // create a map array the length of the total tiles
+      // start a -1. Any tile that tries reference that position
+      // in the map array will create the "not a tile" tile...
+      for (let i = -1; i < this.totalTiles; i++) {
+        this.mapArray[i] = -1;
+      }
 
-          // generate objects
-          random = Math.random();
-          if (!tile.blocking && random < .05) {
-            const x = tile.x; // + random * tile.width;
-            const y = tile.y; // + random * tile.height;
-            let objectIndex = random > .3 ? 0 : 1;
-            const object = new MapTile(Object.assign({}, this.objects[objectIndex], { x, y }));
-            tile.objects.push(object);
-          }
+      // stores references to indexes in the tile array
+      for (let i = 0; i < this.visibleTilesPerDirection * this.visibleTilesPerDirection; i++) {
+        this.visibleTileArray[i] = -1;
+      }
 
-          row.push(tile);
+      // calculate the first set of visible tiles
+      // tiles get created here
+      this.calculateVisibleTiles(0, 0);
+    }
+
+    draw(Canvas) {
+      if (this.needsUpdate) {
+        for (var i = 0; i < this.visibleTileArray.length; i++) {
+          Canvas.drawTile(this.visibleTileArray[i]);
         }
-        this.tileArray.push(row);
       }
     }
 
-    // draw each tile
-    draw(Canvas) {
-      this.visibleTileArray.flat().forEach(tile => tile.draw(this.game.Canvas));
-    }
-
     drawShadows() {
+      // get the origin
       const scene = this.game.scenes[this.game.currentScene];
       const origin = { x: scene.hero.x, y: scene.hero.y };
-      const shadows = new Shadows(this.game.Canvas, origin, this.visibleTileArray.flat());
+
+      // get the shadow objects
+      const blocks = [];
+      for (var i = 0; i < this.visibleTileArray.length; i++) {
+        const tile = this.visibleTileArray[i];
+        if (tile.shadow) {
+          blocks.push(tile);
+        }
+      }
+
+      // get and draw
+      const shadows = new Shadows(this.game.Canvas, origin, blocks);
       shadows.draw();
     }
 
     /**
-     * Updates the visible tile array based off x, y coords
+     * Gets the visible tile array based off x, y coords
      *
      * @param {*} x
      * @param {*} y
      * @memberof Map
      */
-    updateVisibleTiles(x, y) {
-      this.needsUpdate = true;
+    calculateVisibleTiles(x, y) {
+      // signal to the scene that we need to draw the visible tiles
       // TODO: Look into capturing this x,y and setting it as a focus point to be used when drawing shadows??
+      // TODO: Streamline the drawing logic, it's getting tangled up and convoluted
+      
       // get the pixel to tile number
+      // TODO: Don't proceed if the tileX/tileY is the same as the last time this was called
       const tileX = Math.round(x / this.tileWidth);
       const tileY = Math.round(y / this.tileHeight);
 
-      // don't update if we haven't changed tiles
-      if (
-        this.visibleTilePos.x === tileX
-        && this.visibleTilePos.y === tileY
-      ) {
-        return;
-      }
-
-      // update to the new tile positions
-      this.visibleTilePos = {
-        x: tileX,
-        y: tileY,
-      };
-
-      // get a local array
+      // get the bounds of the visible tiles
       let x1 = tileX - this.visibleTilesPerDirection;
       let x2 = tileX + this.visibleTilesPerDirection;
       let y1 = tileY - this.visibleTilesPerDirection;
       let y2 = tileY + this.visibleTilesPerDirection;
 
-      // clamp
+      // clamp the bounds
       if (x1 < 1) {
         x1 = 0;
       }
@@ -1364,16 +1527,31 @@
         y2 = this.yTotalTiles;
       }
 
-      // create visible tile array
+      // create visible tile array from the boundaries
       this.visibleTileArray = [];
-      for (let i = y1; i < y2; i++) {
-        let row = [];
-        for (let j = x1; j < x2; j++) {
-          const tile = this.tileArray[j][i];
-          row.push(tile);
+      let visibleIndex = 0;
+      for (let j = y1; j < y2; j++) {
+        for (let i = x1; i < x2; i++) {
+          // get the map array and visible array indexes
+          const mapIndex = this.convertPosToIndex(i, j);
+
+          // if the map array value is -1
+          // then it has not been visible yet
+          // create a tile at that index
+          if ( -1 === this.mapArray[mapIndex] ) {
+            const tile = this.TileUtil.create({
+              x: i,
+              y: j,
+            });
+            this.mapArray[mapIndex] = tile;
+          }
+
+          // add the unpacked version of the tile to the visible tile array
+          this.visibleTileArray[visibleIndex++] = this.TileUtil.unpack(this.mapArray[mapIndex]);
         }
-        this.visibleTileArray.push(row);
       }
+
+      this.needsUpdate = true;
     }
 
     /**
@@ -1404,18 +1582,15 @@
 
       // tile blocking
       for (let i = 0; i < this.visibleTileArray.length; i++) {
-        const row = this.visibleTileArray[i];
-        for (let j = 0; j < row.length; j++) {
-          let tile = row[j];
-          if (tile.blocking) {
-            if (
-              x2 > tile.x
-              && x1 < tile.x + tile.width
-              && y2 > tile.y
-              && y1 < tile.y + tile.height
-            ) {
-              return true;
-            }
+        const tile = this.visibleTileArray[i];
+        if (tile.blocking) {
+          if (
+            x2 > tile.xPixel
+            && x1 < tile.xPixel + tile.width
+            && y2 > tile.yPixel
+            && y1 < tile.yPixel + tile.height
+          ) {
+            return true;
           }
         }
       }
@@ -1786,12 +1961,7 @@
     }
 
     prepareScene() {
-      // this.Canvas.ctx.fillStyle = 'black';
-      // this.Canvas.ctx.fillRect(0, 0, this.Canvas.width, this.Canvas.height);
-      if (this.map.needsUpdate) {
-        this.map.needsUpdate = false;
-        this.map.visibleTileArray.flat().forEach(tile => this.pushToScene(tile));
-      }
+      this.pushToScene(this.map);
       this.pushToScene(this.hero);
     }
 

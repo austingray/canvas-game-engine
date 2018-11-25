@@ -64,7 +64,7 @@ class Hero extends ObjectCircle {
         y: this.y,
       });
 
-      map.updateVisibleTiles(this.x, this.y);
+      map.calculateVisibleTiles(this.x, this.y);
       map.drawShadows();
 
       // if we're not close enough to the target Y, keep moving
@@ -111,7 +111,7 @@ class Hero extends ObjectCircle {
         y: this.y,
       });
 
-      map.updateVisibleTiles(this.x, this.y);
+      map.calculateVisibleTiles(this.x, this.y);
       map.drawShadows();
 
       // if we're not close enough to the target Y, keep moving

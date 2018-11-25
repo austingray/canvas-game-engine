@@ -2,36 +2,39 @@ class Shadows {
   constructor(Canvas, origin, objects) {
     this.Canvas = Canvas;
 
-    // where the light will emit from
+    // set the context to the shadow layer
+    this.ctx = this.Canvas.shadowLayer.context;
+
+    // origin point where lighting is based off of, which is always the hero x/y
     this.origin = {
       x: origin.x,
       y: origin.y,
     };
 
-
     // get all blocking objects
     this.blocks = [];
     this.lights = [];
-    objects.forEach(object => {
-      const obj = {
-        x1: object.x,
-        y1: object.y,
-        x2: object.x + object.width,
-        y2: object.y + object.height,
+
+    for (let i = 0; i < objects.length; i++) {
+      const object = objects[i];
+      const x1 = object.xPixel;
+      const y1 = object.yPixel;
+      const block = {
+        x1: object.xPixel,
+        y1: object.yPixel,
+        x2: object.xPixel + object.width,
+        y2: object.yPixel + object.height,
         width: object.width,
         height: object.height,
       };
+      this.blocks.push(block);
+    }
 
-      if (object.shadow === true) {
-        this.blocks.push(obj);
-      }
-
-      if (object.light === true) {
-        this.lights.push(obj);
-      }
-    });
-
-    this.ctx = this.Canvas.shadowLayer.context;
+    // TODO: All blocks currently have shadow,
+    // TODO: Add light handling
+    // if (object.light === true) {
+    //   this.lights.push(obj);
+    // }
   }
 
   draw() {

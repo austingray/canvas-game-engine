@@ -1,66 +1,37 @@
-import MapTile from './MapTile';
 import Shadows from './Shadows';
+import TileUtil from './TileUtil';
+
+const objects = [
+  {
+    id: 1,
+    type: 'tree',
+    blocking: true,
+    shadow: false,
+    light: false,
+    width: 25,
+    height: 25,
+  },
+  {
+    id: 2,
+    type: 'torch',
+    blocking: false,
+    shadow: false,
+    light: true,
+    width: 10,
+    height: 10,
+  },
+];
 
 class Map {
   constructor(args, game) {
     this.game = game;
 
-    // tiles that will be seen on this map
-    this.tileTypes = [
-      {
-        id: 1,
-        type: 'grass',
-        blocking: false,
-        shadow: false,
-        light: false,
-      },
-      {
-        id: 2,
-        type: 'water',
-        blocking: true,
-        shadow: false,
-        light: false,
-      },
-      {
-        id: 3,
-        type: 'rock',
-        blocking: true,
-        shadow: true,
-        light: false,
-      },
-    ];
-
-    // objects that will be seen on this map
-    this.objects = [
-      {
-        id: 1,
-        type: 'tree',
-        blocking: true,
-        shadow: false,
-        light: false,
-        width: 25,
-        height: 25,
-      },
-      {
-        id: 2,
-        type: 'torch',
-        blocking: false,
-        shadow: false,
-        light: true,
-        width: 10,
-        height: 10,
-      },
-    ];
-
-    // the object array
-    this.objectArray = [];
-
-    // the tile array
-    this.tileArray = [];
-
     // map width and height in tiles
     this.xTotalTiles = 500;
     this.yTotalTiles = 500;
+    
+    // total amount of tiles
+    this.totalTiles = this.xTotalTiles * this.yTotalTiles;
 
     // single tile width and height in pixels
     this.tileWidth = 50;
@@ -70,109 +41,124 @@ class Map {
     this.pixelWidth = this.xTotalTiles * this.tileWidth;
     this.pixelHeight = this.yTotalTiles * this.tileHeight;
 
-    this.generateMap();
+    // stores the data about what exists at a particular position
+    this.mapArray = [];
 
     // keep track of visible tiles
     this.visibleTilesPerDirection = 8;
-    this.visibleTilePos = { x: null, y: null }
     this.visibleTileArray = [];
-    this.updateVisibleTiles(0, 0);
 
-    // draw the map and convert to base64
-    // this.tileArray.forEach(tile => game.Canvas.drawTile(tile));
-    // this.base64encoded = game.Canvas.element.toDataURL();
-    // this.image = new Image();
-    // this.image.src = this.base64encoded;
+    // tile util needs to know:
+    //  width/height of a tile in pixels
+    //  x / y total tile length
+    this.TileUtil = new TileUtil({
+      tileWidth: this.tileWidth,
+      tileHeight: this.tileHeight,
+      xMax: this.xTotalTiles.toString().length,
+      yMax: this.yTotalTiles.toString().length,
+    });
+
+    // generate the map
+    this.generateMap();
   }
 
-  // generates a random map
+  /**
+   * Converts x, y position to map array index
+   *
+   * @param {*} x
+   * @param {*} y
+   * @param {boolean} [convertPixels=false]
+   * @returns
+   * @memberof Map
+   */
+  convertPosToIndex(x, y, convertPixels = false) {
+    let tileX = x;
+    let tileY = y;
+    
+    if (convertPixels) {
+      tileX = Math.round(x / this.tileWidth);
+      tileY = Math.round(y / this.tileHeight);
+    }
+
+    const index = tileX + tileY * this.yTotalTiles;
+    return index;
+  }
+
+  /**
+   * Generates empty arrays the size of the map
+   * Map tiles get created as needed when they are visible
+   *
+   * @memberof Map
+   */
   generateMap() {
-    // generate the tiles and objects
-    for (let i = 0; i < this.xTotalTiles; i++) {
-      const row = [];
-      for (let j = 0; j < this.yTotalTiles; j++) {
-        let random = Math.random();
-        let tileIndex = 0;
-        if (random > .1) {
-          // grass
-          tileIndex = 0;
-        } else if (random > .08) {
-          // water
-          tileIndex = 1;
-        } else {
-          // rock
-          tileIndex = 2;
-        }
-        const tile = new MapTile(Object.assign({}, this.tileTypes[tileIndex], {
-          x: i * this.tileWidth,
-          y: j * this.tileHeight,
-          width: this.tileWidth,
-          height: this.tileHeight,
-        }));
+    // create a map array the length of the total tiles
+    // start a -1. Any tile that tries reference that position
+    // in the map array will create the "not a tile" tile...
+    for (let i = -1; i < this.totalTiles; i++) {
+      this.mapArray[i] = -1;
+    }
 
-        // generate objects
-        random = Math.random();
-        if (!tile.blocking && random < .05) {
-          const x = tile.x; // + random * tile.width;
-          const y = tile.y; // + random * tile.height;
-          let objectIndex = random > .3 ? 0 : 1;
-          const object = new MapTile(Object.assign({}, this.objects[objectIndex], { x, y }));
-          tile.objects.push(object);
-        }
+    // stores references to indexes in the tile array
+    for (let i = 0; i < this.visibleTilesPerDirection * this.visibleTilesPerDirection; i++) {
+      this.visibleTileArray[i] = -1;
+    }
 
-        row.push(tile);
+    // calculate the first set of visible tiles
+    // tiles get created here
+    this.calculateVisibleTiles(0, 0);
+  }
+
+  draw(Canvas) {
+    if (this.needsUpdate) {
+      for (var i = 0; i < this.visibleTileArray.length; i++) {
+        Canvas.drawTile(this.visibleTileArray[i]);
       }
-      this.tileArray.push(row);
     }
   }
 
-  // draw each tile
-  draw(Canvas) {
-    this.visibleTileArray.flat().forEach(tile => tile.draw(this.game.Canvas));
-  }
-
   drawShadows() {
+    // get the origin
     const scene = this.game.scenes[this.game.currentScene];
     const origin = { x: scene.hero.x, y: scene.hero.y };
-    const shadows = new Shadows(this.game.Canvas, origin, this.visibleTileArray.flat());
+
+    // get the shadow objects
+    const blocks = [];
+    for (var i = 0; i < this.visibleTileArray.length; i++) {
+      const tile = this.visibleTileArray[i];
+      if (tile.shadow) {
+        blocks.push(tile);
+      }
+    }
+
+    // get and draw
+    const shadows = new Shadows(this.game.Canvas, origin, blocks);
     shadows.draw();
   }
 
   /**
-   * Updates the visible tile array based off x, y coords
+   * Gets the visible tile array based off x, y coords
    *
    * @param {*} x
    * @param {*} y
    * @memberof Map
    */
-  updateVisibleTiles(x, y) {
-    this.needsUpdate = true;
+  calculateVisibleTiles(x, y) {
+    // signal to the scene that we need to draw the visible tiles
     // TODO: Look into capturing this x,y and setting it as a focus point to be used when drawing shadows??
+    // TODO: Streamline the drawing logic, it's getting tangled up and convoluted
+    
     // get the pixel to tile number
+    // TODO: Don't proceed if the tileX/tileY is the same as the last time this was called
     const tileX = Math.round(x / this.tileWidth);
     const tileY = Math.round(y / this.tileHeight);
 
-    // don't update if we haven't changed tiles
-    if (
-      this.visibleTilePos.x === tileX
-      && this.visibleTilePos.y === tileY
-    ) {
-      return;
-    }
-
-    // update to the new tile positions
-    this.visibleTilePos = {
-      x: tileX,
-      y: tileY,
-    };
-
-    // get a local array
+    // get the bounds of the visible tiles
     let x1 = tileX - this.visibleTilesPerDirection;
     let x2 = tileX + this.visibleTilesPerDirection;
     let y1 = tileY - this.visibleTilesPerDirection;
     let y2 = tileY + this.visibleTilesPerDirection;
 
-    // clamp
+    // clamp the bounds
     if (x1 < 1) {
       x1 = 0;
     }
@@ -186,16 +172,31 @@ class Map {
       y2 = this.yTotalTiles;
     }
 
-    // create visible tile array
+    // create visible tile array from the boundaries
     this.visibleTileArray = [];
-    for (let i = y1; i < y2; i++) {
-      let row = [];
-      for (let j = x1; j < x2; j++) {
-        const tile = this.tileArray[j][i];
-        row.push(tile);
+    let visibleIndex = 0;
+    for (let j = y1; j < y2; j++) {
+      for (let i = x1; i < x2; i++) {
+        // get the map array and visible array indexes
+        const mapIndex = this.convertPosToIndex(i, j);
+
+        // if the map array value is -1
+        // then it has not been visible yet
+        // create a tile at that index
+        if ( -1 === this.mapArray[mapIndex] ) {
+          const tile = this.TileUtil.create({
+            x: i,
+            y: j,
+          });
+          this.mapArray[mapIndex] = tile;
+        }
+
+        // add the unpacked version of the tile to the visible tile array
+        this.visibleTileArray[visibleIndex++] = this.TileUtil.unpack(this.mapArray[mapIndex]);
       }
-      this.visibleTileArray.push(row);
     }
+
+    this.needsUpdate = true;
   }
 
   /**
@@ -226,18 +227,15 @@ class Map {
 
     // tile blocking
     for (let i = 0; i < this.visibleTileArray.length; i++) {
-      const row = this.visibleTileArray[i];
-      for (let j = 0; j < row.length; j++) {
-        let tile = row[j];
-        if (tile.blocking) {
-          if (
-            x2 > tile.x
-            && x1 < tile.x + tile.width
-            && y2 > tile.y
-            && y1 < tile.y + tile.height
-          ) {
-            return true;
-          }
+      const tile = this.visibleTileArray[i];
+      if (tile.blocking) {
+        if (
+          x2 > tile.xPixel
+          && x1 < tile.xPixel + tile.width
+          && y2 > tile.yPixel
+          && y1 < tile.yPixel + tile.height
+        ) {
+          return true;
         }
       }
     }
