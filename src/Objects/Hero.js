@@ -137,8 +137,11 @@ class Hero extends ObjectCircle {
       return;
     }
 
-    // loop through the direction keys
-    Keyboard.dirs.forEach((active, i) => {
+    // loop through each directions
+    for (let i = 0; i < Keyboard.directions.length; i++) {
+      // is the direction active?
+      const active = Keyboard.directions[i];
+
       // if direction is active
       if (active) {
         this.canMove[i] = false;
@@ -151,7 +154,7 @@ class Hero extends ObjectCircle {
         // y axis
         if (i === 0 || i === 2) {
           // opposite directions cancel eachother out
-          if (!(Keyboard.dir.up && Keyboard.dir.down)) {
+          if (!(Keyboard.active.up && Keyboard.active.down)) {
             this.targetY = i === 0
               ? this.y - this.velocities[i] // up
               : this.y + this.velocities[i] // down
@@ -165,7 +168,7 @@ class Hero extends ObjectCircle {
         // x axis
         if (i === 1 || i === 3) {
           // opposite directions cancel eachother out
-          if (!(Keyboard.dir.left && Keyboard.dir.right)) {
+          if (!(Keyboard.active.left && Keyboard.active.right)) {
             this.targetX = i === 1
               ? this.x + this.velocities[i] // right
               : this.x - this.velocities[i]; // left
@@ -179,7 +182,7 @@ class Hero extends ObjectCircle {
         // nuke velocity if not active
         this.velocities[i] = 0;
       }
-    });
+    }
     
     // set timeout to enable movement in the direction
     clearTimeout(this.keyboardCooldownTimer);

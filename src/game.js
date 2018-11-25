@@ -9,7 +9,6 @@ function game() {
 
   // debug stuff
   this.debug = true;
-  this.frameCount = 0;
   this.timestamp = 0;
   this.fps = 0;
 
@@ -60,11 +59,10 @@ function game() {
 
     // maybe show debug info
     if (this.debug) {
-      this.frameCount++;
       const delta = (timestamp - this.timestamp) / 1000;
       this.timestamp = timestamp;
-      this.Canvas.pushDebugText('keys', `Active Keys: [${this.Keyboard.activeKeys}]`);
       this.Canvas.pushDebugText('fps', `FPS: ${1 / delta}`);
+      // this.Canvas.pushDebugText('keys', `Active Keys: [${this.Keyboard.activeKeys}]`);
       this.Canvas.drawDebugText();
     }
   }

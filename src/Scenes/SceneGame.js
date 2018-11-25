@@ -51,7 +51,7 @@ class SceneGame extends Scene {
    */
   handleInput(Keyboard) {
     // pause the game
-    if (Keyboard.activeKeys.indexOf(27) > -1) {
+    if (Keyboard.active.escape) {
       this.game.changeCurrentScene('pause');
     }
 

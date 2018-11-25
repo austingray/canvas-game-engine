@@ -7,19 +7,59 @@ class KeyboardController {
     // if disabled, keyboard input will not register
     this.disabled = false;
 
-    // an array of active key codes
-    this.activeKeys = [];
+    // raw keycodes
+    this.keyCodes = {
+      13: 'enter',
+      27: 'escape',
+      32: 'shift',
+      37: 'left',
+      38: 'up',
+      39: 'right',
+      40: 'down',
+      65: 'a',
+      68: 'd',
+      83: 's',
+      87: 'w',
+      187: 'equals',
+      189: 'minus',
+    };
 
-    // provide easy way to see which directions are active
-    this.dir = {
+    // reference for keys that use shift
+    // formatted as keyWihoutShift: keyWithShift
+    this.shiftKeys = {
+      equals: 'plus',
+    };
+    
+    // human readable key states
+    this.active = {
+      enter: false,
+      escape: false,
+      shift: false,
       up: false,
       right: false,
       down: false,
       left: false,
+      w: false,
+      a: false,
+      s: false,
+      d: false,
+      equals: false,
+      minus: false,
+      plus: false,
     };
 
-    // alternative implementation for checking active directions
-    this.dirs = [false, false, false, false];
+    // alias keys
+    // if these keys are pressed, they should also mark their aliased key as pressed
+    this.aliasKeys = {
+      w: 'up',
+      a: 'left',
+      s: 'down',
+      d: 'right',
+    }
+
+    // provide an array of all directions and whether they are active
+    // up, right, down, left
+    this.directions = [false, false, false, false];
     
     // add event listeners
     this.addEventListeners();
@@ -32,86 +72,97 @@ class KeyboardController {
    */
   addEventListeners() {
     document.addEventListener('keydown', (e) => {
-      // bail if disabled
-      if (this.disabled) {
-        return;
-      }
-
-      // add the key to active keys
-      if (this.activeKeys.indexOf(e.keyCode) === -1) {
-        this.activeKeys.push(e.keyCode);
-      }
-
-      this.updateReferences();
+      this.eventListener(e, true);
     });
-
     document.addEventListener('keyup', (e) => {
-      // bail if disabled
-      if (this.disabled) {
-        return;
-      }
-
-      // remove the key from active keys
-      const index = this.activeKeys.indexOf(e.keyCode);
-      this.activeKeys.splice(index, 1);
-
-      this.updateReferences();
+      this.eventListener(e, false);
     });
   }
 
   /**
-   * Updates explicit references to active keys, specifically directions
+   * The event listener for keydown / keyup
    *
+   * @param {*} e
+   * @returns
    * @memberof KeyboardController
    */
-  updateReferences() {
-    // up
-    if (
-      this.activeKeys.indexOf(38) > -1 // up
-      || this.activeKeys.indexOf(87) > -1 // w
-    ) {
-      this.dir.up = true;
-      this.dirs[0] = true;
-    } else {
-      this.dir.up = false;
-      this.dirs[0] = false;
+  eventListener(e, press) {
+    // bail if disabled
+    if (this.disabled) {
+      return;
     }
 
-    // right
-    if (
-      this.activeKeys.indexOf(39) > -1 // right
-      || this.activeKeys.indexOf(68) > -1 // d
-    ) {
-      this.dir.right = true;
-      this.dirs[1] = true;
-    } else {
-      this.dir.right = false;
-      this.dirs[1] = false;
+    // bail if we don't care about the ky
+    if (typeof this.keyCodes[e.keyCode] === 'undefined') {
+      return;
     }
 
-    // down
-    if (
-      this.activeKeys.indexOf(40) > -1 // down
-      || this.activeKeys.indexOf(83) > -1 // s
-    ) {
-      this.dir.down = true;
-      this.dirs[2] = true;
-    } else {
-      this.dir.down = false;
-      this.dirs[2] = false;
+    // get the human readable value from keycode
+    const key = this.keyCodes[e.keyCode];
+
+    // bail if the state isn't changing
+    if (this.active[key] === press) {
+      return;
     }
 
-    // left
-    if (
-      this.activeKeys.indexOf(37) > -1 // left
-      || this.activeKeys.indexOf(65) > -1 // a
-    ) {
-      this.dir.left = true;
-      this.dirs[3] = true;
-    } else {
-      this.dir.left = false;
-      this.dirs[3] = false;
+    // otherwise update the state
+    this.active[key] = press;
+    
+    // handle key combos
+    this.handleKeyCombos(key, press);
+
+    // update active directions array
+    this.updateDirectionsArray();
+  }
+
+  /**
+   * Updates keys that require shift
+   * Updates aliased keys
+   *
+   * @param {string} key human readable key
+   * @param {boolean} active whether the key is being pressed
+   * @memberof KeyboardController
+   */
+  handleKeyCombos(key, active) {    
+    // check if there is a shift version we are watching
+    const shiftedKeyExists = typeof this.shiftKeys[key] !== 'undefined';
+
+    // if there is a shift version
+    if (shiftedKeyExists) {
+      // get the shifted key value
+      const shiftedKey = this.shiftKeys[key];
+      
+      // if shift is active, and we're pressing the key
+      if (this.active.shift && active) {
+        this.active[shiftKey] = true;
+      } else {
+        // otherwise set it to inactive
+        this.active[shiftedKey] = false;
+      }
     }
+
+    // wasd handling
+    const aliasKeyExists = typeof this.aliasKeys[key] !== 'undefined';
+
+    // if there is an alias version
+    if (aliasKeyExists) {
+      // get the alias key value
+      const aliasKey = this.aliasKeys[key];
+
+      // TODO: Add handling for the actual key that is being aliased is being pressed
+      // TODO: For example, if we're pressing the A key and we're pressing the UP key,
+      // TODO: If we release one of those keys, it will say we're not moving up!
+      this.active[aliasKey] = active;
+    }
+  }
+
+  updateDirectionsArray() {
+    this.directions = [
+      (this.active.up) ? true : false,
+      (this.active.right) ? true : false,
+      (this.active.down) ? true : false,
+      (this.active.left) ? true : false,
+    ];
   }
 
   /**
@@ -120,7 +171,8 @@ class KeyboardController {
    * @memberof KeyboardController
    */
   clear() {
-    this.activeKeys = [];
+    // this.activeKeys = [];
+    // TODO: update for our new handling
   }
 
   /**
