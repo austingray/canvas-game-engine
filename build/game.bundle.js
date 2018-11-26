@@ -18,12 +18,15 @@
       this.name = args.name;
       this.visible = (typeof args.visible === 'undefined') ? true : args.visible;
 
+      const domParent = (typeof args.appendTo === 'undefined') ? document.body : args.appendTo;
+
       // create the canvas element and add it to the document body
       const element = document.createElement('canvas');
       element.id = id;
       element.width = this.width;
       element.height = this.height;
-      document.body.appendChild(element);
+      domParent.appendChild(element);
+      this.element = element;
 
       if (!this.visible) {
         element.setAttribute('style', 'display: none;');
@@ -31,6 +34,21 @@
 
       // get the context
       this.context = element.getContext(args.context);
+    }
+
+    /**
+     * Toggle canvas element visibility
+     *
+     * @memberof Layer
+     */
+    toggleVisible() {
+      if (this.visible) {
+        this.visible = false;
+        this.element.setAttribute('style', 'display: none;');
+      } else {
+        this.visible = true;
+        this.element.setAttribute('style', '');
+      }
     }
 
     /**
@@ -187,17 +205,23 @@
      * @memberof Canvas
      */
     generateLayers() {
+      // create the canvas container div
+      this.canvasDiv = {};
+      this.canvasDiv.element = document.createElement('div');    this.canvasDiv.element.setAttribute('style', `width: ${this.width}px; height: ${this.height}px; background: #FFFFFF;`);
+      this.canvasDiv.element.id = 'domParent';
+      document.body.appendChild(this.canvasDiv.element);
+
       this.layers = [];
       this.canvasId = 0;
 
       // create canvas layers
-      this.createLayer('background');
-      this.createLayer('primary');
-      this.createLayer('secondary');
-      this.createLayer('override');
-      this.createLayer('shadow');
-      this.createLayer('hud');
-      this.createLayer('debug');
+      this.createLayer('background', { appendTo: this.canvasDiv.element });
+      this.createLayer('primary', { appendTo: this.canvasDiv.element });
+      this.createLayer('secondary', { appendTo: this.canvasDiv.element });
+      this.createLayer('override', { appendTo: this.canvasDiv.element });
+      this.createLayer('shadow', { appendTo: this.canvasDiv.element });
+      this.createLayer('hud', { appendTo: this.canvasDiv.element });
+      this.createLayer('debug', { appendTo: this.canvasDiv.element });
 
       // get explicit reference to debug layer
       this.debugLayer = this.getLayerByName('debug');
@@ -2272,6 +2296,16 @@
         38: 'up',
         39: 'right',
         40: 'down',
+        49: 'one',
+        50: 'two',
+        51: 'three',
+        52: 'four',
+        53: 'five',
+        54: 'six',
+        55: 'seven',
+        56: 'eight',
+        57: 'nine',
+        58: 'zero',
         65: 'a',
         68: 'd',
         83: 's',
@@ -2302,6 +2336,16 @@
         equals: false,
         minus: false,
         plus: false,
+        zero: false,
+        one: false,
+        two: false,
+        three: false,
+        four: false,
+        five: false,
+        six: false,
+        seven: false,
+        eight: false,
+        nine: false,
       };
 
       // alias keys
@@ -2316,6 +2360,9 @@
       // provide an array of all directions and whether they are active
       // up, right, down, left
       this.directions = [false, false, false, false];
+
+      // provide number array
+      this.numbers = [false, false, false, false, false, false, false, false, false, false];
       
       // add event listeners
       this.addEventListeners();
@@ -2369,6 +2416,9 @@
 
       // update active directions array
       this.updateDirectionsArray();
+
+      // update active numbers array
+      this.updateNumberArray();
     }
 
     /**
@@ -2412,12 +2462,37 @@
       }
     }
 
+    /**
+     * Updates the directions array
+     *
+     * @memberof KeyboardController
+     */
     updateDirectionsArray() {
       this.directions = [
         (this.active.up) ? true : false,
         (this.active.right) ? true : false,
         (this.active.down) ? true : false,
         (this.active.left) ? true : false,
+      ];
+    }
+
+    /**
+     * Updates the numbers array
+     *
+     * @memberof KeyboardController
+     */
+    updateNumberArray() {
+      this.numbers = [
+        (this.active.zero) ? true : false,
+        (this.active.one) ? true : false,
+        (this.active.two) ? true : false,
+        (this.active.three) ? true : false,
+        (this.active.four) ? true : false,
+        (this.active.five) ? true : false,
+        (this.active.six) ? true : false,
+        (this.active.seven) ? true : false,
+        (this.active.eight) ? true : false,
+        (this.active.nine) ? true : false,
       ];
     }
 
@@ -2442,6 +2517,65 @@
     }
   }
 
+  class Debug {
+    /**
+     * Creates an instance of Debug.
+     * @param {*} Canvas A canvas context to render information on
+     * @memberof Debug
+     */
+    constructor(game) {
+      this.game = game;
+      this.Canvas = game.Canvas;
+
+      this.canHandleInput = true;
+      this.inputThrottleTimer = null;
+
+      this.canToggleLayers = true;
+    }
+
+    drawDebugText() {
+      // todo
+    }
+
+    handleInput() {
+      // throttle the input a wee bit
+      if (!this.canHandleInput) {
+        return;
+      }
+
+      // get shorter references to game objects
+      const Keyboard = this.game.Keyboard;
+      const Canvas = this.game.Canvas;
+
+      // can toggle layers
+      if (this.canToggleLayers) {
+        for (let i = 0; i < Keyboard.numbers.length; i++) {
+          if (
+            Keyboard.numbers[i]
+            && typeof Canvas.layers[i] !== 'undefined'
+          ) {
+            Canvas.layers[i].toggleVisible();
+            this.doInputCooldown();
+          }
+        }
+      }
+    }
+
+    /**
+     * Sets timeout to re-enable input handling
+     *
+     * @memberof Debug
+     */
+    doInputCooldown() {
+      this.canHandleInput = false;
+
+      window.clearTimeout(this.inputThrottleTimer);
+      this.inputThrottleTimer = window.setTimeout(() => {
+        this.canHandleInput = true;
+      }, 150);
+    }
+  }
+
   function game() {
     // view state
     this.currentScene = 'mainMenu';
@@ -2450,6 +2584,9 @@
     this.debug = true;
     this.timestamp = 0;
     this.fps = 0;
+
+    // debug handler
+    this.Debug = new Debug(this);
 
     // input handler
     this.Keyboard = new KeyboardController();
@@ -2495,6 +2632,10 @@
 
       // handle keyboard input
       scene.handleInput(this.Keyboard);
+
+      if (this.debug) {
+        this.Debug.handleInput();
+      }
 
       // maybe show debug info
       if (this.debug) {

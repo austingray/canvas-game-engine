@@ -2,6 +2,7 @@ import Canvas from './Canvas/Canvas';
 import Objects from './Objects/index';
 import Scenes from './Scenes/index';
 import Keyboard from './Inputs/Keyboard';
+import Debug from './Debug';
 
 function game() {
   // view state
@@ -11,6 +12,9 @@ function game() {
   this.debug = true;
   this.timestamp = 0;
   this.fps = 0;
+
+  // debug handler
+  this.Debug = new Debug(this);
 
   // input handler
   this.Keyboard = new Keyboard();
@@ -56,6 +60,10 @@ function game() {
 
     // handle keyboard input
     scene.handleInput(this.Keyboard);
+
+    if (this.debug) {
+      this.Debug.handleInput();
+    }
 
     // maybe show debug info
     if (this.debug) {

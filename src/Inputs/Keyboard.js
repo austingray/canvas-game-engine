@@ -17,6 +17,16 @@ class KeyboardController {
       38: 'up',
       39: 'right',
       40: 'down',
+      49: 'one',
+      50: 'two',
+      51: 'three',
+      52: 'four',
+      53: 'five',
+      54: 'six',
+      55: 'seven',
+      56: 'eight',
+      57: 'nine',
+      58: 'zero',
       65: 'a',
       68: 'd',
       83: 's',
@@ -47,6 +57,16 @@ class KeyboardController {
       equals: false,
       minus: false,
       plus: false,
+      zero: false,
+      one: false,
+      two: false,
+      three: false,
+      four: false,
+      five: false,
+      six: false,
+      seven: false,
+      eight: false,
+      nine: false,
     };
 
     // alias keys
@@ -61,6 +81,9 @@ class KeyboardController {
     // provide an array of all directions and whether they are active
     // up, right, down, left
     this.directions = [false, false, false, false];
+
+    // provide number array
+    this.numbers = [false, false, false, false, false, false, false, false, false, false];
     
     // add event listeners
     this.addEventListeners();
@@ -114,6 +137,9 @@ class KeyboardController {
 
     // update active directions array
     this.updateDirectionsArray();
+
+    // update active numbers array
+    this.updateNumberArray();
   }
 
   /**
@@ -157,12 +183,37 @@ class KeyboardController {
     }
   }
 
+  /**
+   * Updates the directions array
+   *
+   * @memberof KeyboardController
+   */
   updateDirectionsArray() {
     this.directions = [
       (this.active.up) ? true : false,
       (this.active.right) ? true : false,
       (this.active.down) ? true : false,
       (this.active.left) ? true : false,
+    ];
+  }
+
+  /**
+   * Updates the numbers array
+   *
+   * @memberof KeyboardController
+   */
+  updateNumberArray() {
+    this.numbers = [
+      (this.active.zero) ? true : false,
+      (this.active.one) ? true : false,
+      (this.active.two) ? true : false,
+      (this.active.three) ? true : false,
+      (this.active.four) ? true : false,
+      (this.active.five) ? true : false,
+      (this.active.six) ? true : false,
+      (this.active.seven) ? true : false,
+      (this.active.eight) ? true : false,
+      (this.active.nine) ? true : false,
     ];
   }
 

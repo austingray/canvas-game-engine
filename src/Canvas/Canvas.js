@@ -33,17 +33,24 @@ class Canvas {
    * @memberof Canvas
    */
   generateLayers() {
+    // create the canvas container div
+    this.canvasDiv = {};
+    this.canvasDiv.element = document.createElement('div');;
+    this.canvasDiv.element.setAttribute('style', `width: ${this.width}px; height: ${this.height}px; background: #FFFFFF;`);
+    this.canvasDiv.element.id = 'domParent';
+    document.body.appendChild(this.canvasDiv.element);
+
     this.layers = [];
     this.canvasId = 0;
 
     // create canvas layers
-    this.createLayer('background');
-    this.createLayer('primary');
-    this.createLayer('secondary');
-    this.createLayer('override');
-    this.createLayer('shadow');
-    this.createLayer('hud');
-    this.createLayer('debug');
+    this.createLayer('background', { appendTo: this.canvasDiv.element });
+    this.createLayer('primary', { appendTo: this.canvasDiv.element });
+    this.createLayer('secondary', { appendTo: this.canvasDiv.element });
+    this.createLayer('override', { appendTo: this.canvasDiv.element });
+    this.createLayer('shadow', { appendTo: this.canvasDiv.element });
+    this.createLayer('hud', { appendTo: this.canvasDiv.element });
+    this.createLayer('debug', { appendTo: this.canvasDiv.element });
 
     // get explicit reference to debug layer
     this.debugLayer = this.getLayerByName('debug');
