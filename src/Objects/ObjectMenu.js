@@ -11,8 +11,11 @@ class ObjectMenu {
     // reference to the game object
     this.game = game;
 
+    // the arrow indicator symbol
+    const arrowText = ')';
+
     // calculate the menu starting x position.
-    this.startX = this.game.Canvas.calcCenteredTextBoxX(args.options.map(option => option.text));
+    this.startX = this.game.Canvas.calcCenteredTextBoxX(args.options.map(option => `${option.text}`));
 
     // create the option objects
     this.createOptionObjects(args.options);
@@ -21,7 +24,10 @@ class ObjectMenu {
     this.focusMenuObject = this.options[0];
 
     // create the arrow
-    this.createArrow(args);
+    this.createArrow(arrowText);
+
+    // update the start x to accommodate for the arrow
+    this.startX = this.startX + (this.arrow.width + this.arrow.padding) / 2
   }
 
   /**
@@ -49,14 +55,13 @@ class ObjectMenu {
   }
 
   /**
-   * Creates the arrow indicating which object is selected
+   * Creates the arrow indicator
+   *
+   * @param {*} text
+   * @param {string} [font='44px Arial']
    * @memberof ObjectMenu
    */
-  createArrow() {
-    // the arrow
-    const text = ')';
-    const font = '44px Arial';
-    
+  createArrow(text, font = '44px Arial') {
     // get the width to offset from the menu items
     const width = this.game.Canvas.calcTextWidth(text, font);
 
@@ -68,8 +73,10 @@ class ObjectMenu {
       type: 'text',
       text,
       font,
+      padding: 12,
       x: this.startX - width - 12,
       y: this.focusMenuObject.y,
+      width,
     });
   }
 
@@ -126,6 +133,8 @@ class ObjectMenu {
    * @memberof ObjectMenu
    */
   draw() {
+    // set the Canvas context to the menu layer
+    this.game.Canvas.setContext('menu');
     this.options.forEach(option => option.draw(this.game.Canvas));
 
     if (this.hasFocus) {

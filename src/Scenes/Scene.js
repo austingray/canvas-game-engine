@@ -113,18 +113,37 @@ class Scene {
    * @memberof Scene
    */
   transitionIn() {
-    // clear all layers
-    this.game.Canvas.layers.forEach(layer => {
-      layer.clear()
-    });
-
     // disable and reenable keyboard on scene transition
     this.game.Keyboard.setDisabled();
     this.game.Keyboard.clear();
-    const that = this;
-    setTimeout(function() {
-      that.game.Keyboard.setDisabled(false);
+    setTimeout(() => {
+      this.game.Keyboard.setDisabled(false);
     }, 150);
+
+    // do custom transition in effects
+    this.transitionInCustom();
+  }
+
+  /**
+   ** Should be overridden by subclass
+   *  Give the scene a way to customize the transition in
+   *
+   * @memberof Scene
+   */
+  transitionInCustom() {
+    // hello from the other side
+  }
+
+  /**
+   * Transition out of the current scene
+   *
+   * @memberof Scene
+   */
+  transitionOut() {
+    // default to clear all layers
+    for (let i = 0; i < this.game.Canvas.layers.length; i++) {
+      this.game.Canvas.layers[i].clear();
+    }
   }
 }
 

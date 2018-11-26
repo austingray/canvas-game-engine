@@ -75,6 +75,8 @@ class Hero extends ObjectCircle {
    * @memberof Hero
    */
   draw(Canvas) {
+    Canvas.setContext('character');
+
     Canvas.drawCircle({
       fillStyle: this.fillStyle,
       x: this.x,
@@ -86,7 +88,7 @@ class Hero extends ObjectCircle {
     });
 
     if (this.debug) {
-      Canvas.pushDebugText('hero.maxSpeed', `hero.maxSpeed: ${this.maxSpeed}`);
+      Canvas.pushDebugText('hero.maxSpeed', `Hero.maxSpeed: ${this.maxSpeed}`);
     }
   }
 

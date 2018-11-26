@@ -32,8 +32,19 @@ function game() {
   /** 
    * A method for setting the current scene
    */
-  this.setScene = (sceneName) => {
-    this.scene = new this.scenes[sceneName](this);
+  this.setScene = (scene) => {
+    // transition out of the current scene
+    if (typeof this.scene !== 'undefined') {
+      this.scene.transitionOut();
+    }
+
+    // if scene is an existing scene object, use it
+    // otherwise create a new scene of the specified type
+    this.scene = typeof scene === 'object'
+      ? scene
+      : new this.scenes[scene](this);
+    
+    // transition into new scene
     this.scene.transitionIn();
   }
 

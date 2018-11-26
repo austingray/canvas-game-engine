@@ -217,10 +217,12 @@
       // create canvas layers
       this.createLayer('background', { appendTo: this.canvasDiv.element });
       this.createLayer('primary', { appendTo: this.canvasDiv.element });
+      this.createLayer('character', { appendTo: this.canvasDiv.element });
       this.createLayer('secondary', { appendTo: this.canvasDiv.element });
       this.createLayer('override', { appendTo: this.canvasDiv.element });
       this.createLayer('shadow', { appendTo: this.canvasDiv.element });
       this.createLayer('hud', { appendTo: this.canvasDiv.element });
+      this.createLayer('menu', { appendTo: this.canvasDiv.element });
       this.createLayer('debug', { appendTo: this.canvasDiv.element });
 
       // get explicit reference to debug layer
@@ -247,6 +249,17 @@
     }
 
     /**
+     * Sets this.ctx to a layer's context by its name
+     *
+     * @param {*} layerName
+     * @memberof Canvas
+     */
+    setContext(layerName) {
+      const layer = this.getLayerByName(layerName);
+      this.ctx = layer.context;
+    }
+
+    /**
      * Gets a layer by name
      *
      * @param {*} name
@@ -254,8 +267,8 @@
      * @memberof Canvas
      */
     getLayerByName(name) {
-      const debugLayer = this.layers.filter(layer => layer.name === name)[0];
-      return debugLayer;
+      const layer = this.layers.filter(layer => layer.name === name)[0];
+      return layer;
     }
     
     /**
@@ -298,6 +311,18 @@
       const layer = this.layers[index];
       const ctx = layer.context;
       ctx.clearRect(0, 0, layer.width, layer.height);
+    }
+
+    /**
+     * Clear an array of layers
+     *
+     * @param {array} layers
+     * @memberof Canvas
+     */
+    clearLayers(layers) {
+      for (let i = 0; i < layers.length; i++) {
+        this.getLayerByName(layers[i]).clear();
+      }
     }
 
     /**
@@ -617,8 +642,11 @@
       // reference to the game object
       this.game = game;
 
+      // the arrow indicator symbol
+      const arrowText = ')';
+
       // calculate the menu starting x position.
-      this.startX = this.game.Canvas.calcCenteredTextBoxX(args.options.map(option => option.text));
+      this.startX = this.game.Canvas.calcCenteredTextBoxX(args.options.map(option => `${option.text}`));
 
       // create the option objects
       this.createOptionObjects(args.options);
@@ -627,7 +655,10 @@
       this.focusMenuObject = this.options[0];
 
       // create the arrow
-      this.createArrow(args);
+      this.createArrow(arrowText);
+
+      // update the start x to accommodate for the arrow
+      this.startX = this.startX + (this.arrow.width + this.arrow.padding) / 2;
     }
 
     /**
@@ -655,14 +686,13 @@
     }
 
     /**
-     * Creates the arrow indicating which object is selected
+     * Creates the arrow indicator
+     *
+     * @param {*} text
+     * @param {string} [font='44px Arial']
      * @memberof ObjectMenu
      */
-    createArrow() {
-      // the arrow
-      const text = ')';
-      const font = '44px Arial';
-      
+    createArrow(text, font = '44px Arial') {
       // get the width to offset from the menu items
       const width = this.game.Canvas.calcTextWidth(text, font);
 
@@ -674,8 +704,10 @@
         type: 'text',
         text,
         font,
+        padding: 12,
         x: this.startX - width - 12,
         y: this.focusMenuObject.y,
+        width,
       });
     }
 
@@ -732,6 +764,8 @@
      * @memberof ObjectMenu
      */
     draw() {
+      // set the Canvas context to the menu layer
+      this.game.Canvas.setContext('menu');
       this.options.forEach(option => option.draw(this.game.Canvas));
 
       if (this.hasFocus) {
@@ -815,6 +849,8 @@
      * @memberof Hero
      */
     draw(Canvas) {
+      Canvas.setContext('character');
+
       Canvas.drawCircle({
         fillStyle: this.fillStyle,
         x: this.x,
@@ -826,7 +862,7 @@
       });
 
       if (this.debug) {
-        Canvas.pushDebugText('hero.maxSpeed', `hero.maxSpeed: ${this.maxSpeed}`);
+        Canvas.pushDebugText('hero.maxSpeed', `Hero.maxSpeed: ${this.maxSpeed}`);
       }
     }
 
@@ -1932,18 +1968,37 @@
      * @memberof Scene
      */
     transitionIn() {
-      // clear all layers
-      this.game.Canvas.layers.forEach(layer => {
-        layer.clear();
-      });
-
       // disable and reenable keyboard on scene transition
       this.game.Keyboard.setDisabled();
       this.game.Keyboard.clear();
-      const that = this;
-      setTimeout(function() {
-        that.game.Keyboard.setDisabled(false);
+      setTimeout(() => {
+        this.game.Keyboard.setDisabled(false);
       }, 150);
+
+      // do custom transition in effects
+      this.transitionInCustom();
+    }
+
+    /**
+     ** Should be overridden by subclass
+     *  Give the scene a way to customize the transition in
+     *
+     * @memberof Scene
+     */
+    transitionInCustom() {
+      // hello from the other side
+    }
+
+    /**
+     * Transition out of the current scene
+     *
+     * @memberof Scene
+     */
+    transitionOut() {
+      // default to clear all layers
+      for (let i = 0; i < this.game.Canvas.layers.length; i++) {
+        this.game.Canvas.layers[i].clear();
+      }
     }
   }
 
@@ -2024,13 +2079,25 @@
     }
 
     /**
+     * Clear the text layer
+     *
+     * @memberof SceneMainMenu
+     */
+    clear() {
+      this.Canvas.getLayerByName('menu').clear();
+    }
+
+    /**
      * Loads the objects to the scene for drawing
      *
      * @memberof SceneMainMenu
      */
     prepareScene() {
       // draw the background
+      this.Canvas.setContext('primary');
       this.Canvas.drawGradientBackground();
+
+      this.Canvas.setContext('menu');
 
       // push the logo to the scene
       this.pushToScene(this.logo);
@@ -2079,6 +2146,16 @@
         that.allowInput = true;
       }, this.keyboardCooldown);
     }
+
+    transitionInCustom() {
+      // TODO: fix this nonsense...
+      this.game.Canvas.clearLayers(['menu', 'secondary', 'override', 'shadow']);
+    }
+
+    transitionOut() {
+      // clear the menu layer
+      this.game.Canvas.getLayerByName('menu').clear();
+    }
   }
 
   class SceneGame extends Scene {
@@ -2117,9 +2194,7 @@
     clear() {
       // clear the primary layer
       if (this.map.needsUpdate) {
-        this.Canvas.primaryLayer.clear();
-        this.Canvas.secondaryLayer.clear();
-        this.Canvas.overrideLayer.clear();
+        this.Canvas.clearLayers(['primary', 'secondary', 'override', 'character']);
       }
     }
 
@@ -2139,6 +2214,19 @@
       }
 
       this.hero.handleInput(Keyboard, this.map);
+    }
+
+    transitionInCustom() {
+      this.Canvas.setContext('primary');
+
+      // do a draw
+      this.map.needsUpdate = true;
+    }
+
+    // leave the game in the background cause it's pretty sweet looking
+    transitionOut() {
+      this.Canvas.clearLayers(['character']);
+      // do nothing!
     }
   }
 
@@ -2196,7 +2284,7 @@
           {
             text: 'Resume',
             callback: () => {
-              this.game.scene = this.game.sceneCache;
+              this.game.setScene(this.game.sceneCache);
             },
           },
           {
@@ -2210,13 +2298,25 @@
     }
 
     /**
+     * Clear the text layer
+     *
+     * @memberof SceneMainMenu
+     */
+    clear() {
+      this.Canvas.getLayerByName('menu').clear();
+    }
+
+    /**
      * Loads the objects to the scene for drawing
      *
      * @memberof ScenePause
      */
     prepareScene() {
       // draw the background
+      this.Canvas.setContext('primary');
       this.Canvas.drawGradientBackground();
+
+      this.Canvas.setContext('menu');
 
       // push the logo to the scene
       this.pushToScene(this.logo);
@@ -2258,6 +2358,11 @@
         this.menu.focusMenuObject.callback();
         this.allowInput = false;
       }
+
+      // go back to game on escape
+      if (Keyboard.active.escape) {
+        this.game.setScene(this.game.sceneCache);
+      }
       
       // set timeout to enable key press again
       window.clearTimeout(this.keyboardCooldownTimer);
@@ -2265,6 +2370,14 @@
       this.keyboardCooldownTimer = window.setTimeout(function() {
         that.allowInput = true;
       }, this.keyboardCooldown);
+    }
+
+    // just clear the primary and background
+    transitionOut() {
+      const layersToClear = ['menu'];
+      for (let i = 0; i < layersToClear.length; i++) {
+        this.Canvas.getLayerByName(layersToClear[i]).clear();
+      }
     }
   }
 
@@ -2666,8 +2779,19 @@
     /** 
      * A method for setting the current scene
      */
-    this.setScene = (sceneName) => {
-      this.scene = new this.scenes[sceneName](this);
+    this.setScene = (scene) => {
+      // transition out of the current scene
+      if (typeof this.scene !== 'undefined') {
+        this.scene.transitionOut();
+      }
+
+      // if scene is an existing scene object, use it
+      // otherwise create a new scene of the specified type
+      this.scene = typeof scene === 'object'
+        ? scene
+        : new this.scenes[scene](this);
+      
+      // transition into new scene
       this.scene.transitionIn();
     };
 

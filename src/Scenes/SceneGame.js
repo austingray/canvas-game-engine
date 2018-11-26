@@ -36,9 +36,7 @@ class SceneGame extends Scene {
   clear() {
     // clear the primary layer
     if (this.map.needsUpdate) {
-      this.Canvas.primaryLayer.clear();
-      this.Canvas.secondaryLayer.clear();
-      this.Canvas.overrideLayer.clear();
+      this.Canvas.clearLayers(['primary', 'secondary', 'override', 'character']);
     }
   }
 
@@ -58,6 +56,19 @@ class SceneGame extends Scene {
     }
 
     this.hero.handleInput(Keyboard, this.map);
+  }
+
+  transitionInCustom() {
+    this.Canvas.setContext('primary');
+
+    // do a draw
+    this.map.needsUpdate = true;
+  }
+
+  // leave the game in the background cause it's pretty sweet looking
+  transitionOut() {
+    this.Canvas.clearLayers(['character']);
+    // do nothing!
   }
 }
 

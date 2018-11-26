@@ -54,7 +54,7 @@ class ScenePause extends Scene {
         {
           text: 'Resume',
           callback: () => {
-            this.game.scene = this.game.sceneCache;
+            this.game.setScene(this.game.sceneCache);
           },
         },
         {
@@ -68,13 +68,25 @@ class ScenePause extends Scene {
   }
 
   /**
+   * Clear the text layer
+   *
+   * @memberof SceneMainMenu
+   */
+  clear() {
+    this.Canvas.getLayerByName('menu').clear();
+  }
+
+  /**
    * Loads the objects to the scene for drawing
    *
    * @memberof ScenePause
    */
   prepareScene() {
     // draw the background
+    this.Canvas.setContext('primary');
     this.Canvas.drawGradientBackground();
+
+    this.Canvas.setContext('menu');
 
     // push the logo to the scene
     this.pushToScene(this.logo);
@@ -116,6 +128,11 @@ class ScenePause extends Scene {
       this.menu.focusMenuObject.callback();
       this.allowInput = false;
     }
+
+    // go back to game on escape
+    if (Keyboard.active.escape) {
+      this.game.setScene(this.game.sceneCache);
+    }
     
     // set timeout to enable key press again
     window.clearTimeout(this.keyboardCooldownTimer);
@@ -123,6 +140,14 @@ class ScenePause extends Scene {
     this.keyboardCooldownTimer = window.setTimeout(function() {
       that.allowInput = true;
     }, this.keyboardCooldown);
+  }
+
+  // just clear the primary and background
+  transitionOut() {
+    const layersToClear = ['menu'];
+    for (let i = 0; i < layersToClear.length; i++) {
+      this.Canvas.getLayerByName(layersToClear[i]).clear();
+    }
   }
 }
 

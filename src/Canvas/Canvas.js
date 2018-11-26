@@ -46,10 +46,12 @@ class Canvas {
     // create canvas layers
     this.createLayer('background', { appendTo: this.canvasDiv.element });
     this.createLayer('primary', { appendTo: this.canvasDiv.element });
+    this.createLayer('character', { appendTo: this.canvasDiv.element });
     this.createLayer('secondary', { appendTo: this.canvasDiv.element });
     this.createLayer('override', { appendTo: this.canvasDiv.element });
     this.createLayer('shadow', { appendTo: this.canvasDiv.element });
     this.createLayer('hud', { appendTo: this.canvasDiv.element });
+    this.createLayer('menu', { appendTo: this.canvasDiv.element });
     this.createLayer('debug', { appendTo: this.canvasDiv.element });
 
     // get explicit reference to debug layer
@@ -76,6 +78,17 @@ class Canvas {
   }
 
   /**
+   * Sets this.ctx to a layer's context by its name
+   *
+   * @param {*} layerName
+   * @memberof Canvas
+   */
+  setContext(layerName) {
+    const layer = this.getLayerByName(layerName);
+    this.ctx = layer.context;
+  }
+
+  /**
    * Gets a layer by name
    *
    * @param {*} name
@@ -83,8 +96,8 @@ class Canvas {
    * @memberof Canvas
    */
   getLayerByName(name) {
-    const debugLayer = this.layers.filter(layer => layer.name === name)[0];
-    return debugLayer;
+    const layer = this.layers.filter(layer => layer.name === name)[0];
+    return layer;
   }
   
   /**
@@ -127,6 +140,18 @@ class Canvas {
     const layer = this.layers[index];
     const ctx = layer.context;
     ctx.clearRect(0, 0, layer.width, layer.height);
+  }
+
+  /**
+   * Clear an array of layers
+   *
+   * @param {array} layers
+   * @memberof Canvas
+   */
+  clearLayers(layers) {
+    for (let i = 0; i < layers.length; i++) {
+      this.getLayerByName(layers[i]).clear();
+    }
   }
 
   /**

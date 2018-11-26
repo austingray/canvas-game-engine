@@ -77,13 +77,25 @@ class SceneMainMenu extends Scene {
   }
 
   /**
+   * Clear the text layer
+   *
+   * @memberof SceneMainMenu
+   */
+  clear() {
+    this.Canvas.getLayerByName('menu').clear();
+  }
+
+  /**
    * Loads the objects to the scene for drawing
    *
    * @memberof SceneMainMenu
    */
   prepareScene() {
     // draw the background
+    this.Canvas.setContext('primary');
     this.Canvas.drawGradientBackground();
+
+    this.Canvas.setContext('menu');
 
     // push the logo to the scene
     this.pushToScene(this.logo);
@@ -131,6 +143,16 @@ class SceneMainMenu extends Scene {
     this.keyboardCooldownTimer = window.setTimeout(function() {
       that.allowInput = true;
     }, this.keyboardCooldown);
+  }
+
+  transitionInCustom() {
+    // TODO: fix this nonsense...
+    this.game.Canvas.clearLayers(['menu', 'secondary', 'override', 'shadow']);
+  }
+
+  transitionOut() {
+    // clear the menu layer
+    this.game.Canvas.getLayerByName('menu').clear();
   }
 }
 
