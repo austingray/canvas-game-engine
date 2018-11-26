@@ -10,8 +10,9 @@ class KeyboardController {
     // raw keycodes
     this.keyCodes = {
       13: 'enter',
+      16: 'shift',
       27: 'escape',
-      32: 'shift',
+      32: 'space',
       37: 'left',
       38: 'up',
       39: 'right',
@@ -33,8 +34,8 @@ class KeyboardController {
     // human readable key states
     this.active = {
       enter: false,
-      escape: false,
       shift: false,
+      escape: false,
       up: false,
       right: false,
       down: false,
@@ -134,7 +135,7 @@ class KeyboardController {
       
       // if shift is active, and we're pressing the key
       if (this.active.shift && active) {
-        this.active[shiftKey] = true;
+        this.active[shiftedKey] = true;
       } else {
         // otherwise set it to inactive
         this.active[shiftedKey] = false;
