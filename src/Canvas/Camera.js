@@ -17,9 +17,10 @@ class Camera {
    * Sets camera focus on an object
    *
    * @param {*} object
+   * @param {boolean} [centered=false]
    * @memberof Camera
    */
-  setFocus(object) {
+  setFocus(object, centered = false) {
     // if we're at the right edge of the viewport
     if (
       this.x > (this.width * .6) - this.offsetX
@@ -56,9 +57,18 @@ class Camera {
       this.offsetY = this.screenPushY - this.y;
     }
 
-    // convert floats to integers
-    this.offsetX = Math.round(this.offsetX);
-    this.offsetY = Math.round(this.offsetY);
+    if (centered) {
+      this.x = object.x;
+      this.y = object.y;
+      this.screenPushX = this.width / 2;
+      this.screenPushY = this.height / 2;
+      this.offsetX = Math.round(this.width / 2 - this.x);
+      this.offsetY = Math.round(this.height / 2  - this.y);
+    } else {
+      // convert floats to integers
+      this.offsetX = Math.round(this.offsetX);
+      this.offsetY = Math.round(this.offsetY);
+    }
 
     // update this
     this.x = object.x;

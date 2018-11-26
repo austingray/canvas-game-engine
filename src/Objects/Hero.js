@@ -53,6 +53,9 @@ class Hero extends ObjectCircle {
       return this.moveToRandomLocation();
     }
 
+    // set the camera focus
+    this.game.Canvas.Camera.setFocus({ x, y }, true);
+
     // remove movement easing, update position
     clearTimeout(this.targetXTimer);
     clearTimeout(this.targetYTimer);
@@ -60,9 +63,6 @@ class Hero extends ObjectCircle {
     this.targetY = y;
     this.x = x;
     this.y = y;
-
-    // set the camera focus
-    this.game.Canvas.Camera.setFocus(x, y);
 
     // tell the map to redraw
     this.map.needsUpdate = true;
