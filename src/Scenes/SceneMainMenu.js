@@ -57,7 +57,7 @@ class SceneMainMenu extends Scene {
         {
           text: 'New Game',
           callback: () => {
-            this.game.changeCurrentScene('game');
+            this.game.setScene('game');
           },
         },
         {

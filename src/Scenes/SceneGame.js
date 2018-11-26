@@ -52,7 +52,9 @@ class SceneGame extends Scene {
   handleInput(Keyboard) {
     // pause the game
     if (Keyboard.active.escape) {
-      this.game.changeCurrentScene('pause');
+      // cache the current scene in case we're just pausing
+      this.game.sceneCache = this.game.scene;
+      this.game.setScene('pause');
     }
 
     this.hero.handleInput(Keyboard, this.map);

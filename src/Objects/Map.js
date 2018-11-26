@@ -112,7 +112,7 @@ class Map {
    */
   drawShadows() {
     // get the origin
-    const scene = this.game.scenes[this.game.currentScene];
+    const scene = this.game.scene;
     const origin = { x: scene.hero.x, y: scene.hero.y };
 
     // get the shadow objects

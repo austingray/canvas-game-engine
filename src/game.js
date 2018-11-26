@@ -5,9 +5,6 @@ import Keyboard from './Inputs/Keyboard';
 import Debug from './Debug';
 
 function game() {
-  // view state
-  this.currentScene = 'mainMenu';
-
   // debug stuff
   this.debug = true;
   this.timestamp = 0;
@@ -27,10 +24,18 @@ function game() {
 
   // define the scenes
   this.scenes = {
-    mainMenu: new Scenes.SceneMainMenu(this),
-    game: new Scenes.SceneGame(this),
-    pause: new Scenes.ScenePause(this),
+    mainMenu: Scenes.SceneMainMenu,
+    game: Scenes.SceneGame,
+    pause: Scenes.ScenePause,
   };
+
+  /** 
+   * A method for setting the current scene
+   */
+  this.setScene = (sceneName) => {
+    this.scene = new this.scenes[sceneName](this);
+    this.scene.transitionIn();
+  }
 
   /**
    * Calls request animation frame and the update function
@@ -45,22 +50,19 @@ function game() {
    * This is where the logic goes
    */
   this.update = (timestamp) => {
-    // get the current scene
-    const scene = this.scenes[this.currentScene];
-
     // clear the previous frame
-    scene.clear();
+    this.scene.clear();
 
     if (this.debug) {
       this.Canvas.debugLayer.clear();
     }
 
     // draw the current frame
-    scene.draw();
+    this.scene.draw();
 
     // handle keyboard input
     if (this.Keyboard.activeKeyCodes.length > 0) {
-      scene.handleInput(this.Keyboard);
+      this.scene.handleInput(this.Keyboard);
 
       if (this.debug) {
         this.Debug.handleInput();
@@ -77,16 +79,17 @@ function game() {
     }
   }
 
-  /** 
-   * A method for changing the current scene
-   */
-  this.changeCurrentScene = (sceneName) => {
-    this.currentScene = sceneName;
-    this.scenes[this.currentScene].transitionIn();
+  
+  this.init = () => {
+    // set the current scene to the main menu
+    this.setScene('mainMenu');
+
+    // start the game loop
+    this.loop();
   }
 
-  // kick the tires and light the fires
-  this.loop();
+  // kick the tires and light the fires!!!
+  this.init();
 };
 
 export default game;

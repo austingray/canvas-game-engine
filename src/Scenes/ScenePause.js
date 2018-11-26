@@ -54,13 +54,13 @@ class ScenePause extends Scene {
         {
           text: 'Resume',
           callback: () => {
-            this.game.changeCurrentScene('game');
+            this.game.scene = this.game.sceneCache;
           },
         },
         {
           text: 'Quit To Menu',
           callback: () => {
-            this.game.changeCurrentScene('mainMenu');
+            this.game.setScene('mainMenu');
           },
         },
       ]

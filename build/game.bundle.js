@@ -1623,7 +1623,7 @@
      */
     drawShadows() {
       // get the origin
-      const scene = this.game.scenes[this.game.currentScene];
+      const scene = this.game.scene;
       const origin = { x: scene.hero.x, y: scene.hero.y };
 
       // get the shadow objects
@@ -2004,7 +2004,7 @@
           {
             text: 'New Game',
             callback: () => {
-              this.game.changeCurrentScene('game');
+              this.game.setScene('game');
             },
           },
           {
@@ -2133,7 +2133,9 @@
     handleInput(Keyboard) {
       // pause the game
       if (Keyboard.active.escape) {
-        this.game.changeCurrentScene('pause');
+        // cache the current scene in case we're just pausing
+        this.game.sceneCache = this.game.scene;
+        this.game.setScene('pause');
       }
 
       this.hero.handleInput(Keyboard, this.map);
@@ -2194,13 +2196,13 @@
           {
             text: 'Resume',
             callback: () => {
-              this.game.changeCurrentScene('game');
+              this.game.scene = this.game.sceneCache;
             },
           },
           {
             text: 'Quit To Menu',
             callback: () => {
-              this.game.changeCurrentScene('mainMenu');
+              this.game.setScene('mainMenu');
             },
           },
         ]
@@ -2447,8 +2449,6 @@
           this.activeKeyCodes.splice(index, 1);
         }
       }
-
-      debugger;
     }
 
     /**
@@ -2639,9 +2639,6 @@
   }
 
   function game() {
-    // view state
-    this.currentScene = 'mainMenu';
-
     // debug stuff
     this.debug = true;
     this.timestamp = 0;
@@ -2661,9 +2658,17 @@
 
     // define the scenes
     this.scenes = {
-      mainMenu: new Scenes.SceneMainMenu(this),
-      game: new Scenes.SceneGame(this),
-      pause: new Scenes.ScenePause(this),
+      mainMenu: Scenes.SceneMainMenu,
+      game: Scenes.SceneGame,
+      pause: Scenes.ScenePause,
+    };
+
+    /** 
+     * A method for setting the current scene
+     */
+    this.setScene = (sceneName) => {
+      this.scene = new this.scenes[sceneName](this);
+      this.scene.transitionIn();
     };
 
     /**
@@ -2679,22 +2684,19 @@
      * This is where the logic goes
      */
     this.update = (timestamp) => {
-      // get the current scene
-      const scene = this.scenes[this.currentScene];
-
       // clear the previous frame
-      scene.clear();
+      this.scene.clear();
 
       if (this.debug) {
         this.Canvas.debugLayer.clear();
       }
 
       // draw the current frame
-      scene.draw();
+      this.scene.draw();
 
       // handle keyboard input
       if (this.Keyboard.activeKeyCodes.length > 0) {
-        scene.handleInput(this.Keyboard);
+        this.scene.handleInput(this.Keyboard);
 
         if (this.debug) {
           this.Debug.handleInput();
@@ -2711,16 +2713,17 @@
       }
     };
 
-    /** 
-     * A method for changing the current scene
-     */
-    this.changeCurrentScene = (sceneName) => {
-      this.currentScene = sceneName;
-      this.scenes[this.currentScene].transitionIn();
+    
+    this.init = () => {
+      // set the current scene to the main menu
+      this.setScene('mainMenu');
+
+      // start the game loop
+      this.loop();
     };
 
-    // kick the tires and light the fires
-    this.loop();
+    // kick the tires and light the fires!!!
+    this.init();
   }
 
   return game;

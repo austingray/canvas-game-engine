@@ -173,8 +173,6 @@ class KeyboardController {
         this.activeKeyCodes.splice(index, 1);
       }
     }
-
-    debugger;
   }
 
   /**
