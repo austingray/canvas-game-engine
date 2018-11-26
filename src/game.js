@@ -72,7 +72,7 @@ function game() {
       const delta = (timestamp - this.timestamp) / 1000;
       this.timestamp = timestamp;
       this.Canvas.pushDebugText('fps', `FPS: ${1 / delta}`);
-      this.Canvas.pushDebugText('activeKeys', `Keyboard.activeKeyCodes: ${this.Keyboard.activeKeyCodes.toString()}`);
+      this.Canvas.pushDebugText('activeKeys', `Keyboard.activeKeyCodes: [${this.Keyboard.activeKeyCodes.toString()}]`);
       this.Canvas.drawDebugText();
     }
   }
