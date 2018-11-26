@@ -762,8 +762,6 @@
       // remove movement easing, update position
       clearTimeout(this.targetXTimer);
       clearTimeout(this.targetYTimer);
-      // TODO: 20 is hardcoded in the map.getCollision method
-      // TODO: Should not have to hardcode this.
       this.targetX = x;
       this.targetY = y;
       this.x = x;
