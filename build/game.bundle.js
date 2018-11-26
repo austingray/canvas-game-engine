@@ -2226,37 +2226,32 @@
     /**
      * Handle input for the scene
      *
-     * @param {array} activeKeys
+     * @param {Keyboard} Keyboard
      * @returns {void}
      * @memberof ScenePause
      */
-    handleInput(activeKeys) {
+    handleInput(Keyboard) {
       // bail if input is disabled
       if (!this.allowInput) {
         return;
       }
 
-      // bail if no key press
-      if (activeKeys.length === 0) {
-        return;
-      }
-
       // handle down
-      if (activeKeys.indexOf(40) > -1) {
+      if (Keyboard.active.down) {
         // increment the focused object
         this.menu.incrementFocusMenuObject();
         this.allowInput = false;
       }
 
       // handle up
-      if (activeKeys.indexOf(38) > -1) {
+      if (Keyboard.active.up) {
         // decrement the focused object
         this.menu.decrementFocusMenuObject();
         this.allowInput = false;
       }
 
       // handle enter
-      if (activeKeys.indexOf(13) > -1) {
+      if (Keyboard.active.enter) {
         // do the menu item callback
         this.menu.focusMenuObject.callback();
         this.allowInput = false;
@@ -2357,6 +2352,11 @@
         d: 'right',
       };
 
+      // keep track of the active key codes
+      // we can intercept the handleInput calls for each scene
+      // to prevent unnecessary calculations
+      this.activeKeyCodes = [];
+
       // provide an array of all directions and whether they are active
       // up, right, down, left
       this.directions = [false, false, false, false];
@@ -2400,6 +2400,9 @@
         return;
       }
 
+      // keep track of the active keycodes
+      this.updateActiveKeyCodesArray(e.keyCode, press);
+
       // get the human readable value from keycode
       const key = this.keyCodes[e.keyCode];
 
@@ -2419,6 +2422,33 @@
 
       // update active numbers array
       this.updateNumberArray();
+    }
+
+    /**
+     * Adds or removes a keyCode from this.activeKeyCodes
+     *
+     * @param {*} keyCode
+     * @param {*} press
+     * @memberof KeyboardController
+     */
+    updateActiveKeyCodesArray(keyCode, press) {
+      // get the index
+      const index = this.activeKeyCodes.indexOf(keyCode);
+
+      // if press,
+      if (press) {
+        // add it if it does not exist
+        if (index === -1) {
+          this.activeKeyCodes.push(keyCode);
+        }
+      } else {
+        // remove it if it exists
+        if (index > -1) {
+          this.activeKeyCodes.splice(index, 1);
+        }
+      }
+
+      debugger;
     }
 
     /**
@@ -2502,8 +2532,40 @@
      * @memberof KeyboardController
      */
     clear() {
-      // this.activeKeys = [];
-      // TODO: update for our new handling
+      this.activeKeyCodes = [];
+      
+      this.active = {
+        enter: false,
+        shift: false,
+        escape: false,
+        up: false,
+        right: false,
+        down: false,
+        left: false,
+        w: false,
+        a: false,
+        s: false,
+        d: false,
+        equals: false,
+        minus: false,
+        plus: false,
+        zero: false,
+        one: false,
+        two: false,
+        three: false,
+        four: false,
+        five: false,
+        six: false,
+        seven: false,
+        eight: false,
+        nine: false,
+      };
+
+      // update active directions array
+      this.updateDirectionsArray();
+
+      // update active numbers array
+      this.updateNumberArray();
     }
 
     /**
@@ -2631,10 +2693,12 @@
       scene.draw();
 
       // handle keyboard input
-      scene.handleInput(this.Keyboard);
+      if (this.Keyboard.activeKeyCodes.length > 0) {
+        scene.handleInput(this.Keyboard);
 
-      if (this.debug) {
-        this.Debug.handleInput();
+        if (this.debug) {
+          this.Debug.handleInput();
+        }
       }
 
       // maybe show debug info
@@ -2642,6 +2706,7 @@
         const delta = (timestamp - this.timestamp) / 1000;
         this.timestamp = timestamp;
         this.Canvas.pushDebugText('fps', `FPS: ${1 / delta}`);
+        this.Canvas.pushDebugText('activeKeys', `Keyboard.activeKeyCodes: ${this.Keyboard.activeKeyCodes.toString()}`);
         this.Canvas.drawDebugText();
       }
     };

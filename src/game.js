@@ -59,10 +59,12 @@ function game() {
     scene.draw();
 
     // handle keyboard input
-    scene.handleInput(this.Keyboard);
+    if (this.Keyboard.activeKeyCodes.length > 0) {
+      scene.handleInput(this.Keyboard);
 
-    if (this.debug) {
-      this.Debug.handleInput();
+      if (this.debug) {
+        this.Debug.handleInput();
+      }
     }
 
     // maybe show debug info
@@ -70,6 +72,7 @@ function game() {
       const delta = (timestamp - this.timestamp) / 1000;
       this.timestamp = timestamp;
       this.Canvas.pushDebugText('fps', `FPS: ${1 / delta}`);
+      this.Canvas.pushDebugText('activeKeys', `Keyboard.activeKeyCodes: ${this.Keyboard.activeKeyCodes.toString()}`);
       this.Canvas.drawDebugText();
     }
   }

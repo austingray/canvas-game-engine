@@ -86,37 +86,32 @@ class ScenePause extends Scene {
   /**
    * Handle input for the scene
    *
-   * @param {array} activeKeys
+   * @param {Keyboard} Keyboard
    * @returns {void}
    * @memberof ScenePause
    */
-  handleInput(activeKeys) {
+  handleInput(Keyboard) {
     // bail if input is disabled
     if (!this.allowInput) {
       return;
     }
 
-    // bail if no key press
-    if (activeKeys.length === 0) {
-      return;
-    }
-
     // handle down
-    if (activeKeys.indexOf(40) > -1) {
+    if (Keyboard.active.down) {
       // increment the focused object
       this.menu.incrementFocusMenuObject();
       this.allowInput = false;
     }
 
     // handle up
-    if (activeKeys.indexOf(38) > -1) {
+    if (Keyboard.active.up) {
       // decrement the focused object
       this.menu.decrementFocusMenuObject();
       this.allowInput = false;
     }
 
     // handle enter
-    if (activeKeys.indexOf(13) > -1) {
+    if (Keyboard.active.enter) {
       // do the menu item callback
       this.menu.focusMenuObject.callback();
       this.allowInput = false;

@@ -76,7 +76,12 @@ class KeyboardController {
       a: 'left',
       s: 'down',
       d: 'right',
-    }
+    };
+
+    // keep track of the active key codes
+    // we can intercept the handleInput calls for each scene
+    // to prevent unnecessary calculations
+    this.activeKeyCodes = [];
 
     // provide an array of all directions and whether they are active
     // up, right, down, left
@@ -121,6 +126,9 @@ class KeyboardController {
       return;
     }
 
+    // keep track of the active keycodes
+    this.updateActiveKeyCodesArray(e.keyCode, press);
+
     // get the human readable value from keycode
     const key = this.keyCodes[e.keyCode];
 
@@ -140,6 +148,33 @@ class KeyboardController {
 
     // update active numbers array
     this.updateNumberArray();
+  }
+
+  /**
+   * Adds or removes a keyCode from this.activeKeyCodes
+   *
+   * @param {*} keyCode
+   * @param {*} press
+   * @memberof KeyboardController
+   */
+  updateActiveKeyCodesArray(keyCode, press) {
+    // get the index
+    const index = this.activeKeyCodes.indexOf(keyCode);
+
+    // if press,
+    if (press) {
+      // add it if it does not exist
+      if (index === -1) {
+        this.activeKeyCodes.push(keyCode);
+      }
+    } else {
+      // remove it if it exists
+      if (index > -1) {
+        this.activeKeyCodes.splice(index, 1);
+      }
+    }
+
+    debugger;
   }
 
   /**
@@ -223,8 +258,40 @@ class KeyboardController {
    * @memberof KeyboardController
    */
   clear() {
-    // this.activeKeys = [];
-    // TODO: update for our new handling
+    this.activeKeyCodes = [];
+    
+    this.active = {
+      enter: false,
+      shift: false,
+      escape: false,
+      up: false,
+      right: false,
+      down: false,
+      left: false,
+      w: false,
+      a: false,
+      s: false,
+      d: false,
+      equals: false,
+      minus: false,
+      plus: false,
+      zero: false,
+      one: false,
+      two: false,
+      three: false,
+      four: false,
+      five: false,
+      six: false,
+      seven: false,
+      eight: false,
+      nine: false,
+    };
+
+    // update active directions array
+    this.updateDirectionsArray();
+
+    // update active numbers array
+    this.updateNumberArray();
   }
 
   /**
