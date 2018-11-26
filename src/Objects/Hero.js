@@ -2,6 +2,10 @@ import ObjectCircle from './ObjectCircle';
 
 class Hero extends ObjectCircle {
   init(map) {
+    // display debug info about the hero
+    this.debug = true;
+
+    // provide access to the map
     this.map = map;
 
     // allows keyboard input to the character
@@ -25,6 +29,85 @@ class Hero extends ObjectCircle {
 
     // cooldown beteween movement
     this.inputCooldown = 30;
+
+    // start the hero at a random location
+    this.moveToRandomLocation();
+  }
+
+  /**
+   * Gets a random x/y coord
+   *
+   * @memberof Hero
+   */
+  moveToRandomLocation() {
+    // get random pixel coords
+    const x = Math.round(Math.random() * this.map.widthInPixels);
+    const y = Math.round(Math.random() * this.map.heightInPixels);
+
+    // calculate visible tiles so we can check for collisions
+    this.map.calculateVisibleTiles(x, y);
+
+    // check if blocking
+    // if it is, try again
+    if (this.map.getCollision(x, y)) {
+      return this.moveToRandomLocation();
+    }
+
+    // remove movement easing, update position
+    clearTimeout(this.targetXTimer);
+    clearTimeout(this.targetYTimer);
+    // TODO: 20 is hardcoded in the map.getCollision method
+    // TODO: Should not have to hardcode this.
+    this.targetX = x;
+    this.targetY = y;
+    this.x = x;
+    this.y = y;
+
+    // set the camera focus
+    this.game.Canvas.Camera.setFocus(x, y);
+
+    // tell the map to redraw
+    this.map.needsUpdate = true;
+  }
+
+  /**
+   * Currently draws a circle
+   *
+   * @param {*} Canvas
+   * @memberof Hero
+   */
+  draw(Canvas) {
+    Canvas.drawCircle({
+      fillStyle: this.fillStyle,
+      x: this.x,
+      y: this.y,
+      radius: this.radius,
+      startAngle: this.startAngle,
+      endAngle: this.endAngle,
+      anticlockwise: this.anticlockwise,
+    });
+
+    if (this.debug) {
+      Canvas.pushDebugText('hero.maxSpeed', `hero.maxSpeed: ${this.maxSpeed}`);
+    }
+  }
+
+  /**
+   * Increases the hero.maxSpeed
+   *
+   * @memberof Hero
+   */
+  increaseSpeed() {
+    this.maxSpeed++;
+  }
+
+  /**
+   * Decreases the hero.maxSpeed
+   *
+   * @memberof Hero
+   */
+  decreaseSpeed() {
+    this.maxSpeed--;
   }
 
   /**
@@ -135,6 +218,14 @@ class Hero extends ObjectCircle {
     // bail if input is disabled
     if (!this.allowInput) {
       return;
+    }
+
+    if (Keyboard.active.plus) {
+      this.increaseSpeed();
+    }
+
+    if (Keyboard.active.minus) {
+      this.decreaseSpeed();
     }
 
     // loop through each directions

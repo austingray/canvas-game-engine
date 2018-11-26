@@ -26,7 +26,7 @@ function game() {
     mainMenu: new Scenes.SceneMainMenu(this),
     game: new Scenes.SceneGame(this),
     pause: new Scenes.ScenePause(this),
-  }
+  };
 
   /**
    * Calls request animation frame and the update function
@@ -62,7 +62,6 @@ function game() {
       const delta = (timestamp - this.timestamp) / 1000;
       this.timestamp = timestamp;
       this.Canvas.pushDebugText('fps', `FPS: ${1 / delta}`);
-      // this.Canvas.pushDebugText('keys', `Active Keys: [${this.Keyboard.activeKeys}]`);
       this.Canvas.drawDebugText();
     }
   }

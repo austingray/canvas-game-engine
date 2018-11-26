@@ -27,8 +27,8 @@ class Map {
     this.game = game;
 
     // map width and height in tiles
-    this.xTotalTiles = 500;
-    this.yTotalTiles = 500;
+    this.xTotalTiles = 5000;
+    this.yTotalTiles = 5000;
     
     // total amount of tiles
     this.totalTiles = this.xTotalTiles * this.yTotalTiles;
@@ -38,8 +38,8 @@ class Map {
     this.tileHeight = 50;
 
     // get the width and height of the map in total pixels
-    this.pixelWidth = this.xTotalTiles * this.tileWidth;
-    this.pixelHeight = this.yTotalTiles * this.tileHeight;
+    this.widthInPixels = this.xTotalTiles * this.tileWidth;
+    this.heightInPixels = this.yTotalTiles * this.tileHeight;
 
     // stores the data about what exists at a particular position
     this.mapArray = [];
@@ -200,25 +200,25 @@ class Map {
   /**
    * Check if a coordinate is a collision and return the collision boundaries
    *
-   * @param {*} x
-   * @param {*} y
+   * @param {*} x pixel position
+   * @param {*} y pixel position
    * @returns
    * @memberof Map
    */
-  getCollision(x, y) {
+  getCollision(xPixel, yPixel) {
     // hardcode the hero
     const heroRadius = 20;
-    const x1 = x - heroRadius;
-    const x2 = x + heroRadius;
-    const y1 = y - heroRadius;
-    const y2 = y + heroRadius;
+    const x1 = xPixel - heroRadius;
+    const x2 = xPixel + heroRadius;
+    const y1 = yPixel - heroRadius;
+    const y2 = yPixel + heroRadius;
     
     // map boundaries
     if (
       x1 < 0
       || y1 < 0
-      || x2 > this.pixelWidth
-      || y2 > this.pixelHeight
+      || x2 > this.widthInPixels
+      || y2 > this.heightInPixels
     ) {
       return true;
     }

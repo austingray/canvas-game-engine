@@ -708,6 +708,10 @@
 
   class Hero extends ObjectCircle {
     init(map) {
+      // display debug info about the hero
+      this.debug = true;
+
+      // provide access to the map
       this.map = map;
 
       // allows keyboard input to the character
@@ -731,6 +735,85 @@
 
       // cooldown beteween movement
       this.inputCooldown = 30;
+
+      // start the hero at a random location
+      this.moveToRandomLocation();
+    }
+
+    /**
+     * Gets a random x/y coord
+     *
+     * @memberof Hero
+     */
+    moveToRandomLocation() {
+      // get random pixel coords
+      const x = Math.round(Math.random() * this.map.widthInPixels);
+      const y = Math.round(Math.random() * this.map.heightInPixels);
+
+      // calculate visible tiles so we can check for collisions
+      this.map.calculateVisibleTiles(x, y);
+
+      // check if blocking
+      // if it is, try again
+      if (this.map.getCollision(x, y)) {
+        return this.moveToRandomLocation();
+      }
+
+      // remove movement easing, update position
+      clearTimeout(this.targetXTimer);
+      clearTimeout(this.targetYTimer);
+      // TODO: 20 is hardcoded in the map.getCollision method
+      // TODO: Should not have to hardcode this.
+      this.targetX = x;
+      this.targetY = y;
+      this.x = x;
+      this.y = y;
+
+      // set the camera focus
+      this.game.Canvas.Camera.setFocus(x, y);
+
+      // tell the map to redraw
+      this.map.needsUpdate = true;
+    }
+
+    /**
+     * Currently draws a circle
+     *
+     * @param {*} Canvas
+     * @memberof Hero
+     */
+    draw(Canvas) {
+      Canvas.drawCircle({
+        fillStyle: this.fillStyle,
+        x: this.x,
+        y: this.y,
+        radius: this.radius,
+        startAngle: this.startAngle,
+        endAngle: this.endAngle,
+        anticlockwise: this.anticlockwise,
+      });
+
+      if (this.debug) {
+        Canvas.pushDebugText('hero.maxSpeed', `hero.maxSpeed: ${this.maxSpeed}`);
+      }
+    }
+
+    /**
+     * Increases the hero.maxSpeed
+     *
+     * @memberof Hero
+     */
+    increaseSpeed() {
+      this.maxSpeed++;
+    }
+
+    /**
+     * Decreases the hero.maxSpeed
+     *
+     * @memberof Hero
+     */
+    decreaseSpeed() {
+      this.maxSpeed--;
     }
 
     /**
@@ -841,6 +924,14 @@
       // bail if input is disabled
       if (!this.allowInput) {
         return;
+      }
+
+      if (Keyboard.active.plus) {
+        this.increaseSpeed();
+      }
+
+      if (Keyboard.active.minus) {
+        this.decreaseSpeed();
       }
 
       // loop through each directions
@@ -1415,8 +1506,8 @@
       this.game = game;
 
       // map width and height in tiles
-      this.xTotalTiles = 500;
-      this.yTotalTiles = 500;
+      this.xTotalTiles = 5000;
+      this.yTotalTiles = 5000;
       
       // total amount of tiles
       this.totalTiles = this.xTotalTiles * this.yTotalTiles;
@@ -1426,8 +1517,8 @@
       this.tileHeight = 50;
 
       // get the width and height of the map in total pixels
-      this.pixelWidth = this.xTotalTiles * this.tileWidth;
-      this.pixelHeight = this.yTotalTiles * this.tileHeight;
+      this.widthInPixels = this.xTotalTiles * this.tileWidth;
+      this.heightInPixels = this.yTotalTiles * this.tileHeight;
 
       // stores the data about what exists at a particular position
       this.mapArray = [];
@@ -1588,25 +1679,25 @@
     /**
      * Check if a coordinate is a collision and return the collision boundaries
      *
-     * @param {*} x
-     * @param {*} y
+     * @param {*} x pixel position
+     * @param {*} y pixel position
      * @returns
      * @memberof Map
      */
-    getCollision(x, y) {
+    getCollision(xPixel, yPixel) {
       // hardcode the hero
       const heroRadius = 20;
-      const x1 = x - heroRadius;
-      const x2 = x + heroRadius;
-      const y1 = y - heroRadius;
-      const y2 = y + heroRadius;
+      const x1 = xPixel - heroRadius;
+      const x2 = xPixel + heroRadius;
+      const y1 = yPixel - heroRadius;
+      const y2 = yPixel + heroRadius;
       
       // map boundaries
       if (
         x1 < 0
         || y1 < 0
-        || x2 > this.pixelWidth
-        || y2 > this.pixelHeight
+        || x2 > this.widthInPixels
+        || y2 > this.heightInPixels
       ) {
         return true;
       }
@@ -2166,8 +2257,9 @@
       // raw keycodes
       this.keyCodes = {
         13: 'enter',
+        16: 'shift',
         27: 'escape',
-        32: 'shift',
+        32: 'space',
         37: 'left',
         38: 'up',
         39: 'right',
@@ -2189,8 +2281,8 @@
       // human readable key states
       this.active = {
         enter: false,
-        escape: false,
         shift: false,
+        escape: false,
         up: false,
         right: false,
         down: false,
@@ -2290,7 +2382,7 @@
         
         // if shift is active, and we're pressing the key
         if (this.active.shift && active) {
-          this.active[shiftKey] = true;
+          this.active[shiftedKey] = true;
         } else {
           // otherwise set it to inactive
           this.active[shiftedKey] = false;
@@ -2401,7 +2493,6 @@
         const delta = (timestamp - this.timestamp) / 1000;
         this.timestamp = timestamp;
         this.Canvas.pushDebugText('fps', `FPS: ${1 / delta}`);
-        // this.Canvas.pushDebugText('keys', `Active Keys: [${this.Keyboard.activeKeys}]`);
         this.Canvas.drawDebugText();
       }
     };
