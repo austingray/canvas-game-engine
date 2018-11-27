@@ -1,8 +1,9 @@
+import objectSizeof from 'object-sizeof';
 import Canvas from './Canvas/Canvas';
 import Objects from './Objects/index';
 import Scenes from './Scenes/index';
 import Keyboard from './Inputs/Keyboard';
-import Debug from './Debug';
+import Debug from './Debug/index';
 
 function game() {
   // debug stuff
@@ -82,10 +83,20 @@ function game() {
 
     // maybe show debug info
     if (this.debug) {
+      // fps
       const delta = (timestamp - this.timestamp) / 1000;
       this.timestamp = timestamp;
       this.Canvas.pushDebugText('fps', `FPS: ${1 / delta}`);
+
+      // active keys
       this.Canvas.pushDebugText('activeKeys', `Keyboard.activeKeyCodes: [${this.Keyboard.activeKeyCodes.toString()}]`);
+
+      // size of
+      if (typeof this.scene.map !== 'undefined') {
+        this.Canvas.pushDebugText('objectSizeof', `MapArray bytes: ${objectSizeof(this.scene.map.mapArray)}`);
+      }
+
+      // draw debug text
       this.Canvas.drawDebugText();
     }
   }
