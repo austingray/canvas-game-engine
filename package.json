@@ -8,17 +8,12 @@
   },
   "main": "index.js",
   "scripts": {
-    "start": "rollup -c --watch"
+    "start": "electron .",
+    "watch": "rollup -c --watch"
   },
   "author": "Austin Gray",
   "license": "ISC",
   "devDependencies": {
-    "rollup-plugin-commonjs": "^9.2.0",
-    "rollup-plugin-node-builtins": "^2.1.2",
-    "rollup-plugin-node-globals": "^1.4.0",
-    "rollup-plugin-node-resolve": "^3.4.0"
-  },
-  "dependencies": {
-    "object-sizeof": "^1.3.0"
+    "electron": "^3.0.10"
   }
 }

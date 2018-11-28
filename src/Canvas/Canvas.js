@@ -8,8 +8,8 @@ import Camera from './Camera';
 class Canvas {
   constructor(args = {}) {
     // set constants
-    this.width = 1024;
-    this.height = 640;
+    this.width = args.width;
+    this.height = args.height;
 
     // for consistent spacing off the canvas edge
     this.padding = 24;

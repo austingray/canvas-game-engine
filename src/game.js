@@ -1,4 +1,3 @@
-import objectSizeof from 'object-sizeof';
 import Canvas from './Canvas/Canvas';
 import Objects from './Objects/index';
 import Scenes from './Scenes/index';
@@ -18,7 +17,10 @@ function game() {
   this.Keyboard = new Keyboard();
 
   // create the canvas
-  this.Canvas = new Canvas();
+  this.Canvas = new Canvas({
+    width: window.innerWidth,
+    height: window.innerHeight,
+  });
 
   // the object factory
   this.Objects = new Objects(this);
