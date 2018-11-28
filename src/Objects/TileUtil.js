@@ -1,20 +1,19 @@
-const tileTypes = [
+// create references to the most used default tile types
+// to save memory usage in the overall map array
+const tiles = [
   {
-    id: 1,
     type: 'grass',
     blocking: false,
     shadow: false,
     light: false,
-  },
+  }, 
   {
-    id: 2,
     type: 'water',
     blocking: true,
     shadow: false,
     light: false,
-  },
+  }, 
   {
-    id: 3,
     type: 'rock',
     blocking: true,
     shadow: true,
@@ -60,7 +59,7 @@ class TileUtil {
    * @returns
    * @memberof TileUtil
    */
-  create(args) {
+  create(args = {}) {
     // defaults
     let type = 0;
     let blocking = 0;
@@ -80,20 +79,23 @@ class TileUtil {
       shadow = 1;
     }
 
-    // left pad x so tiles are consistent lengths
-    let xString = args.x += '';
-    while (xString.length < this.xMax) {
-      xString = '0' + xString;
+    // null is 0 bytes, woohoo! (grass)
+    if (type === 0) {
+      return null;
     }
 
-    // left pad y so tiles are consistent lengths
-    let yString = args.y += '';
-    while (yString.length < this.yMax) {
-      yString = '0' + yString;
+    // (water)
+    if (type === 1) {
+      return '1';
+    }
+
+    // '' is 0 bytes too, woohoo (rock)
+    if (type === 2) {
+      return '';
     }
 
     // create and return the string
-    const string = '1' + type + '' + blocking + '' + light + '' + shadow + '' + xString + '' + yString + '';
+    const string = '1' + type + '' + blocking + '' + light + '' + shadow + '';
     return Number(string);
   }
 
@@ -105,6 +107,31 @@ class TileUtil {
    * @memberof TileUtil
    */
   unpack(int) {
+    // if int is not an int, it's an aliased value
+    if (typeof int !== 'number') {
+      // TODO: Look into why i have to explicitly do this and can't use reference array
+      if (int === null) return {
+        type: 'grass',
+        blocking: false,
+        shadow: false,
+        light: false,
+      };
+
+      if (int === '1') return {
+        type: 'water',
+        blocking: true,
+        shadow: false,
+        light: false,
+      }
+
+      if (int === '') return {
+        type: 'rock',
+        blocking: true,
+        shadow: true,
+        light: false,
+      }
+    }
+
     // convert the int to a string
     const raw = this.toString(int);
 
@@ -113,24 +140,24 @@ class TileUtil {
     const blocking = Number(raw.substr(this.substr.blocking, 1)) === 1;
     const light = Number(raw.substr(this.substr.light, 1)) === 1;
     const shadow = Number(raw.substr(this.substr.shadow, 1)) === 1;
-    const x = Number(raw.substr(this.substr.x, this.xMax));
-    const y = Number(raw.substr(this.substr.y, this.yMax));
-    const xPixel = x * this.tileWidth;
-    const yPixel = y * this.tileHeight;
-    const width = this.tileWidth;
-    const height = this.tileHeight;
+    // const x = Number(raw.substr(this.substr.x, this.xMax));
+    // const y = Number(raw.substr(this.substr.y, this.yMax));
+    // const xPixel = x * this.tileWidth;
+    // const yPixel = y * this.tileHeight;
+    // const width = this.tileWidth;
+    // const height = this.tileHeight;
 
     const tile = {
       type,
       blocking,
       light,
       shadow,
-      x,
-      y,
-      xPixel,
-      yPixel,
-      width,
-      height,
+      // x,
+      // y,
+      // xPixel,
+      // yPixel,
+      // width,
+      // height,
     };
 
     return tile;
@@ -174,10 +201,10 @@ class TileUtil {
    * @returns
    * @memberof TileUtil
    */
-  x(int) {
-    const x = Number(this.toString(int).substr(this.substr.x, this.xMax));
-    return x;
-  }
+  // x(int) {
+  //   const x = Number(this.toString(int).substr(this.substr.x, this.xMax));
+  //   return x;
+  // }
 
   /**
    * * Get the Y map position
@@ -185,10 +212,10 @@ class TileUtil {
    * @returns
    * @memberof TileUtil
    */
-  y(int) {
-    const y = Number(this.toString(int).substr(this.substr.y, this.yMax));
-    return y;
-  }
+  // y(int) {
+  //   const y = Number(this.toString(int).substr(this.substr.y, this.yMax));
+  //   return y;
+  // }
 
   /**
    * Check if the tile is blocking

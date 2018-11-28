@@ -143,6 +143,16 @@ class Canvas {
   }
 
   /**
+   * Clear a layer by its name
+   *
+   * @param {*} layerName
+   * @memberof Canvas
+   */
+  clearLayer(layerName) {
+    this.getLayerByName(layerName).clear();
+  }
+
+  /**
    * Clear an array of layers
    *
    * @param {array} layers

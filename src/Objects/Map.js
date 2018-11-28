@@ -184,15 +184,22 @@ class Map {
         // then it has not been visible yet
         // create a tile at that index
         if (typeof this.mapArray[mapIndex] === 'undefined') {
-          const tile = this.TileUtil.create({
-            x: i,
-            y: j,
-          });
+          const tile = this.TileUtil.create();
           this.mapArray[mapIndex] = tile;
         }
 
+        // add the x/y data to the object
+        const visibleTile = this.TileUtil.unpack(this.mapArray[mapIndex]);
+        visibleTile.x = i;
+        visibleTile.y = j;
+        visibleTile.xPixel = i * this.tileWidth;
+        visibleTile.yPixel = j * this.tileHeight;
+        visibleTile.width = this.tileWidth;
+        visibleTile.height = this.tileHeight;
+
         // add the unpacked version of the tile to the visible tile array
-        this.visibleTileArray[visibleIndex++] = this.TileUtil.unpack(this.mapArray[mapIndex]);
+        this.visibleTileArray[visibleIndex++] = visibleTile;
+        ;
       }
     }
   }

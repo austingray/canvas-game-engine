@@ -2358,6 +2358,16 @@
       }
 
       /**
+       * Clear a layer by its name
+       *
+       * @param {*} layerName
+       * @memberof Canvas
+       */
+      clearLayer(layerName) {
+        this.getLayerByName(layerName).clear();
+      }
+
+      /**
        * Clear an array of layers
        *
        * @param {array} layers
@@ -3400,29 +3410,7 @@
       }
     }
 
-    const tileTypes = [
-      {
-        id: 1,
-        type: 'grass',
-        blocking: false,
-        shadow: false,
-        light: false,
-      },
-      {
-        id: 2,
-        type: 'water',
-        blocking: true,
-        shadow: false,
-        light: false,
-      },
-      {
-        id: 3,
-        type: 'rock',
-        blocking: true,
-        shadow: true,
-        light: false,
-      },
-    ];
+    // create references to the most used default tile types
 
     /**
      * Provides utility methods for tiles
@@ -3462,7 +3450,7 @@
        * @returns
        * @memberof TileUtil
        */
-      create(args) {
+      create(args = {}) {
         // defaults
         let type = 0;
         let blocking = 0;
@@ -3482,20 +3470,23 @@
           shadow = 1;
         }
 
-        // left pad x so tiles are consistent lengths
-        let xString = args.x += '';
-        while (xString.length < this.xMax) {
-          xString = '0' + xString;
+        // null is 0 bytes, woohoo! (grass)
+        if (type === 0) {
+          return null;
         }
 
-        // left pad y so tiles are consistent lengths
-        let yString = args.y += '';
-        while (yString.length < this.yMax) {
-          yString = '0' + yString;
+        // (water)
+        if (type === 1) {
+          return '1';
+        }
+
+        // '' is 0 bytes too, woohoo (rock)
+        if (type === 2) {
+          return '';
         }
 
         // create and return the string
-        const string = '1' + type + '' + blocking + '' + light + '' + shadow + '' + xString + '' + yString + '';
+        const string = '1' + type + '' + blocking + '' + light + '' + shadow + '';
         return Number(string);
       }
 
@@ -3507,6 +3498,31 @@
        * @memberof TileUtil
        */
       unpack(int) {
+        // if int is not an int, it's an aliased value
+        if (typeof int !== 'number') {
+          // TODO: Look into why i have to explicitly do this and can't use reference array
+          if (int === null) return {
+            type: 'grass',
+            blocking: false,
+            shadow: false,
+            light: false,
+          };
+
+          if (int === '1') return {
+            type: 'water',
+            blocking: true,
+            shadow: false,
+            light: false,
+          }
+
+          if (int === '') return {
+            type: 'rock',
+            blocking: true,
+            shadow: true,
+            light: false,
+          }
+        }
+
         // convert the int to a string
         const raw = this.toString(int);
 
@@ -3515,24 +3531,24 @@
         const blocking = Number(raw.substr(this.substr.blocking, 1)) === 1;
         const light = Number(raw.substr(this.substr.light, 1)) === 1;
         const shadow = Number(raw.substr(this.substr.shadow, 1)) === 1;
-        const x = Number(raw.substr(this.substr.x, this.xMax));
-        const y = Number(raw.substr(this.substr.y, this.yMax));
-        const xPixel = x * this.tileWidth;
-        const yPixel = y * this.tileHeight;
-        const width = this.tileWidth;
-        const height = this.tileHeight;
+        // const x = Number(raw.substr(this.substr.x, this.xMax));
+        // const y = Number(raw.substr(this.substr.y, this.yMax));
+        // const xPixel = x * this.tileWidth;
+        // const yPixel = y * this.tileHeight;
+        // const width = this.tileWidth;
+        // const height = this.tileHeight;
 
         const tile = {
           type,
           blocking,
           light,
           shadow,
-          x,
-          y,
-          xPixel,
-          yPixel,
-          width,
-          height,
+          // x,
+          // y,
+          // xPixel,
+          // yPixel,
+          // width,
+          // height,
         };
 
         return tile;
@@ -3576,10 +3592,10 @@
        * @returns
        * @memberof TileUtil
        */
-      x(int) {
-        const x = Number(this.toString(int).substr(this.substr.x, this.xMax));
-        return x;
-      }
+      // x(int) {
+      //   const x = Number(this.toString(int).substr(this.substr.x, this.xMax));
+      //   return x;
+      // }
 
       /**
        * * Get the Y map position
@@ -3587,10 +3603,10 @@
        * @returns
        * @memberof TileUtil
        */
-      y(int) {
-        const y = Number(this.toString(int).substr(this.substr.y, this.yMax));
-        return y;
-      }
+      // y(int) {
+      //   const y = Number(this.toString(int).substr(this.substr.y, this.yMax));
+      //   return y;
+      // }
 
       /**
        * Check if the tile is blocking
@@ -3775,15 +3791,21 @@
             // then it has not been visible yet
             // create a tile at that index
             if (typeof this.mapArray[mapIndex] === 'undefined') {
-              const tile = this.TileUtil.create({
-                x: i,
-                y: j,
-              });
+              const tile = this.TileUtil.create();
               this.mapArray[mapIndex] = tile;
             }
 
+            // add the x/y data to the object
+            const visibleTile = this.TileUtil.unpack(this.mapArray[mapIndex]);
+            visibleTile.x = i;
+            visibleTile.y = j;
+            visibleTile.xPixel = i * this.tileWidth;
+            visibleTile.yPixel = j * this.tileHeight;
+            visibleTile.width = this.tileWidth;
+            visibleTile.height = this.tileHeight;
+
             // add the unpacked version of the tile to the visible tile array
-            this.visibleTileArray[visibleIndex++] = this.TileUtil.unpack(this.mapArray[mapIndex]);
+            this.visibleTileArray[visibleIndex++] = visibleTile;
           }
         }
       }
@@ -4881,9 +4903,10 @@
           // active keys
           this.Canvas.pushDebugText('activeKeys', `Keyboard.activeKeyCodes: [${this.Keyboard.activeKeyCodes.toString()}]`);
 
-          // size of
-          if (typeof this.scene.map !== 'undefined') {
-            this.Canvas.pushDebugText('objectSizeof', `MapArray bytes: ${objectSizeof(this.scene.map.mapArray)}`);
+          // TODO: This is an expensive operation, 
+          // TODO: Should be generated by a keystroke, not calculated every frame
+          if (this.Keyboard.active.shift) {
+            this.Canvas.pushDebugText('maparray', `MapArray bytes: ${objectSizeof(this.scene.map.mapArray)}`);
           }
 
           // draw debug text
