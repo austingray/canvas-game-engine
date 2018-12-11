@@ -448,7 +448,7 @@ var game = (function () {
           x: tile.x + 25,
           y: tile.y + 25,
           radius: 5,
-          fillStyle: 'rgba(255, 155, 0, .5)',
+          fillStyle: 'rgba(255, 155, 0, 1)',
           startAngle: Math.PI / 180 * 0,
           endAngle: Math.PI / 180 * 360,
           anticlockwise: false,
@@ -1064,751 +1064,6 @@ var game = (function () {
     }
   }
 
-  class Shadows {
-    constructor(Canvas, origin, objects) {
-      this.Canvas = Canvas;
-
-      // set the context to the shadow layer
-      this.ctx = this.Canvas.shadowLayer.context;
-
-      // origin point where lighting is based off of, which is always the hero x/y
-      this.origin = {
-        x: origin.x,
-        y: origin.y,
-      };
-
-      // get all blocking objects
-      this.blocks = [];
-      this.lights = [];
-
-      for (let i = 0; i < objects.length; i++) {
-        const object = objects[i];
-        const x1 = object.xPixel;
-        const y1 = object.yPixel;
-        const block = {
-          x1: object.xPixel,
-          y1: object.yPixel,
-          x2: object.xPixel + object.width,
-          y2: object.yPixel + object.height,
-          width: object.width,
-          height: object.height,
-        };
-        this.blocks.push(block);
-      }
-
-      // TODO: All blocks currently have shadow,
-      // TODO: Add light handling
-      // if (object.light === true) {
-      //   this.lights.push(obj);
-      // }
-    }
-
-    draw() {
-      this.Canvas.shadowLayer.clear();
-
-      // get the camera offset
-      const offsetX = this.Canvas.Camera.offsetX;
-      const offsetY = this.Canvas.Camera.offsetY;
-
-      this.ctx.globalCompositeOperation = 'source-over';
-
-      // gradient 1
-      const grd = this.ctx.createRadialGradient(
-        this.origin.x + offsetX,
-        this.origin.y + offsetY,
-        0,
-        this.origin.x + offsetX,
-        this.origin.y + offsetY,
-        360
-      );
-      
-      grd.addColorStop(0, 'rgba(0, 0, 0, .1)');
-      grd.addColorStop(0.9, 'rgba(0, 0, 0, .5');
-      this.ctx.fillStyle = grd;
-      this.ctx.fillRect(0, 0, this.Canvas.width, this.Canvas.height);
-
-      // gradient 2
-      this.ctx.globalCompositeOperation = 'source-over';
-      const grd2 = this.ctx.createRadialGradient(
-        this.origin.x + offsetX,
-        this.origin.y + offsetY,
-        0,
-        this.origin.x + offsetX,
-        this.origin.y + offsetY,
-        360
-      );
-      grd2.addColorStop(0, 'rgba(0, 0, 0, .1)');
-      grd2.addColorStop(0.9, 'rgba(0, 0, 0, 1');
-      this.ctx.fillStyle = grd2;
-      this.ctx.fillRect(0, 0, this.Canvas.width, this.Canvas.height);
-
-      // lights
-      this.ctx.globalCompositeOperation = 'destination-out';
-      this.lights.forEach(light => {
-        const gradient = this.ctx.createRadialGradient(
-          light.x1 + offsetX + light.width / 2,
-          light.y1 + offsetY + light.height / 2,
-          0,
-          light.x1 + offsetX + light.width / 2,
-          light.y1 + offsetY + light.height / 2,
-          100
-        );
-        gradient.addColorStop(0, `rgba(0, 0, 0, ${Math.random() + .7})`);
-        gradient.addColorStop(0.9, 'rgba(0, 0, 0, 0');
-        this.ctx.fillStyle = gradient;
-        this.ctx.fillRect(
-          light.x1 + offsetX - 100 + light.width / 2,
-          light.y1 + offsetY - 100 + light.height / 2,
-          200,
-          200
-        );
-      });
-
-      // object shadows
-      this.ctx.fillStyle = 'rgba(0, 0, 0, 1)';
-      this.ctx.strokeStyle = 'red';
-      this.ctx.lineWidth = '1px';
-
-      for (let i = 0; i < this.blocks.length; i++) {
-        const pos = this.blocks[i];
-
-        // get all 4 corners
-        const points = [
-          { x: pos.x1, y: pos.y1 },
-          { x: pos.x2, y: pos.y1 },
-          { x: pos.x1, y: pos.y2 },
-          { x: pos.x2, y: pos.y2 },
-        ];
-
-        this.drawShadows(points, pos, offsetX, offsetY);
-      }
-    }
-
-    drawShadows(points, pos, offsetX, offsetY) {
-      
-      this.ctx.globalCompositeOperation = 'source-over';
-      
-      // calculate the angle of each line
-      const raw = points.map(point => Object.assign({}, point, {
-        angle: this.calculateAngle(point),
-        distance: this.calculateDistance(point),
-      }));
-
-      const minMaxDistance = 500;
-
-      const angles = raw.slice(0).sort((a, b) => {
-        // sort by angle
-        if (b.angle > a.angle) {
-          return 1;
-        }
-
-        if (b.angle < a.angle) {
-          return -1;
-        }
-
-        return 0;
-      });
-
-      const furthest = raw.slice(0).sort((a, b) => {
-        // sort by angle
-        if (b.distance > a.distance) {
-          return 1;
-        }
-
-        if (b.distance < a.distance) {
-          return -1;
-        }
-
-        return 0;
-      });
-      
-      // TODO: Don't read this next block of code
-      // TODO: it's just a bunch of spaghett
-      this.ctx.fillStyle = `rgb(0, 0, 0)`;
-      this.ctx.beginPath();
-      if (
-        this.origin.x > pos.x2
-        && this.origin.y > pos.y1
-        && this.origin.y < pos.y2
-      ) {
-        let min = this.calculatePoint(angles[2].angle, minMaxDistance);
-        let max = this.calculatePoint(angles[1].angle, minMaxDistance);
-        this.ctx.moveTo(angles[1].x + offsetX, angles[1].y + offsetY);
-        this.ctx.lineTo(max.x + offsetX, max.y + offsetY);
-        this.ctx.lineTo(min.x + offsetX, min.y + offsetY);
-        this.ctx.lineTo(angles[2].x + offsetX, angles[2].y + offsetY);
-        if (this.origin.y > pos.y1 + pos.width / 2) {
-          this.ctx.lineTo(furthest[0].x + offsetX, furthest[0].y + offsetY);
-          this.ctx.lineTo(furthest[1].x + offsetX, furthest[1].y + offsetY);
-        } else {
-          this.ctx.lineTo(furthest[1].x + offsetX, furthest[1].y + offsetY);
-          this.ctx.lineTo(furthest[0].x + offsetX, furthest[0].y + offsetY);
-        }
-        this.ctx.lineTo(angles[1].x + offsetX, angles[1].y + offsetY);
-      } else {
-        if (
-          this.origin.y > pos.y1
-          && this.origin.y < pos.y2
-        ) {
-          // handle being left of the object
-          const max = this.calculatePoint(angles[0].angle, minMaxDistance);
-          const min = this.calculatePoint(angles[3].angle, minMaxDistance);
-          this.ctx.moveTo(angles[0].x + offsetX, angles[0].y + offsetY);
-          this.ctx.lineTo(max.x + offsetX, max.y + offsetY);
-          this.ctx.lineTo(min.x + offsetX, min.y + offsetY);
-          this.ctx.lineTo(angles[3].x + offsetX, angles[3].y + offsetY);
-          if (this.origin.y > pos.y1 + pos.width / 2) {
-            this.ctx.lineTo(furthest[0].x + offsetX, furthest[0].y + offsetY);
-            this.ctx.lineTo(furthest[1].x + offsetX, furthest[1].y + offsetY);
-          } else {
-            this.ctx.lineTo(furthest[1].x + offsetX, furthest[1].y + offsetY);
-            this.ctx.lineTo(furthest[0].x + offsetX, furthest[0].y + offsetY);
-          }
-          this.ctx.lineTo(angles[0].x + offsetX, angles[0].y + offsetY);
-        } else if ( // above/beneath object
-          this.origin.x > pos.x1
-          && this.origin.x < pos.x2
-        ) {
-          // below the object
-          if (this.origin.y > pos.y1) {
-            // below the object
-            const max = this.calculatePoint(angles[0].angle, minMaxDistance);
-            const min = this.calculatePoint(angles[3].angle, minMaxDistance);
-            this.ctx.moveTo(angles[0].x + offsetX, angles[0].y + offsetY);
-            this.ctx.lineTo(max.x + offsetX, max.y + offsetY);
-            this.ctx.lineTo(min.x + offsetX, min.y + offsetY);
-            this.ctx.lineTo(angles[3].x + offsetX, angles[3].y + offsetY);
-            if (this.origin.x > pos.x1 + pos.width / 2) {
-              this.ctx.lineTo(furthest[0].x + offsetX, furthest[0].y + offsetY);
-              this.ctx.lineTo(furthest[1].x + offsetX, furthest[1].y + offsetY);
-            } else {
-              this.ctx.lineTo(furthest[1].x + offsetX, furthest[1].y + offsetY);
-              this.ctx.lineTo(furthest[0].x + offsetX, furthest[0].y + offsetY);
-            }
-            this.ctx.lineTo(angles[0].x + offsetX, angles[0].y + offsetY);
-          } else { // above the object
-            // below the object
-            const max = this.calculatePoint(angles[0].angle, minMaxDistance);
-            const min = this.calculatePoint(angles[3].angle, minMaxDistance);
-            this.ctx.moveTo(angles[0].x + offsetX, angles[0].y + offsetY);
-            this.ctx.lineTo(max.x + offsetX, max.y + offsetY);
-            this.ctx.lineTo(min.x + offsetX, min.y + offsetY);
-            this.ctx.lineTo(angles[3].x + offsetX, angles[3].y + offsetY);
-            if (this.origin.x > pos.x1 + pos.width / 2) {
-              this.ctx.lineTo(furthest[1].x + offsetX, furthest[1].y + offsetY);
-              this.ctx.lineTo(furthest[0].x + offsetX, furthest[0].y + offsetY);
-            } else {
-              this.ctx.lineTo(furthest[0].x + offsetX, furthest[0].y + offsetY);
-              this.ctx.lineTo(furthest[1].x + offsetX, furthest[1].y + offsetY);
-            }
-            this.ctx.lineTo(angles[0].x + offsetX, angles[0].y + offsetY);
-          }
-        } else { // northwest of object
-          const max = this.calculatePoint(angles[0].angle, minMaxDistance);
-          const min = this.calculatePoint(angles[3].angle, minMaxDistance);
-          this.ctx.moveTo(angles[0].x + offsetX, angles[0].y + offsetY);
-          this.ctx.lineTo(max.x + offsetX, max.y + offsetY);
-          this.ctx.lineTo(min.x + offsetX, min.y + offsetY);
-          this.ctx.lineTo(angles[3].x + offsetX, angles[3].y + offsetY);
-          this.ctx.lineTo(furthest[0].x + offsetX, furthest[0].y + offsetY);
-          this.ctx.lineTo(angles[0].x + offsetX, angles[0].y + offsetY);
-        }
-      }
-      this.ctx.closePath();
-      this.ctx.fill();
-    }
-
-    /**
-     * Calculates the angle between 2 points
-     *
-     * @param {*} point
-     * @param {*} [origin={ x: this.origin.x, y: this.origin,y }]
-     * @returns
-     * @memberof Shadows
-     */
-    calculateAngle(point, origin = { x: this.origin.x, y: this.origin.y }) {
-      return Math.atan2(point.y - origin.y, point.x - origin.x) * 180 / Math.PI;
-    }
-
-    /**
-     * Calculates a new point given an angle, distance from, and starting point
-     *
-     * @param {*} angle
-     * @param {*} distance
-     * @returns {object} x, y
-     * @memberof Shadows
-     */
-    calculatePoint(angle, distanceFrom, point = { x: this.origin.x, y: this.origin.y }) {
-      return {
-        x: Math.round(Math.cos(angle * Math.PI / 180) * distanceFrom + point.x),
-        y: Math.round(Math.sin(angle * Math.PI / 180) * distanceFrom + point.y),
-      };
-    }
-
-    /**
-     * Calculate the distance between two points
-     * AKA Pythagorean theorem
-     *
-     * @param {*} pos1
-     * @param {*} pos2
-     * @returns
-     * @memberof Shadows
-     */
-    calculateDistance(pos1, pos2 = { x: this.origin.x, y: this.origin.y }) {
-      const a = pos1.x - pos2.x;
-      const b = pos1.y - pos2.y;
-
-      // return the distance
-      return Math.sqrt(a * a + b * b);
-    }
-  }
-
-  // create references to the most used default tile types
-
-  /**
-   * Provides utility methods for tiles
-   *
-   * @class TileUtil
-   */
-  class TileUtil {
-    /**
-     * Creates an instance of TileUtil.
-     * @param {number} [tileInt=0]
-     * @memberof TileUtil
-     */
-    constructor(args) {
-      // width of tiles in pixels
-      this.tileWidth = args.tileWidth;
-      this.tileHeight = args.tileHeight;
-
-      // max x / y positions
-      this.xMax = args.xMax;
-      this.yMax = args.yMax;
-
-      // define substr positions for extracting tile data
-      this.substr = {
-        type: 1,
-        blocking: 2,
-        light: 3,
-        shadow: 4,
-        x: 5,
-        y: 5 + this.xMax,
-      };
-    }
-
-    /**
-     * Creates a map tile
-     *
-     * @param {*} args
-     * @returns
-     * @memberof TileUtil
-     */
-    create(args = {}) {
-      // defaults
-      let type = 0;
-      let blocking = 0;
-      let light = 0;
-      let shadow = 0;
-
-      // randomize the tile type
-      let random = Math.random();
-      if (random > .1) {
-        type = 0; // grass
-      } else if (random > .08) {
-        type = 1; // water;
-        blocking = 1;
-      } else {
-        type = 2; // rock
-        blocking = 1;
-        shadow = 1;
-      }
-
-      // null is 0 bytes, woohoo! (grass)
-      if (type === 0) {
-        return null;
-      }
-
-      // (water)
-      if (type === 1) {
-        return '1';
-      }
-
-      // '' is 0 bytes too, woohoo (rock)
-      if (type === 2) {
-        return '';
-      }
-
-      // create and return the string
-      const string = '1' + type + '' + blocking + '' + light + '' + shadow + '';
-      return Number(string);
-    }
-
-    /**
-     * Converts a packed tile integer into a verbose object
-     *
-     * @param {*} int
-     * @returns
-     * @memberof TileUtil
-     */
-    unpack(int) {
-      // if int is not an int, it's an aliased value
-      if (typeof int !== 'number') {
-        // TODO: Look into why i have to explicitly do this and can't use reference array
-        if (int === null) return {
-          type: 'grass',
-          blocking: false,
-          shadow: false,
-          light: false,
-        };
-
-        if (int === '1') return {
-          type: 'water',
-          blocking: true,
-          shadow: false,
-          light: false,
-        }
-
-        if (int === '') return {
-          type: 'rock',
-          blocking: true,
-          shadow: true,
-          light: false,
-        }
-      }
-
-      // convert the int to a string
-      const raw = this.toString(int);
-
-      // get the properties
-      const type = tileTypes[raw.substr(this.substr.type, 1)].type;
-      const blocking = Number(raw.substr(this.substr.blocking, 1)) === 1;
-      const light = Number(raw.substr(this.substr.light, 1)) === 1;
-      const shadow = Number(raw.substr(this.substr.shadow, 1)) === 1;
-      // const x = Number(raw.substr(this.substr.x, this.xMax));
-      // const y = Number(raw.substr(this.substr.y, this.yMax));
-      // const xPixel = x * this.tileWidth;
-      // const yPixel = y * this.tileHeight;
-      // const width = this.tileWidth;
-      // const height = this.tileHeight;
-
-      const tile = {
-        type,
-        blocking,
-        light,
-        shadow,
-        // x,
-        // y,
-        // xPixel,
-        // yPixel,
-        // width,
-        // height,
-      };
-
-      return tile;
-    }
-
-    /**
-     * Converts an int to string
-     *
-     * @param {*} int
-     * @returns
-     * @memberof TileUtil
-     */
-    toString(int) {
-      return int + "";
-    }
-
-    /**
-     * Get the type integer
-     *
-     * @returns {integer} type
-     * @memberof TileUtil
-     */
-    typeInt(int) {
-      return Number(this.toString(int).substr(this.substr.type, 1));
-    }
-
-    /**
-     * Get the human readable tile type
-     *
-     * @returns
-     * @memberof TileUtil
-     */
-    typeText(int) {
-      const index = this.typeInt(int);
-      return tileTypes[index].type;
-    }
-
-    /**
-     * Get the X map position
-     *
-     * @returns
-     * @memberof TileUtil
-     */
-    // x(int) {
-    //   const x = Number(this.toString(int).substr(this.substr.x, this.xMax));
-    //   return x;
-    // }
-
-    /**
-     * * Get the Y map position
-     *
-     * @returns
-     * @memberof TileUtil
-     */
-    // y(int) {
-    //   const y = Number(this.toString(int).substr(this.substr.y, this.yMax));
-    //   return y;
-    // }
-
-    /**
-     * Check if the tile is blocking
-     *
-     * @returns {boolean} is blocking
-     * @memberof TileUtil
-     */
-    blocking(int) {
-      return Number(this.toString(int).substr(this.substr.blocking, 1)) === 1;
-    }
-
-    /**
-     * Check if the tile casts a shadow
-     *
-     * @returns
-     * @memberof TileUtil
-     */
-    shadow(int) {
-      return Number(this.toString(int).substr(this.substr.shadow, 1)) === 1;
-    }
-  }
-
-  class Map {
-    constructor(args, game) {
-      this.game = game;
-
-      // map width and height in tiles
-      this.xTotalTiles = 5000;
-      this.yTotalTiles = 5000;
-      
-      // total amount of tiles
-      this.totalTiles = this.xTotalTiles * this.yTotalTiles;
-
-      // single tile width and height in pixels
-      this.tileWidth = 50;
-      this.tileHeight = 50;
-
-      // get the width and height of the map in total pixels
-      this.widthInPixels = this.xTotalTiles * this.tileWidth;
-      this.heightInPixels = this.yTotalTiles * this.tileHeight;
-
-      // stores the data about what exists at a particular position
-      this.mapArray = [];
-
-      // keep track of visible tiles
-      this.visibleTilesPerDirection = 8;
-      this.visibleTileArray = [];
-      this.visibleTileX = 0;
-      this.visibleTileY = 0;
-
-      // tile util needs to know:
-      //  width/height of a tile in pixels
-      //  x / y total tile length
-      this.TileUtil = new TileUtil({
-        tileWidth: this.tileWidth,
-        tileHeight: this.tileHeight,
-        xMax: this.xTotalTiles.toString().length,
-        yMax: this.yTotalTiles.toString().length,
-      });
-    }
-
-    /**
-     * Converts x, y position to map array index
-     *
-     * @param {*} x
-     * @param {*} y
-     * @param {boolean} [convertPixels=false]
-     * @returns
-     * @memberof Map
-     */
-    convertPosToIndex(x, y, convertPixels = false) {
-      let tileX = x;
-      let tileY = y;
-      
-      if (convertPixels) {
-        tileX = Math.round(x / this.tileWidth);
-        tileY = Math.round(y / this.tileHeight);
-      }
-
-      const index = tileX + tileY * this.yTotalTiles;
-      return index;
-    }
-
-    /**
-     * Draws the map tiles and shawdows
-     * only if the map needs an update
-     *
-     * @param {*} Canvas
-     * @memberof Map
-     */
-    draw(Canvas) {
-      if (this.needsUpdate) {
-        // calculate the visible tiles
-        this.calculateVisibleTiles();
-
-        // draw the tiles
-        for (var i = 0; i < this.visibleTileArray.length; i++) {
-          Canvas.drawTile(this.visibleTileArray[i]);
-        }
-
-        // draw the shadows
-        this.drawShadows();
-      }
-    }
-
-    /**
-     * Draws the shadows
-     *
-     * @memberof Map
-     */
-    drawShadows() {
-      // get the origin
-      const scene = this.game.scene;
-      const origin = { x: scene.hero.x, y: scene.hero.y };
-
-      // get the shadow objects
-      const blocks = [];
-      for (var i = 0; i < this.visibleTileArray.length; i++) {
-        const tile = this.visibleTileArray[i];
-        if (tile.shadow) {
-          blocks.push(tile);
-        }
-      }
-
-      // get and draw
-      const shadows = new Shadows(this.game.Canvas, origin, blocks);
-      shadows.draw();
-    }
-
-    /**
-     * Gets the visible tile array based off x, y coords
-     *
-     * @param {*} x
-     * @param {*} y
-     * @memberof Map
-     */
-    calculateVisibleTiles(x = this.game.Canvas.Camera.x, y = this.game.Canvas.Camera.y) {    
-      // get the pixel to tile number
-      const tileX = Math.round(x / this.tileWidth);
-      const tileY = Math.round(y / this.tileHeight);
-
-      // bail if the tiles are the same as the last time
-      if (
-        this.visibleTileX === tileX
-        && this.visibleTileY === tileY
-      ) {
-        return;
-      }
-
-      this.visibleTileX = tileX;
-      this.visibleTileY = tileY;
-
-      // get the bounds of the visible tiles
-      let x1 = tileX - this.visibleTilesPerDirection;
-      let x2 = tileX + this.visibleTilesPerDirection;
-      let y1 = tileY - this.visibleTilesPerDirection;
-      let y2 = tileY + this.visibleTilesPerDirection;
-
-      // clamp the bounds
-      if (x1 < 1) {
-        x1 = 0;
-      }
-      if (x2 > this.xTotalTiles) {
-        x2 = this.xTotalTiles;
-      }
-      if (y1 < 1) {
-        y1 = 0;
-      }
-      if (y2 > this.yTotalTiles) {
-        y2 = this.yTotalTiles;
-      }
-
-      // create visible tile array from the boundaries
-      this.visibleTileArray = [];
-      let visibleIndex = 0;
-      for (let j = y1; j < y2; j++) {
-        for (let i = x1; i < x2; i++) {
-          // get the map array and visible array indexes
-          const mapIndex = this.convertPosToIndex(i, j);
-
-          // if the map array value is -1
-          // then it has not been visible yet
-          // create a tile at that index
-          if (typeof this.mapArray[mapIndex] === 'undefined') {
-            const tile = this.TileUtil.create();
-            this.mapArray[mapIndex] = tile;
-          }
-
-          // add the x/y data to the object
-          const visibleTile = this.TileUtil.unpack(this.mapArray[mapIndex]);
-          visibleTile.x = i;
-          visibleTile.y = j;
-          visibleTile.xPixel = i * this.tileWidth;
-          visibleTile.yPixel = j * this.tileHeight;
-          visibleTile.width = this.tileWidth;
-          visibleTile.height = this.tileHeight;
-
-          // add the unpacked version of the tile to the visible tile array
-          this.visibleTileArray[visibleIndex++] = visibleTile;
-        }
-      }
-    }
-
-    /**
-     * Check if a coordinate is a collision and return the collision boundaries
-     *
-     * @param {*} x pixel position
-     * @param {*} y pixel position
-     * @returns
-     * @memberof Map
-     */
-    getCollision(xPixel, yPixel) {
-      // hardcode the hero
-      const heroRadius = 20;
-      const x1 = xPixel - heroRadius;
-      const x2 = xPixel + heroRadius;
-      const y1 = yPixel - heroRadius;
-      const y2 = yPixel + heroRadius;
-      
-      // map boundaries
-      if (
-        x1 < 0
-        || y1 < 0
-        || x2 > this.widthInPixels
-        || y2 > this.heightInPixels
-      ) {
-        return true;
-      }
-
-      // tile blocking
-      for (let i = 0; i < this.visibleTileArray.length; i++) {
-        const tile = this.visibleTileArray[i];
-        if (tile.blocking) {
-          if (
-            x2 > tile.xPixel
-            && x1 < tile.xPixel + tile.width
-            && y2 > tile.yPixel
-            && y1 < tile.yPixel + tile.height
-          ) {
-            return true;
-          }
-        }
-      }
-
-      // let 'em pass
-      return false;
-    }
-  }
-
   /**
    * Handles Object creation for use in Scenes
    *
@@ -1858,10 +1113,6 @@ var game = (function () {
 
         case 'hero':
           return new Hero(object, this.game);
-          break;
-        
-        case 'map':
-          return new Map(object, this.game);
           break;
         
         default:
@@ -2177,6 +1428,845 @@ var game = (function () {
     }
   }
 
+  class Shadows {
+    constructor(Canvas, origin, objects) {
+      this.Canvas = Canvas;
+
+      // set the context to the shadow layer
+      this.ctx = this.Canvas.shadowLayer.context;
+
+      // origin point where lighting is based off of, which is always the hero x/y
+      this.origin = {
+        x: origin.x,
+        y: origin.y,
+      };
+
+      // get all blocking objects
+      this.blocks = [];
+      this.lights = [];
+
+      for (let i = 0; i < objects.length; i++) {
+        const object = objects[i];
+        const x1 = object.xPixel;
+        const y1 = object.yPixel;
+        const block = {
+          x1: object.xPixel,
+          y1: object.yPixel,
+          x2: object.xPixel + object.width,
+          y2: object.yPixel + object.height,
+          width: object.width,
+          height: object.height,
+        };
+
+        if (object.shadow) {
+          this.blocks.push(block);
+        }
+
+        // TODO: All blocks currently have shadow,
+        // TODO: Add light handling
+        if (object.light === true) {
+          debugger;
+          this.lights.push(block);
+        }
+      }
+    }
+
+    draw() {
+      this.Canvas.shadowLayer.clear();
+
+      // get the camera offset
+      const offsetX = this.Canvas.Camera.offsetX;
+      const offsetY = this.Canvas.Camera.offsetY;
+
+      this.ctx.globalCompositeOperation = 'source-over';
+
+      // gradient 1
+      const grd = this.ctx.createRadialGradient(
+        this.origin.x + offsetX,
+        this.origin.y + offsetY,
+        0,
+        this.origin.x + offsetX,
+        this.origin.y + offsetY,
+        360
+      );
+      
+      grd.addColorStop(0, 'rgba(0, 0, 0, .1)');
+      grd.addColorStop(0.9, 'rgba(0, 0, 0, .5');
+      this.ctx.fillStyle = grd;
+      this.ctx.fillRect(0, 0, this.Canvas.width, this.Canvas.height);
+
+      // gradient 2
+      this.ctx.globalCompositeOperation = 'source-over';
+      const grd2 = this.ctx.createRadialGradient(
+        this.origin.x + offsetX,
+        this.origin.y + offsetY,
+        0,
+        this.origin.x + offsetX,
+        this.origin.y + offsetY,
+        360
+      );
+      grd2.addColorStop(0, 'rgba(0, 0, 0, .1)');
+      grd2.addColorStop(0.9, 'rgba(0, 0, 0, 1');
+      this.ctx.fillStyle = grd2;
+      this.ctx.fillRect(0, 0, this.Canvas.width, this.Canvas.height);
+
+      // lights
+      this.ctx.globalCompositeOperation = 'destination-out';
+      this.lights.forEach(light => {
+        debugger;
+        const gradient = this.ctx.createRadialGradient(
+          light.x1 + offsetX + light.width / 2,
+          light.y1 + offsetY + light.height / 2,
+          0,
+          light.x1 + offsetX + light.width / 2,
+          light.y1 + offsetY + light.height / 2,
+          100
+        );
+        gradient.addColorStop(0, `rgba(0, 0, 0, ${Math.random() + .7})`);
+        gradient.addColorStop(0.9, 'rgba(0, 0, 0, 0');
+        this.ctx.fillStyle = gradient;
+        this.ctx.fillRect(
+          light.x1 + offsetX - 100 + light.width / 2,
+          light.y1 + offsetY - 100 + light.height / 2,
+          200,
+          200
+        );
+      });
+
+      // object shadows
+      this.ctx.fillStyle = 'rgba(0, 0, 0, 1)';
+      this.ctx.strokeStyle = 'red';
+      this.ctx.lineWidth = '1px';
+
+      for (let i = 0; i < this.blocks.length; i++) {
+        const pos = this.blocks[i];
+
+        // get all 4 corners
+        const points = [
+          { x: pos.x1, y: pos.y1 },
+          { x: pos.x2, y: pos.y1 },
+          { x: pos.x1, y: pos.y2 },
+          { x: pos.x2, y: pos.y2 },
+        ];
+
+        this.drawShadows(points, pos, offsetX, offsetY);
+      }
+    }
+
+    drawShadows(points, pos, offsetX, offsetY) {
+      
+      this.ctx.globalCompositeOperation = 'source-over';
+      
+      // calculate the angle of each line
+      const raw = points.map(point => Object.assign({}, point, {
+        angle: this.calculateAngle(point),
+        distance: this.calculateDistance(point),
+      }));
+
+      const minMaxDistance = 1000;
+
+      const angles = raw.slice(0).sort((a, b) => {
+        // sort by angle
+        if (b.angle > a.angle) {
+          return 1;
+        }
+
+        if (b.angle < a.angle) {
+          return -1;
+        }
+
+        return 0;
+      });
+
+      const furthest = raw.slice(0).sort((a, b) => {
+        // sort by angle
+        if (b.distance > a.distance) {
+          return 1;
+        }
+
+        if (b.distance < a.distance) {
+          return -1;
+        }
+
+        return 0;
+      });
+      
+      // TODO: Don't read this next block of code
+      // TODO: it's just a bunch of spaghett
+      this.ctx.fillStyle = `rgb(0, 0, 0)`;
+      this.ctx.beginPath();
+      if (
+        this.origin.x > pos.x2
+        && this.origin.y > pos.y1
+        && this.origin.y < pos.y2
+      ) {
+        let min = this.calculatePoint(angles[2].angle, minMaxDistance);
+        let max = this.calculatePoint(angles[1].angle, minMaxDistance);
+        this.ctx.moveTo(angles[1].x + offsetX, angles[1].y + offsetY);
+        this.ctx.lineTo(max.x + offsetX, max.y + offsetY);
+        this.ctx.lineTo(min.x + offsetX, min.y + offsetY);
+        this.ctx.lineTo(angles[2].x + offsetX, angles[2].y + offsetY);
+        if (this.origin.y > pos.y1 + pos.width / 2) {
+          this.ctx.lineTo(furthest[0].x + offsetX, furthest[0].y + offsetY);
+          this.ctx.lineTo(furthest[1].x + offsetX, furthest[1].y + offsetY);
+        } else {
+          this.ctx.lineTo(furthest[1].x + offsetX, furthest[1].y + offsetY);
+          this.ctx.lineTo(furthest[0].x + offsetX, furthest[0].y + offsetY);
+        }
+        this.ctx.lineTo(angles[1].x + offsetX, angles[1].y + offsetY);
+      } else {
+        if (
+          this.origin.y > pos.y1
+          && this.origin.y < pos.y2
+        ) {
+          // handle being left of the object
+          const max = this.calculatePoint(angles[0].angle, minMaxDistance);
+          const min = this.calculatePoint(angles[3].angle, minMaxDistance);
+          this.ctx.moveTo(angles[0].x + offsetX, angles[0].y + offsetY);
+          this.ctx.lineTo(max.x + offsetX, max.y + offsetY);
+          this.ctx.lineTo(min.x + offsetX, min.y + offsetY);
+          this.ctx.lineTo(angles[3].x + offsetX, angles[3].y + offsetY);
+          if (this.origin.y > pos.y1 + pos.width / 2) {
+            this.ctx.lineTo(furthest[0].x + offsetX, furthest[0].y + offsetY);
+            this.ctx.lineTo(furthest[1].x + offsetX, furthest[1].y + offsetY);
+          } else {
+            this.ctx.lineTo(furthest[1].x + offsetX, furthest[1].y + offsetY);
+            this.ctx.lineTo(furthest[0].x + offsetX, furthest[0].y + offsetY);
+          }
+          this.ctx.lineTo(angles[0].x + offsetX, angles[0].y + offsetY);
+        } else if ( // above/beneath object
+          this.origin.x > pos.x1
+          && this.origin.x < pos.x2
+        ) {
+          // below the object
+          if (this.origin.y > pos.y1) {
+            // below the object
+            const max = this.calculatePoint(angles[0].angle, minMaxDistance);
+            const min = this.calculatePoint(angles[3].angle, minMaxDistance);
+            this.ctx.moveTo(angles[0].x + offsetX, angles[0].y + offsetY);
+            this.ctx.lineTo(max.x + offsetX, max.y + offsetY);
+            this.ctx.lineTo(min.x + offsetX, min.y + offsetY);
+            this.ctx.lineTo(angles[3].x + offsetX, angles[3].y + offsetY);
+            if (this.origin.x > pos.x1 + pos.width / 2) {
+              this.ctx.lineTo(furthest[0].x + offsetX, furthest[0].y + offsetY);
+              this.ctx.lineTo(furthest[1].x + offsetX, furthest[1].y + offsetY);
+            } else {
+              this.ctx.lineTo(furthest[1].x + offsetX, furthest[1].y + offsetY);
+              this.ctx.lineTo(furthest[0].x + offsetX, furthest[0].y + offsetY);
+            }
+            this.ctx.lineTo(angles[0].x + offsetX, angles[0].y + offsetY);
+          } else { // above the object
+            // below the object
+            const max = this.calculatePoint(angles[0].angle, minMaxDistance);
+            const min = this.calculatePoint(angles[3].angle, minMaxDistance);
+            this.ctx.moveTo(angles[0].x + offsetX, angles[0].y + offsetY);
+            this.ctx.lineTo(max.x + offsetX, max.y + offsetY);
+            this.ctx.lineTo(min.x + offsetX, min.y + offsetY);
+            this.ctx.lineTo(angles[3].x + offsetX, angles[3].y + offsetY);
+            if (this.origin.x > pos.x1 + pos.width / 2) {
+              this.ctx.lineTo(furthest[1].x + offsetX, furthest[1].y + offsetY);
+              this.ctx.lineTo(furthest[0].x + offsetX, furthest[0].y + offsetY);
+            } else {
+              this.ctx.lineTo(furthest[0].x + offsetX, furthest[0].y + offsetY);
+              this.ctx.lineTo(furthest[1].x + offsetX, furthest[1].y + offsetY);
+            }
+            this.ctx.lineTo(angles[0].x + offsetX, angles[0].y + offsetY);
+          }
+        } else { // northwest of object
+          const max = this.calculatePoint(angles[0].angle, minMaxDistance);
+          const min = this.calculatePoint(angles[3].angle, minMaxDistance);
+          this.ctx.moveTo(angles[0].x + offsetX, angles[0].y + offsetY);
+          this.ctx.lineTo(max.x + offsetX, max.y + offsetY);
+          this.ctx.lineTo(min.x + offsetX, min.y + offsetY);
+          this.ctx.lineTo(angles[3].x + offsetX, angles[3].y + offsetY);
+          this.ctx.lineTo(furthest[0].x + offsetX, furthest[0].y + offsetY);
+          this.ctx.lineTo(angles[0].x + offsetX, angles[0].y + offsetY);
+        }
+      }
+      this.ctx.closePath();
+      this.ctx.fill();
+    }
+
+    /**
+     * Calculates the angle between 2 points
+     *
+     * @param {*} point
+     * @param {*} [origin={ x: this.origin.x, y: this.origin,y }]
+     * @returns
+     * @memberof Shadows
+     */
+    calculateAngle(point, origin = { x: this.origin.x, y: this.origin.y }) {
+      return Math.atan2(point.y - origin.y, point.x - origin.x) * 180 / Math.PI;
+    }
+
+    /**
+     * Calculates a new point given an angle, distance from, and starting point
+     *
+     * @param {*} angle
+     * @param {*} distance
+     * @returns {object} x, y
+     * @memberof Shadows
+     */
+    calculatePoint(angle, distanceFrom, point = { x: this.origin.x, y: this.origin.y }) {
+      return {
+        x: Math.round(Math.cos(angle * Math.PI / 180) * distanceFrom + point.x),
+        y: Math.round(Math.sin(angle * Math.PI / 180) * distanceFrom + point.y),
+      };
+    }
+
+    /**
+     * Calculate the distance between two points
+     * AKA Pythagorean theorem
+     *
+     * @param {*} pos1
+     * @param {*} pos2
+     * @returns
+     * @memberof Shadows
+     */
+    calculateDistance(pos1, pos2 = { x: this.origin.x, y: this.origin.y }) {
+      const a = pos1.x - pos2.x;
+      const b = pos1.y - pos2.y;
+
+      // return the distance
+      return Math.sqrt(a * a + b * b);
+    }
+  }
+
+  // create references to the most used default tile types
+
+  const objects = [
+    {
+      type: 'tree',
+      blocking: true,
+      shadow: false,
+      light: false,
+      width: 25,
+      height: 25,
+    },
+    {
+      type: 'torch',
+      blocking: false,
+      shadow: false,
+      light: true,
+      width: 10,
+      height: 10,
+    },
+  ];
+
+  /**
+   * Provides utility methods for tiles
+   *
+   * @class TileUtil
+   */
+  class TileUtil {
+    /**
+     * Creates an instance of TileUtil.
+     * @param {number} [tileInt=0]
+     * @memberof TileUtil
+     */
+    constructor(args) {
+      // width of tiles in pixels
+      this.tileWidth = args.tileWidth;
+      this.tileHeight = args.tileHeight;
+
+      // max x / y positions
+      this.xMax = args.xMax;
+      this.yMax = args.yMax;
+
+      // define substr positions for extracting tile data
+      this.substr = {
+        type: 1,
+        blocking: 2,
+        light: 3,
+        shadow: 4,
+        x: 5,
+        y: 5 + this.xMax,
+      };
+    }
+
+    /**
+     * Creates a map tile
+     *
+     * @param {*} args
+     * @returns
+     * @memberof TileUtil
+     */
+    create(args = {}) {
+      // defaults
+      let type = 0;
+      let blocking = 0;
+      let light = 0;
+      let shadow = 0;
+
+      // randomize the tile type
+      let random = Math.random();
+      if (random > .1) {
+        type = 0; // grass
+      } else if (random > .08) {
+        type = 1; // water;
+        blocking = 1;
+      } else {
+        type = 2; // rock
+        blocking = 1;
+        shadow = 1;
+      }
+
+      // null is 0 bytes, woohoo! (grass)
+      if (type === 0) {
+        return null;
+      }
+
+      // (water)
+      if (type === 1) {
+        return '1';
+      }
+
+      // '' is 0 bytes too, woohoo (rock)
+      if (type === 2) {
+        return '';
+      }
+
+      // create and return the string
+      const string = '1' + type + '' + blocking + '' + light + '' + shadow + '';
+      return Number(string);
+    }
+
+    /**
+     * Grabs a random object from the objects array
+     *
+     * @param {*} [args={}]
+     * @returns
+     * @memberof TileUtil
+     */
+    createObject(args = {}) {
+      let type = 1;
+      
+      // if (random > .7) {
+      //   type = 1;
+      // }
+
+      return objects[type];
+    }
+    
+    maybeCreateObject() {
+      const random = Math.random();
+      if (random > .95)  {
+        return this.createObject();
+      } else {
+        return null;
+      }
+    }
+
+    /**
+     * Converts a packed tile integer into a verbose object
+     *
+     * @param {*} int
+     * @returns
+     * @memberof TileUtil
+     */
+    unpack(int) {
+      // if int is not an int, it's an aliased value
+      if (typeof int !== 'number') {
+        // TODO: Look into why i have to explicitly do this and can't use reference array
+        if (int === null) return {
+          type: 'grass',
+          blocking: false,
+          shadow: false,
+          light: false,
+        };
+
+        if (int === '1') return {
+          type: 'water',
+          blocking: true,
+          shadow: false,
+          light: false,
+        }
+
+        if (int === '') return {
+          type: 'rock',
+          blocking: true,
+          shadow: true,
+          light: false,
+        }
+      }
+
+      // convert the int to a string
+      const raw = this.toString(int);
+
+      // get the properties
+      const type = tileTypes[raw.substr(this.substr.type, 1)].type;
+      const blocking = Number(raw.substr(this.substr.blocking, 1)) === 1;
+      const light = Number(raw.substr(this.substr.light, 1)) === 1;
+      const shadow = Number(raw.substr(this.substr.shadow, 1)) === 1;
+      // const x = Number(raw.substr(this.substr.x, this.xMax));
+      // const y = Number(raw.substr(this.substr.y, this.yMax));
+      // const xPixel = x * this.tileWidth;
+      // const yPixel = y * this.tileHeight;
+      // const width = this.tileWidth;
+      // const height = this.tileHeight;
+
+      const tile = {
+        type,
+        blocking,
+        light,
+        shadow,
+        // x,
+        // y,
+        // xPixel,
+        // yPixel,
+        // width,
+        // height,
+      };
+
+      return tile;
+    }
+
+    /**
+     * Converts an int to string
+     *
+     * @param {*} int
+     * @returns
+     * @memberof TileUtil
+     */
+    toString(int) {
+      return int + "";
+    }
+
+    /**
+     * Get the type integer
+     *
+     * @returns {integer} type
+     * @memberof TileUtil
+     */
+    typeInt(int) {
+      return Number(this.toString(int).substr(this.substr.type, 1));
+    }
+
+    /**
+     * Get the human readable tile type
+     *
+     * @returns
+     * @memberof TileUtil
+     */
+    typeText(int) {
+      const index = this.typeInt(int);
+      return tileTypes[index].type;
+    }
+
+    /**
+     * Get the X map position
+     *
+     * @returns
+     * @memberof TileUtil
+     */
+    // x(int) {
+    //   const x = Number(this.toString(int).substr(this.substr.x, this.xMax));
+    //   return x;
+    // }
+
+    /**
+     * * Get the Y map position
+     *
+     * @returns
+     * @memberof TileUtil
+     */
+    // y(int) {
+    //   const y = Number(this.toString(int).substr(this.substr.y, this.yMax));
+    //   return y;
+    // }
+
+    /**
+     * Check if the tile is blocking
+     *
+     * @returns {boolean} is blocking
+     * @memberof TileUtil
+     */
+    blocking(int) {
+      return Number(this.toString(int).substr(this.substr.blocking, 1)) === 1;
+    }
+
+    /**
+     * Check if the tile casts a shadow
+     *
+     * @returns
+     * @memberof TileUtil
+     */
+    shadow(int) {
+      return Number(this.toString(int).substr(this.substr.shadow, 1)) === 1;
+    }
+  }
+
+  /**
+   * @class Map
+   * 
+   *  Types of information stored in the Map class are
+   *    - Terrain
+   *    - Items
+   *    - Characters
+   *
+   *  All of the above types are stored in their each respective array
+   *  keyed by the map coordinates [ x + (y * xWidth)]
+   *
+   *  Map has a property MainCharacter which is controlled by user input
+   *
+   *  Map has a property Camera
+   *    The Camera contains a focal point which is used to
+   *    calculate pixel offsets when drawing map objects
+   *
+   */
+  class Map {
+    constructor(args, game) {
+      this.game = game;
+
+      // map width and height in tiles
+      this.xTotalTiles = 5000;
+      this.yTotalTiles = 5000;
+      
+      // total amount of tiles
+      this.totalTiles = this.xTotalTiles * this.yTotalTiles;
+
+      // single tile width and height in pixels
+      this.tileWidth = 50;
+      this.tileHeight = 50;
+
+      // get the width and height of the map in total pixels
+      this.widthInPixels = this.xTotalTiles * this.tileWidth;
+      this.heightInPixels = this.yTotalTiles * this.tileHeight;
+
+      // stores the data about what exists at a particular position
+      this.mapArray = [];
+
+      // stores the objects on the current map
+      this.objectArray = [];
+
+      // keep track of visible tiles
+      this.visibleTilesPerDirection = 16;
+      this.visibleTileArray = [];
+      this.visibleTileX = 0;
+      this.visibleTileY = 0;
+
+      // tile util needs to know:
+      //  width/height of a tile in pixels
+      //  x / y total tile length
+      this.TileUtil = new TileUtil({
+        tileWidth: this.tileWidth,
+        tileHeight: this.tileHeight,
+        xMax: this.xTotalTiles.toString().length,
+        yMax: this.yTotalTiles.toString().length,
+      });
+    }
+
+    /**
+     * Converts x, y position to map array index
+     *
+     * @param {*} x
+     * @param {*} y
+     * @param {boolean} [convertPixels=false]
+     * @returns
+     * @memberof Map
+     */
+    convertPosToIndex(x, y, convertPixels = false) {
+      let tileX = x;
+      let tileY = y;
+      
+      if (convertPixels) {
+        tileX = Math.round(x / this.tileWidth);
+        tileY = Math.round(y / this.tileHeight);
+      }
+
+      const index = tileX + tileY * this.yTotalTiles;
+      return index;
+    }
+
+    /**
+     * Draws the map tiles and shawdows
+     * only if the map needs an update
+     *
+     * @param {*} Canvas
+     * @memberof Map
+     */
+    draw(Canvas) {
+      if (this.needsUpdate) {
+        // calculate the visible tiles
+        this.calculateVisibleTiles();
+
+        // draw the tiles
+        for (var i = 0; i < this.visibleTileArray.length; i++) {
+          const tileData = this.visibleTileArray[i];
+          Canvas.drawTile(tileData[0]);
+
+          // draw the objects
+          if (tileData[1] !== null) {
+            Canvas.drawTile(tileData[1]);
+          }
+        }
+
+        // draw the shadows
+        this.drawShadows();
+      }
+    }
+
+    /**
+     * Draws the shadows
+     *
+     * @memberof Map
+     */
+    drawShadows() {
+      // get the origin
+      const scene = this.game.scene;
+      const origin = { x: scene.hero.x, y: scene.hero.y };
+
+      // get the shadow objects
+      const blocks = [];
+      for (var i = 0; i < this.visibleTileArray.length; i++) {
+        const tile = this.visibleTileArray[i][0];
+        if (tile.shadow) {
+          blocks.push(tile);
+        }
+
+        const object = this.visibleTileArray[i][1];
+        if (object !== null) {
+          blocks.push(object);
+        }
+      }
+
+      // get and draw
+      const shadows = new Shadows(this.game.Canvas, origin, blocks);
+      shadows.draw();
+    }
+
+    /**
+     * Gets the visible tile array based off x, y coords
+     *
+     * @param {*} x
+     * @param {*} y
+     * @memberof Map
+     */
+    calculateVisibleTiles(x = this.game.Canvas.Camera.x, y = this.game.Canvas.Camera.y) {    
+      // get the pixel to tile number
+      const tileX = Math.round(x / this.tileWidth);
+      const tileY = Math.round(y / this.tileHeight);
+
+      // bail if the tiles are the same as the last time
+      if (
+        this.visibleTileX === tileX
+        && this.visibleTileY === tileY
+      ) {
+        return;
+      }
+
+      this.visibleTileX = tileX;
+      this.visibleTileY = tileY;
+
+      // get the bounds of the visible tiles
+      let x1 = tileX - this.visibleTilesPerDirection;
+      let x2 = tileX + this.visibleTilesPerDirection;
+      let y1 = tileY - this.visibleTilesPerDirection;
+      let y2 = tileY + this.visibleTilesPerDirection;
+
+      // clamp the bounds
+      if (x1 < 1) {
+        x1 = 0;
+      }
+      if (x2 > this.xTotalTiles) {
+        x2 = this.xTotalTiles;
+      }
+      if (y1 < 1) {
+        y1 = 0;
+      }
+      if (y2 > this.yTotalTiles) {
+        y2 = this.yTotalTiles;
+      }
+
+      // create visible tile array from the boundaries
+      this.visibleTileArray = [];
+      let visibleIndex = 0;
+      for (let j = y1; j < y2; j++) {
+        for (let i = x1; i < x2; i++) {
+          // get the map array and visible array indexes
+          const mapIndex = this.convertPosToIndex(i, j);
+
+          // if the map array value is -1
+          // then it has not been visible yet
+          // create a tile at that index
+          if (typeof this.mapArray[mapIndex] === 'undefined') {
+            const tile = this.TileUtil.create();
+            this.mapArray[mapIndex] = tile;
+
+            // maybe generate an object at this tile location
+            const maybeObject = this.TileUtil.maybeCreateObject();
+            const object = maybeObject === null
+              ? null
+              : Object.assign({}, maybeObject, {
+                x: i,
+                y: j,
+                xPixel: i * this.tileWidth,
+                yPixel: j * this.tileHeight,
+              });
+            this.objectArray[mapIndex] = object;
+          }
+
+          // add the x/y data to the object
+          const visibleTile = this.TileUtil.unpack(this.mapArray[mapIndex]);
+          visibleTile.x = i;
+          visibleTile.y = j;
+          visibleTile.xPixel = i * this.tileWidth;
+          visibleTile.yPixel = j * this.tileHeight;
+          visibleTile.width = this.tileWidth;
+          visibleTile.height = this.tileHeight;
+
+          // add the unpacked version of the tile to the visible tile array
+          this.visibleTileArray[visibleIndex++] = [visibleTile, this.objectArray[mapIndex]];
+        }
+      }
+    }
+
+    /**
+     * Check if a coordinate is a collision and return the collision boundaries
+     *
+     * @param {*} x pixel position
+     * @param {*} y pixel position
+     * @returns
+     * @memberof Map
+     */
+    getCollision(xPixel, yPixel) {
+      // hardcode the hero
+      const heroRadius = 20;
+      const x1 = xPixel - heroRadius;
+      const x2 = xPixel + heroRadius;
+      const y1 = yPixel - heroRadius;
+      const y2 = yPixel + heroRadius;
+      
+      // map boundaries
+      if (
+        x1 < 0
+        || y1 < 0
+        || x2 > this.widthInPixels
+        || y2 > this.heightInPixels
+      ) {
+        return true;
+      }
+
+      // tile blocking
+      for (let i = 0; i < this.visibleTileArray.length; i++) {
+        const tile = this.visibleTileArray[i][0];
+        if (tile.blocking) {
+          if (
+            x2 > tile.xPixel
+            && x1 < tile.xPixel + tile.width
+            && y2 > tile.yPixel
+            && y1 < tile.yPixel + tile.height
+          ) {
+            return true;
+          }
+        }
+      }
+
+      // let 'em pass
+      return false;
+    }
+  }
+
   class SceneGame extends Scene {
     init() {
       this.createMap();
@@ -2184,9 +2274,7 @@ var game = (function () {
     }
 
     createMap() {
-      this.map = this.Objects.create({
-        type: 'map',
-      });
+      this.map = new Map({}, this.game);
     }
 
     createHero() {

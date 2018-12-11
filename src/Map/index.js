@@ -1,27 +1,24 @@
 import Shadows from './Shadows';
 import TileUtil from './TileUtil';
 
-const objects = [
-  {
-    id: 1,
-    type: 'tree',
-    blocking: true,
-    shadow: false,
-    light: false,
-    width: 25,
-    height: 25,
-  },
-  {
-    id: 2,
-    type: 'torch',
-    blocking: false,
-    shadow: false,
-    light: true,
-    width: 10,
-    height: 10,
-  },
-];
-
+/**
+ * @class Map
+ * 
+ *  Types of information stored in the Map class are
+ *    - Terrain
+ *    - Items
+ *    - Characters
+ *
+ *  All of the above types are stored in their each respective array
+ *  keyed by the map coordinates [ x + (y * xWidth)]
+ *
+ *  Map has a property MainCharacter which is controlled by user input
+ *
+ *  Map has a property Camera
+ *    The Camera contains a focal point which is used to
+ *    calculate pixel offsets when drawing map objects
+ *
+ */
 class Map {
   constructor(args, game) {
     this.game = game;
@@ -44,8 +41,11 @@ class Map {
     // stores the data about what exists at a particular position
     this.mapArray = [];
 
+    // stores the objects on the current map
+    this.objectArray = [];
+
     // keep track of visible tiles
-    this.visibleTilesPerDirection = 8;
+    this.visibleTilesPerDirection = 16;
     this.visibleTileArray = [];
     this.visibleTileX = 0;
     this.visibleTileY = 0;
@@ -97,7 +97,13 @@ class Map {
 
       // draw the tiles
       for (var i = 0; i < this.visibleTileArray.length; i++) {
-        Canvas.drawTile(this.visibleTileArray[i]);
+        const tileData = this.visibleTileArray[i];
+        Canvas.drawTile(tileData[0]);
+
+        // draw the objects
+        if (tileData[1] !== null) {
+          Canvas.drawTile(tileData[1]);
+        }
       }
 
       // draw the shadows
@@ -118,9 +124,14 @@ class Map {
     // get the shadow objects
     const blocks = [];
     for (var i = 0; i < this.visibleTileArray.length; i++) {
-      const tile = this.visibleTileArray[i];
+      const tile = this.visibleTileArray[i][0];
       if (tile.shadow) {
         blocks.push(tile);
+      }
+
+      const object = this.visibleTileArray[i][1];
+      if (object !== null) {
+        blocks.push(object);
       }
     }
 
@@ -186,6 +197,18 @@ class Map {
         if (typeof this.mapArray[mapIndex] === 'undefined') {
           const tile = this.TileUtil.create();
           this.mapArray[mapIndex] = tile;
+
+          // maybe generate an object at this tile location
+          const maybeObject = this.TileUtil.maybeCreateObject();
+          const object = maybeObject === null
+            ? null
+            : Object.assign({}, maybeObject, {
+              x: i,
+              y: j,
+              xPixel: i * this.tileWidth,
+              yPixel: j * this.tileHeight,
+            });
+          this.objectArray[mapIndex] = object;
         }
 
         // add the x/y data to the object
@@ -198,7 +221,7 @@ class Map {
         visibleTile.height = this.tileHeight;
 
         // add the unpacked version of the tile to the visible tile array
-        this.visibleTileArray[visibleIndex++] = visibleTile;
+        this.visibleTileArray[visibleIndex++] = [visibleTile, this.objectArray[mapIndex]];
         ;
       }
     }
@@ -232,7 +255,7 @@ class Map {
 
     // tile blocking
     for (let i = 0; i < this.visibleTileArray.length; i++) {
-      const tile = this.visibleTileArray[i];
+      const tile = this.visibleTileArray[i][0];
       if (tile.blocking) {
         if (
           x2 > tile.xPixel

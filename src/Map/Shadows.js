@@ -27,14 +27,18 @@ class Shadows {
         width: object.width,
         height: object.height,
       };
-      this.blocks.push(block);
-    }
 
-    // TODO: All blocks currently have shadow,
-    // TODO: Add light handling
-    // if (object.light === true) {
-    //   this.lights.push(obj);
-    // }
+      if (object.shadow) {
+        this.blocks.push(block);
+      }
+
+      // TODO: All blocks currently have shadow,
+      // TODO: Add light handling
+      if (object.light === true) {
+        debugger;
+        this.lights.push(block);
+      }
+    }
   }
 
   draw() {
@@ -79,6 +83,7 @@ class Shadows {
     // lights
     this.ctx.globalCompositeOperation = 'destination-out';
     this.lights.forEach(light => {
+      debugger;
       const gradient = this.ctx.createRadialGradient(
         light.x1 + offsetX + light.width / 2,
         light.y1 + offsetY + light.height / 2,
@@ -128,7 +133,7 @@ class Shadows {
       distance: this.calculateDistance(point),
     }));
 
-    const minMaxDistance = 500;
+    const minMaxDistance = 1000;
 
     const angles = raw.slice(0).sort((a, b) => {
       // sort by angle

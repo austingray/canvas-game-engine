@@ -1,4 +1,5 @@
 import Scene from './Scene';
+import Map from '../Map/index';
 
 class SceneGame extends Scene {
   init() {
@@ -7,9 +8,7 @@ class SceneGame extends Scene {
   }
 
   createMap() {
-    this.map = this.Objects.create({
-      type: 'map',
-    });
+    this.map = new Map({}, this.game);
   }
 
   createHero() {

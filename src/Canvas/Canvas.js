@@ -275,12 +275,12 @@ class Canvas {
     }
 
     if (tile.type === 'torch') {
-      this.ctx = this.primaryLayer.context
+      this.ctx = this.primaryLayer.context;
       this.drawCircle({
         x: tile.x + 25,
         y: tile.y + 25,
         radius: 5,
-        fillStyle: 'rgba(255, 155, 0, .5)',
+        fillStyle: 'rgba(255, 155, 0, 1)',
         startAngle: Math.PI / 180 * 0,
         endAngle: Math.PI / 180 * 360,
         anticlockwise: false,
