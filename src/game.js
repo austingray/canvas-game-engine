@@ -6,7 +6,6 @@ import Debug from './Debug/index';
 
 function game() {
   // debug stuff
-  this.debug = true;
   this.timestamp = 0;
   this.fps = 0;
 

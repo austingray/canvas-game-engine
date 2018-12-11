@@ -99,11 +99,6 @@ class Map {
       for (var i = 0; i < this.visibleTileArray.length; i++) {
         const tileData = this.visibleTileArray[i];
         Canvas.drawTile(tileData[0]);
-
-        // draw the objects
-        if (tileData[1] !== null) {
-          Canvas.drawTile(tileData[1]);
-        }
       }
 
       // draw the shadows
@@ -127,11 +122,6 @@ class Map {
       const tile = this.visibleTileArray[i][0];
       if (tile.shadow) {
         blocks.push(tile);
-      }
-
-      const object = this.visibleTileArray[i][1];
-      if (object !== null) {
-        blocks.push(object);
       }
     }
 
@@ -197,18 +187,6 @@ class Map {
         if (typeof this.mapArray[mapIndex] === 'undefined') {
           const tile = this.TileUtil.create();
           this.mapArray[mapIndex] = tile;
-
-          // maybe generate an object at this tile location
-          const maybeObject = this.TileUtil.maybeCreateObject();
-          const object = maybeObject === null
-            ? null
-            : Object.assign({}, maybeObject, {
-              x: i,
-              y: j,
-              xPixel: i * this.tileWidth,
-              yPixel: j * this.tileHeight,
-            });
-          this.objectArray[mapIndex] = object;
         }
 
         // add the x/y data to the object
@@ -221,7 +199,7 @@ class Map {
         visibleTile.height = this.tileHeight;
 
         // add the unpacked version of the tile to the visible tile array
-        this.visibleTileArray[visibleIndex++] = [visibleTile, this.objectArray[mapIndex]];
+        this.visibleTileArray[visibleIndex++] = [visibleTile];
         ;
       }
     }
@@ -237,11 +215,10 @@ class Map {
    */
   getCollision(xPixel, yPixel) {
     // hardcode the hero
-    const heroRadius = 20;
-    const x1 = xPixel - heroRadius;
-    const x2 = xPixel + heroRadius;
-    const y1 = yPixel - heroRadius;
-    const y2 = yPixel + heroRadius;
+    const x1 = xPixel + 10;
+    const x2 = xPixel + 40;
+    const y1 = yPixel + 10;
+    const y2 = yPixel + 40;
     
     // map boundaries
     if (

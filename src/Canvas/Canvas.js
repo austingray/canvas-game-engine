@@ -229,6 +229,13 @@ class Canvas {
     this.ctx.closePath();
   }
 
+  drawCharacter(args) {
+    // offset for camera
+    const x = args.x + this.Camera.offsetX;
+    const y = args.y + this.Camera.offsetY;
+    this.ctx.drawImage(args.image, x, y, args.width, args.height);
+  }
+
   drawDebugLine(p1, p2) {
     ctx.beginPath();
     ctx.moveTo(0,0);

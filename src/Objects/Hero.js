@@ -32,6 +32,10 @@ class Hero extends ObjectCircle {
 
     // start the hero at a random location
     this.moveToRandomLocation();
+
+    // image
+    this.image = new Image(50, 50);
+    this.image.src = 'img/purpleCircle.png';
   }
 
   /**
@@ -77,15 +81,25 @@ class Hero extends ObjectCircle {
   draw(Canvas) {
     Canvas.setContext('character');
 
-    Canvas.drawCircle({
-      fillStyle: this.fillStyle,
+    Canvas.drawCharacter({
+      image: this.image,
       x: this.x,
       y: this.y,
-      radius: this.radius,
-      startAngle: this.startAngle,
-      endAngle: this.endAngle,
-      anticlockwise: this.anticlockwise,
+      width: 50,
+      height: 50,
     });
+  
+    
+
+    // Canvas.drawCircle({
+    //   fillStyle: this.fillStyle,
+    //   x: this.x,
+    //   y: this.y,
+    //   radius: this.radius,
+    //   startAngle: this.startAngle,
+    //   endAngle: this.endAngle,
+    //   anticlockwise: this.anticlockwise,
+    // });
 
     if (this.debug) {
       Canvas.pushDebugText('hero.maxSpeed', `Hero.maxSpeed: ${this.maxSpeed}`);

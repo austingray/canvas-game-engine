@@ -7,8 +7,8 @@ class Shadows {
 
     // origin point where lighting is based off of, which is always the hero x/y
     this.origin = {
-      x: origin.x,
-      y: origin.y,
+      x: origin.x + 25,
+      y: origin.y + 25,
     };
 
     // get all blocking objects
@@ -35,7 +35,6 @@ class Shadows {
       // TODO: All blocks currently have shadow,
       // TODO: Add light handling
       if (object.light === true) {
-        debugger;
         this.lights.push(block);
       }
     }

@@ -397,6 +397,13 @@ var game = (function () {
       this.ctx.closePath();
     }
 
+    drawCharacter(args) {
+      // offset for camera
+      const x = args.x + this.Camera.offsetX;
+      const y = args.y + this.Camera.offsetY;
+      this.ctx.drawImage(args.image, x, y, args.width, args.height);
+    }
+
     drawDebugLine(p1, p2) {
       ctx.beginPath();
       ctx.moveTo(0,0);
@@ -813,6 +820,10 @@ var game = (function () {
 
       // start the hero at a random location
       this.moveToRandomLocation();
+
+      // image
+      this.image = new Image(50, 50);
+      this.image.src = 'img/purpleCircle.png';
     }
 
     /**
@@ -858,15 +869,25 @@ var game = (function () {
     draw(Canvas) {
       Canvas.setContext('character');
 
-      Canvas.drawCircle({
-        fillStyle: this.fillStyle,
+      Canvas.drawCharacter({
+        image: this.image,
         x: this.x,
         y: this.y,
-        radius: this.radius,
-        startAngle: this.startAngle,
-        endAngle: this.endAngle,
-        anticlockwise: this.anticlockwise,
+        width: 50,
+        height: 50,
       });
+    
+      
+
+      // Canvas.drawCircle({
+      //   fillStyle: this.fillStyle,
+      //   x: this.x,
+      //   y: this.y,
+      //   radius: this.radius,
+      //   startAngle: this.startAngle,
+      //   endAngle: this.endAngle,
+      //   anticlockwise: this.anticlockwise,
+      // });
 
       if (this.debug) {
         Canvas.pushDebugText('hero.maxSpeed', `Hero.maxSpeed: ${this.maxSpeed}`);
@@ -1437,8 +1458,8 @@ var game = (function () {
 
       // origin point where lighting is based off of, which is always the hero x/y
       this.origin = {
-        x: origin.x,
-        y: origin.y,
+        x: origin.x + 25,
+        y: origin.y + 25,
       };
 
       // get all blocking objects
@@ -1465,7 +1486,6 @@ var game = (function () {
         // TODO: All blocks currently have shadow,
         // TODO: Add light handling
         if (object.light === true) {
-          debugger;
           this.lights.push(block);
         }
       }
@@ -2094,11 +2114,6 @@ var game = (function () {
         for (var i = 0; i < this.visibleTileArray.length; i++) {
           const tileData = this.visibleTileArray[i];
           Canvas.drawTile(tileData[0]);
-
-          // draw the objects
-          if (tileData[1] !== null) {
-            Canvas.drawTile(tileData[1]);
-          }
         }
 
         // draw the shadows
@@ -2122,11 +2137,6 @@ var game = (function () {
         const tile = this.visibleTileArray[i][0];
         if (tile.shadow) {
           blocks.push(tile);
-        }
-
-        const object = this.visibleTileArray[i][1];
-        if (object !== null) {
-          blocks.push(object);
         }
       }
 
@@ -2192,18 +2202,6 @@ var game = (function () {
           if (typeof this.mapArray[mapIndex] === 'undefined') {
             const tile = this.TileUtil.create();
             this.mapArray[mapIndex] = tile;
-
-            // maybe generate an object at this tile location
-            const maybeObject = this.TileUtil.maybeCreateObject();
-            const object = maybeObject === null
-              ? null
-              : Object.assign({}, maybeObject, {
-                x: i,
-                y: j,
-                xPixel: i * this.tileWidth,
-                yPixel: j * this.tileHeight,
-              });
-            this.objectArray[mapIndex] = object;
           }
 
           // add the x/y data to the object
@@ -2216,7 +2214,7 @@ var game = (function () {
           visibleTile.height = this.tileHeight;
 
           // add the unpacked version of the tile to the visible tile array
-          this.visibleTileArray[visibleIndex++] = [visibleTile, this.objectArray[mapIndex]];
+          this.visibleTileArray[visibleIndex++] = [visibleTile];
         }
       }
     }
@@ -2231,11 +2229,10 @@ var game = (function () {
      */
     getCollision(xPixel, yPixel) {
       // hardcode the hero
-      const heroRadius = 20;
-      const x1 = xPixel - heroRadius;
-      const x2 = xPixel + heroRadius;
-      const y1 = yPixel - heroRadius;
-      const y2 = yPixel + heroRadius;
+      const x1 = xPixel + 10;
+      const x2 = xPixel + 40;
+      const y1 = yPixel + 10;
+      const y2 = yPixel + 40;
       
       // map boundaries
       if (
@@ -2860,7 +2857,6 @@ var game = (function () {
 
   function game() {
     // debug stuff
-    this.debug = true;
     this.timestamp = 0;
     this.fps = 0;
 
