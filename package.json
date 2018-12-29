@@ -14,6 +14,7 @@
   "author": "Austin Gray",
   "license": "ISC",
   "devDependencies": {
-    "electron": "^3.0.10"
+    "electron": "^3.0.10",
+    "eslint": "^5.10.0"
   }
 }

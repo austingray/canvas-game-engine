@@ -3,33 +3,15 @@ import Map from '../Map/index';
 
 class SceneGame extends Scene {
   init() {
-    this.createMap();
-    this.createHero();
+    // gets called before scene changes
   }
 
   createMap() {
-    this.map = new Map({}, this.game);
-  }
-
-  createHero() {
-    this.hero = this.Objects.create({
-      type: 'hero',
-      x: 25,
-      y: 25,
-      radius: 25,
-      fillStyle: '#800080',
-      map: this.map,
-    });
-
-    // set focus to hero
-    this.Canvas.Camera.x = this.hero.x;
-    this.Canvas.Camera.y = this.hero.y;
-    this.Canvas.Camera.setFocus(this.hero);
+    this.map = new Map(this.game);
   }
 
   prepareScene() {
     this.pushToScene(this.map);
-    this.pushToScene(this.hero);
   }
 
   clear() {
@@ -54,10 +36,13 @@ class SceneGame extends Scene {
       this.game.setScene('pause');
     }
 
-    this.hero.handleInput(Keyboard, this.map);
+    this.map.handleInput(Keyboard);
   }
 
   transitionInCustom() {
+    // create map after scene change
+    this.createMap();
+    
     this.Canvas.setContext('primary');
 
     // do a draw

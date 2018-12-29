@@ -1,3 +1,5 @@
+import MapBaseClass from './MapBaseClass';
+
 // create references to the most used default tile types
 // to save memory usage in the overall map array
 const tiles = [
@@ -45,21 +47,13 @@ const objects = [
  *
  * @class TileUtil
  */
-class TileUtil {
+class TileUtil extends MapBaseClass {
   /**
    * Creates an instance of TileUtil.
    * @param {number} [tileInt=0]
    * @memberof TileUtil
    */
-  constructor(args) {
-    // width of tiles in pixels
-    this.tileWidth = args.tileWidth;
-    this.tileHeight = args.tileHeight;
-
-    // max x / y positions
-    this.xMax = args.xMax;
-    this.yMax = args.yMax;
-
+  init(args) {
     // define substr positions for extracting tile data
     this.substr = {
       type: 1,
@@ -69,6 +63,28 @@ class TileUtil {
       x: 5,
       y: 5 + this.xMax,
     };
+  }
+
+  /**
+   * Converts x, y position to map array index
+   *
+   * @param {*} x
+   * @param {*} y
+   * @param {boolean} [convertPixels=false]
+   * @returns
+   * @memberof Map
+   */
+  convertPosToIndex(x, y, convertPixels = false) {
+    let tileX = x;
+    let tileY = y;
+    
+    if (convertPixels) {
+      tileX = Math.round(x / this.tileWidth);
+      tileY = Math.round(y / this.tileHeight);
+    }
+
+    const index = tileX + tileY * this.yTiles;
+    return index;
   }
 
   /**

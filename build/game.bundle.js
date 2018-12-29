@@ -397,7 +397,13 @@ var game = (function () {
       this.ctx.closePath();
     }
 
-    drawCharacter(args) {
+    /**
+     * Draws the character
+     *
+     * @param {*} args
+     * @memberof Canvas
+     */
+    drawCharacter(args) {    
       // offset for camera
       const x = args.x + this.Camera.offsetX;
       const y = args.y + this.Camera.offsetY;
@@ -788,303 +794,6 @@ var game = (function () {
     }
   }
 
-  class Hero extends ObjectCircle {
-    init(map) {
-      // display debug info about the hero
-      this.debug = true;
-
-      // provide access to the map
-      this.map = map;
-
-      // allows keyboard input to the character
-      this.allowInput = true;
-
-      // if the hero can move in a certain direction
-      // [ up, right, down, left ];
-      this.canMove = [true, true, true, true];
-
-      // handle character's directional velocity
-      this.velocities = [0, 0, 0, 0];
-      this.maxSpeed = 18; 
-      this.rateOfIncrease = 1 + this.maxSpeed / 100;
-      this.rateOfDecrease = 1 + this.maxSpeed;
-
-      // set target x,y for easing the character movement
-      this.targetX = this.x;
-      this.targetY = this.y;
-      this.targetXTimer;
-      this.targetYTimer;
-
-      // cooldown beteween movement
-      this.inputCooldown = 30;
-
-      // start the hero at a random location
-      this.moveToRandomLocation();
-
-      // image
-      this.image = new Image(50, 50);
-      this.image.src = 'img/purpleCircle.png';
-    }
-
-    /**
-     * Gets a random x/y coord
-     *
-     * @memberof Hero
-     */
-    moveToRandomLocation() {
-      // get random pixel coords
-      const x = Math.round(Math.random() * this.map.widthInPixels);
-      const y = Math.round(Math.random() * this.map.heightInPixels);
-
-      // calculate visible tiles so we can check for collisions
-      this.map.calculateVisibleTiles(x, y);
-
-      // check if blocking
-      // if it is, try again
-      if (this.map.getCollision(x, y)) {
-        return this.moveToRandomLocation();
-      }
-
-      // set the camera focus
-      this.game.Canvas.Camera.setFocus({ x, y }, true);
-
-      // remove movement easing, update position
-      clearTimeout(this.targetXTimer);
-      clearTimeout(this.targetYTimer);
-      this.targetX = x;
-      this.targetY = y;
-      this.x = x;
-      this.y = y;
-
-      // tell the map to redraw
-      this.map.needsUpdate = true;
-    }
-
-    /**
-     * Currently draws a circle
-     *
-     * @param {*} Canvas
-     * @memberof Hero
-     */
-    draw(Canvas) {
-      Canvas.setContext('character');
-
-      Canvas.drawCharacter({
-        image: this.image,
-        x: this.x,
-        y: this.y,
-        width: 50,
-        height: 50,
-      });
-    
-      
-
-      // Canvas.drawCircle({
-      //   fillStyle: this.fillStyle,
-      //   x: this.x,
-      //   y: this.y,
-      //   radius: this.radius,
-      //   startAngle: this.startAngle,
-      //   endAngle: this.endAngle,
-      //   anticlockwise: this.anticlockwise,
-      // });
-
-      if (this.debug) {
-        Canvas.pushDebugText('hero.maxSpeed', `Hero.maxSpeed: ${this.maxSpeed}`);
-      }
-    }
-
-    /**
-     * Increases the hero.maxSpeed
-     *
-     * @memberof Hero
-     */
-    increaseSpeed() {
-      this.maxSpeed++;
-    }
-
-    /**
-     * Decreases the hero.maxSpeed
-     *
-     * @memberof Hero
-     */
-    decreaseSpeed() {
-      this.maxSpeed--;
-    }
-
-    /**
-     * Handles easing on the X axis
-     *
-     * @param {*} dir
-     * @param {*} this.map
-     * @memberof Hero
-     */
-    targetXTimerHandler(dir) {
-      // clear the existing timer
-      clearTimeout(this.targetXTimer);
-
-      // get the difference between the current y and the target y
-      let difference = Math.abs(this.x - this.targetX);
-
-      // set a new timer
-      this.targetXTimer = setTimeout(() => {
-        // calculate what the new x should be
-        const newX = dir === 1 // right
-          ? this.x + (difference / this.inputCooldown)
-          : this.x - (difference / this.inputCooldown); 
-
-        // handle collision
-        const collision = this.map.getCollision(newX, this.y);
-
-        if (collision) {
-          this.targetX = this.x;
-          difference = 0;
-        } else {
-          this.x = newX;
-        }
-
-        this.afterEaseMovement();
-
-        // if we're not close enough to the target Y, keep moving
-        if (difference > 1) {
-          this.targetXTimerHandler(dir, this.map);
-        }
-      }, difference / this.inputCooldown);
-    }
-
-    /**
-     * Handles easing on the Y axis
-     *
-     * @param {*} dir
-     * @memberof Hero
-     */
-    targetYTimerHandler(dir) {
-      // clear the existing timer
-      clearTimeout(this.targetYTimer);
-
-      // get the difference between the current y and the target y
-      let difference = Math.abs(this.y - this.targetY);
-
-      // set a new timer
-      this.targetYTimer = setTimeout(() => {
-        // handle direction
-        const newY = dir === 0 // up
-          ? this.y - (difference / this.inputCooldown)
-          : this.y + (difference / this.inputCooldown);
-
-        // handle collision
-        const collision = this.map.getCollision(this.x, newY);
-
-        if (collision) {
-          this.targetY = this.y;
-          difference = 0;
-        } else {
-          this.y = newY;
-        }
-
-        this.afterEaseMovement();
-
-        // if we're not close enough to the target Y, keep moving
-        if (difference > 1) {
-          this.targetYTimerHandler(dir, this.map);
-        } else {
-          this.map.needsUpdate = false;
-        }
-      }, difference / this.inputCooldown);
-    }
-
-    /**
-     * Additional actions to perform after movement easing is calculated
-     *
-     * @memberof Hero
-     */
-    afterEaseMovement() {
-      // calculate
-      this.game.Canvas.Camera.setFocus({
-        x: this.x,
-        y: this.y,
-      });
-
-      this.map.needsUpdate = true;
-    }
-
-    /**
-     * Handle input for the hero
-     *
-     * @param {*} activeKeys
-     * @param {*} this.map
-     * @returns
-     * @memberof Hero
-     */
-    handleInput(Keyboard) {
-      // bail if input is disabled
-      if (!this.allowInput) {
-        return;
-      }
-
-      if (Keyboard.active.plus) {
-        this.increaseSpeed();
-      }
-
-      if (Keyboard.active.minus) {
-        this.decreaseSpeed();
-      }
-
-      // loop through each directions
-      for (let i = 0; i < Keyboard.directions.length; i++) {
-        // is the direction active?
-        const active = Keyboard.directions[i];
-
-        // if direction is active
-        if (active) {
-          this.canMove[i] = false;
-          
-          // make it faster
-          this.velocities[i] = this.velocities[i] >= this.maxSpeed
-            ? this.maxSpeed
-            : (this.velocities[i] + 1) * this.rateOfIncrease;
-          
-          // y axis
-          if (i === 0 || i === 2) {
-            // opposite directions cancel eachother out
-            if (!(Keyboard.active.up && Keyboard.active.down)) {
-              this.targetY = i === 0
-                ? this.y - this.velocities[i] // up
-                : this.y + this.velocities[i]; // down
-              
-              this.targetYTimerHandler(i);
-            } else {
-              this.velocities[i] = 0;
-            }
-          }
-
-          // x axis
-          if (i === 1 || i === 3) {
-            // opposite directions cancel eachother out
-            if (!(Keyboard.active.left && Keyboard.active.right)) {
-              this.targetX = i === 1
-                ? this.x + this.velocities[i] // right
-                : this.x - this.velocities[i]; // left
-              
-              this.targetXTimerHandler(i);
-            } else {
-              this.velocities[i] = 0;
-            }
-          }
-        } else {
-          // nuke velocity if not active
-          this.velocities[i] = 0;
-        }
-      }
-      
-      // set timeout to enable movement in the direction
-      clearTimeout(this.keyboardCooldownTimer);
-      this.keyboardCooldownTimer = setTimeout(() => {
-        this.canMove = [true, true, true, true];
-      }, this.inputCooldown);
-    }
-  }
-
   /**
    * Handles Object creation for use in Scenes
    *
@@ -1130,10 +839,6 @@ var game = (function () {
         
         case 'menu':
           return new ObjectMenu(object, this.game);
-          break;
-
-        case 'hero':
-          return new Hero(object, this.game);
           break;
         
         default:
@@ -1449,6 +1154,691 @@ var game = (function () {
     }
   }
 
+  /**
+   * Contains descriptive properties of the map for all map classes to extend from
+   *
+   * @class MapBaseClass
+   */
+  class MapBaseClass {
+    constructor(game, map) {
+      this.game = game;
+      this.map = map;
+      this.Canvas = game.Canvas;
+      this.Objects = game.Objects;
+      
+      // map and tile description
+      this.xTiles = 50;
+      this.yTiles = 50;
+      this.totalTiles = this.xTiles * this.yTiles;
+      this.tileWidth = 50;
+      this.tileHeight = 50;
+      this.pixelWidth = this.xTiles * this.tileWidth;
+      this.pixelHeight = this.yTiles * this.tileHeight;
+
+      this.init();
+    }
+
+    /**
+     * Gets a random tile coordinate
+     *
+     * @returns
+     * @memberof MapBaseClass
+     */
+    getRandomTileCoordinate() {
+      // get random tile coords
+      const x = Math.round(Math.random() * this.xTiles);
+      const y = Math.round(Math.random() * this.yTiles);
+
+      return { x, y }
+    }
+
+    /**
+     * Gets a random pixel coordinate
+     *
+     * @returns
+     * @memberof MapBaseClass
+     */
+    getRandomPixelCoordinate() {
+      // get random pixel coords
+      const x = Math.round(Math.random() * this.pixelWidth);
+      const y = Math.round(Math.random() * this.pixelHeight);
+
+      return { x, y };
+    }
+
+    /**
+     * Subclass constructor
+     *
+     * @memberof MapBaseClass
+     */
+    init() {
+      // 
+    }
+  }
+
+  const objects = [
+    {
+      type: 'tree',
+      blocking: true,
+      shadow: false,
+      light: false,
+      width: 25,
+      height: 25,
+    },
+    {
+      type: 'torch',
+      blocking: false,
+      shadow: false,
+      light: true,
+      width: 10,
+      height: 10,
+    },
+  ];
+
+  /**
+   * Provides utility methods for tiles
+   *
+   * @class TileUtil
+   */
+  class TileUtil extends MapBaseClass {
+    /**
+     * Creates an instance of TileUtil.
+     * @param {number} [tileInt=0]
+     * @memberof TileUtil
+     */
+    init(args) {
+      // define substr positions for extracting tile data
+      this.substr = {
+        type: 1,
+        blocking: 2,
+        light: 3,
+        shadow: 4,
+        x: 5,
+        y: 5 + this.xMax,
+      };
+    }
+
+    /**
+     * Converts x, y position to map array index
+     *
+     * @param {*} x
+     * @param {*} y
+     * @param {boolean} [convertPixels=false]
+     * @returns
+     * @memberof Map
+     */
+    convertPosToIndex(x, y, convertPixels = false) {
+      let tileX = x;
+      let tileY = y;
+      
+      if (convertPixels) {
+        tileX = Math.round(x / this.tileWidth);
+        tileY = Math.round(y / this.tileHeight);
+      }
+
+      const index = tileX + tileY * this.yTiles;
+      return index;
+    }
+
+    /**
+     * Creates a map tile
+     *
+     * @param {*} args
+     * @returns
+     * @memberof TileUtil
+     */
+    create(args = {}) {
+      // defaults
+      let type = 0;
+      let blocking = 0;
+      let light = 0;
+      let shadow = 0;
+
+      // randomize the tile type
+      let random = Math.random();
+      if (random > .1) {
+        type = 0; // grass
+      } else if (random > .08) {
+        type = 1; // water;
+        blocking = 1;
+      } else {
+        type = 2; // rock
+        blocking = 1;
+        shadow = 1;
+      }
+
+      // null is 0 bytes, woohoo! (grass)
+      if (type === 0) {
+        return null;
+      }
+
+      // (water)
+      if (type === 1) {
+        return '1';
+      }
+
+      // '' is 0 bytes too, woohoo (rock)
+      if (type === 2) {
+        return '';
+      }
+
+      // create and return the string
+      const string = '1' + type + '' + blocking + '' + light + '' + shadow + '';
+      return Number(string);
+    }
+
+    /**
+     * Grabs a random object from the objects array
+     *
+     * @param {*} [args={}]
+     * @returns
+     * @memberof TileUtil
+     */
+    createObject(args = {}) {
+      let type = 1;
+      
+      // if (random > .7) {
+      //   type = 1;
+      // }
+
+      return objects[type];
+    }
+    
+    maybeCreateObject() {
+      const random = Math.random();
+      if (random > .95)  {
+        return this.createObject();
+      } else {
+        return null;
+      }
+    }
+
+    /**
+     * Converts a packed tile integer into a verbose object
+     *
+     * @param {*} int
+     * @returns
+     * @memberof TileUtil
+     */
+    unpack(int) {
+      // if int is not an int, it's an aliased value
+      if (typeof int !== 'number') {
+        // TODO: Look into why i have to explicitly do this and can't use reference array
+        if (int === null) return {
+          type: 'grass',
+          blocking: false,
+          shadow: false,
+          light: false,
+        };
+
+        if (int === '1') return {
+          type: 'water',
+          blocking: true,
+          shadow: false,
+          light: false,
+        }
+
+        if (int === '') return {
+          type: 'rock',
+          blocking: true,
+          shadow: true,
+          light: false,
+        }
+      }
+
+      // convert the int to a string
+      const raw = this.toString(int);
+
+      // get the properties
+      const type = tileTypes[raw.substr(this.substr.type, 1)].type;
+      const blocking = Number(raw.substr(this.substr.blocking, 1)) === 1;
+      const light = Number(raw.substr(this.substr.light, 1)) === 1;
+      const shadow = Number(raw.substr(this.substr.shadow, 1)) === 1;
+      // const x = Number(raw.substr(this.substr.x, this.xMax));
+      // const y = Number(raw.substr(this.substr.y, this.yMax));
+      // const xPixel = x * this.tileWidth;
+      // const yPixel = y * this.tileHeight;
+      // const width = this.tileWidth;
+      // const height = this.tileHeight;
+
+      const tile = {
+        type,
+        blocking,
+        light,
+        shadow,
+        // x,
+        // y,
+        // xPixel,
+        // yPixel,
+        // width,
+        // height,
+      };
+
+      return tile;
+    }
+
+    /**
+     * Converts an int to string
+     *
+     * @param {*} int
+     * @returns
+     * @memberof TileUtil
+     */
+    toString(int) {
+      return int + "";
+    }
+
+    /**
+     * Get the type integer
+     *
+     * @returns {integer} type
+     * @memberof TileUtil
+     */
+    typeInt(int) {
+      return Number(this.toString(int).substr(this.substr.type, 1));
+    }
+
+    /**
+     * Get the human readable tile type
+     *
+     * @returns
+     * @memberof TileUtil
+     */
+    typeText(int) {
+      const index = this.typeInt(int);
+      return tileTypes[index].type;
+    }
+
+    /**
+     * Get the X map position
+     *
+     * @returns
+     * @memberof TileUtil
+     */
+    // x(int) {
+    //   const x = Number(this.toString(int).substr(this.substr.x, this.xMax));
+    //   return x;
+    // }
+
+    /**
+     * * Get the Y map position
+     *
+     * @returns
+     * @memberof TileUtil
+     */
+    // y(int) {
+    //   const y = Number(this.toString(int).substr(this.substr.y, this.yMax));
+    //   return y;
+    // }
+
+    /**
+     * Check if the tile is blocking
+     *
+     * @returns {boolean} is blocking
+     * @memberof TileUtil
+     */
+    blocking(int) {
+      return Number(this.toString(int).substr(this.substr.blocking, 1)) === 1;
+    }
+
+    /**
+     * Check if the tile casts a shadow
+     *
+     * @returns
+     * @memberof TileUtil
+     */
+    shadow(int) {
+      return Number(this.toString(int).substr(this.substr.shadow, 1)) === 1;
+    }
+  }
+
+  class ItemUtil extends MapBaseClass {
+
+  }
+
+  /**
+   * The character base class
+   * keeps track of the characters individual easing to position
+   *
+   * @class CharacterBaseClass
+   */
+  class CharacterBaseClass {
+    constructor(game, map, args) {
+      this.args = args;
+      
+      this.id = args.id;
+      this.x = args.x;
+      this.y = args.y;
+
+      // display debug info about the hero
+      this.debug = true;
+
+      // the game
+      this.game = game;
+
+      // provide access to the map
+      this.map = map;
+
+      // allows keyboard input to the character
+      this.allowInput = true;
+
+      // if the hero can move in a certain direction
+      // [ up, right, down, left ];
+      this.canMove = [true, true, true, true];
+
+      // handle character's directional velocity
+      this.velocities = [0, 0, 0, 0];
+      this.maxSpeed = 18; 
+      this.rateOfIncrease = 1 + this.maxSpeed / 100;
+      this.rateOfDecrease = 1 + this.maxSpeed;
+
+      // set target x,y for easing the character movement
+      this.targetX = this.x;
+      this.targetY = this.y;
+      this.targetXTimer;
+      this.targetYTimer;
+
+      // cooldown beteween movement
+      this.inputCooldown = 30;
+
+      // image
+      this.image = new Image(50, 50);
+      this.image.src = 'img/purpleCircle.png';
+
+      this.init(args.map);
+    }
+
+    /**
+     * Subclass constructor
+     *
+     * @param {*} map
+     * @memberof CharacterBaseClass
+     */
+    init(map) {
+      
+    }
+
+    /**
+     * Currently draws a circle
+     *
+     * @param {*} Canvas
+     * @memberof Hero
+     */
+    draw(Canvas) {
+      Canvas.setContext('character');
+
+      Canvas.drawCharacter({
+        image: this.image,
+        x: this.x,
+        y: this.y,
+        width: 50,
+        height: 50,
+      });
+    }
+
+    /**
+     * Increases the hero.maxSpeed
+     *
+     * @memberof Hero
+     */
+    increaseSpeed() {
+      this.maxSpeed++;
+    }
+
+    /**
+     * Decreases the hero.maxSpeed
+     *
+     * @memberof Hero
+     */
+    decreaseSpeed() {
+      this.maxSpeed--;
+    }
+
+    /**
+     * Handles easing on the X axis
+     *
+     * @param {*} dir
+     * @param {*} this.map
+     * @memberof Hero
+     */
+    targetXTimerHandler(dir) {
+      // clear the existing timer
+      clearTimeout(this.targetXTimer);
+
+      // get the difference between the current y and the target y
+      let difference = Math.abs(this.x - this.targetX);
+
+      // set a new timer
+      this.targetXTimer = setTimeout(() => {
+        // calculate what the new x should be
+        const newX = dir === 1 // right
+          ? this.x + (difference / this.inputCooldown)
+          : this.x - (difference / this.inputCooldown); 
+
+        // handle collision
+        const collision = this.map.getCollision(newX, this.y);
+
+        if (collision) {
+          this.targetX = this.x;
+          difference = 0;
+        } else {
+          this.x = newX;
+        }
+
+        this.afterEaseMovement();
+
+        // if we're not close enough to the target Y, keep moving
+        if (difference > 1) {
+          this.targetXTimerHandler(dir, this.map);
+        }
+      }, difference / this.inputCooldown);
+    }
+
+    /**
+     * Handles easing on the Y axis
+     *
+     * @param {*} dir
+     * @memberof Hero
+     */
+    targetYTimerHandler(dir) {
+      // clear the existing timer
+      clearTimeout(this.targetYTimer);
+
+      // get the difference between the current y and the target y
+      let difference = Math.abs(this.y - this.targetY);
+
+      // set a new timer
+      this.targetYTimer = setTimeout(() => {
+        // handle direction
+        const newY = dir === 0 // up
+          ? this.y - (difference / this.inputCooldown)
+          : this.y + (difference / this.inputCooldown);
+
+        // handle collision
+        const collision = this.map.getCollision(this.x, newY);
+
+        if (collision) {
+          this.targetY = this.y;
+          difference = 0;
+        } else {
+          this.y = newY;
+        }
+
+        this.afterEaseMovement();
+
+        // if we're not close enough to the target Y, keep moving
+        if (difference > 1) {
+          this.targetYTimerHandler(dir, this.map);
+        } else {
+          this.map.needsUpdate = false;
+        }
+      }, difference / this.inputCooldown);
+    }
+
+    /**
+     * Additional actions to perform after movement easing is calculated
+     *
+     * @memberof Hero
+     */
+    afterEaseMovement() {
+      // calculate
+      this.game.Canvas.Camera.setFocus({
+        x: this.x,
+        y: this.y,
+      });
+
+      this.map.needsUpdate = true;
+    }
+
+    /**
+     * Handle input for the hero
+     *
+     * @param {*} activeKeys
+     * @param {*} this.map
+     * @returns
+     * @memberof Hero
+     */
+    handleInput(Keyboard) {
+      // bail if input is disabled
+      if (!this.allowInput) {
+        return;
+      }
+
+      if (Keyboard.active.plus) {
+        this.increaseSpeed();
+      }
+
+      if (Keyboard.active.minus) {
+        this.decreaseSpeed();
+      }
+
+      // loop through each directions
+      for (let i = 0; i < Keyboard.directions.length; i++) {
+        // is the direction active?
+        const active = Keyboard.directions[i];
+
+        // if direction is active
+        if (active) {
+          this.canMove[i] = false;
+          
+          // make it faster
+          this.velocities[i] = this.velocities[i] >= this.maxSpeed
+            ? this.maxSpeed
+            : (this.velocities[i] + 1) * this.rateOfIncrease;
+          
+          // y axis
+          if (i === 0 || i === 2) {
+            // opposite directions cancel eachother out
+            if (!(Keyboard.active.up && Keyboard.active.down)) {
+              this.targetY = i === 0
+                ? this.y - this.velocities[i] // up
+                : this.y + this.velocities[i]; // down
+              
+              this.targetYTimerHandler(i);
+            } else {
+              this.velocities[i] = 0;
+            }
+          }
+
+          // x axis
+          if (i === 1 || i === 3) {
+            // opposite directions cancel eachother out
+            if (!(Keyboard.active.left && Keyboard.active.right)) {
+              this.targetX = i === 1
+                ? this.x + this.velocities[i] // right
+                : this.x - this.velocities[i]; // left
+              
+              this.targetXTimerHandler(i);
+            } else {
+              this.velocities[i] = 0;
+            }
+          }
+        } else {
+          // nuke velocity if not active
+          this.velocities[i] = 0;
+        }
+      }
+      
+      // set timeout to enable movement in the direction
+      clearTimeout(this.keyboardCooldownTimer);
+      this.keyboardCooldownTimer = setTimeout(() => {
+        this.canMove = [true, true, true, true];
+      }, this.inputCooldown);
+    }
+  }
+
+  class Characters extends MapBaseClass {
+    /**
+     * Subclass constructor
+     *
+     * @memberof CharUtil
+     */
+    init() {
+      // holds all characters
+      this.array = [];
+
+      // used to give each character a unique id
+      this.ids = 0;
+
+      // a list of all character types
+      this.types = [
+        {
+          name: 'hero',
+        }
+      ];
+    }
+
+    getById(id) {
+      for (var i = 0; i < this.array.length; i++) {
+        if (this.array[i].id === id) {
+          return this.array[i];
+        }
+      }
+
+      throw `CharacterUtil.getById: character with id does not exist: ${id}`;
+    }
+
+    /**
+     * Gets a type by its name
+     *
+     * @param {*} name
+     * @returns
+     * @memberof CharUtil
+     */
+    getTypeByName(name) {
+      for (var i = 0; i < this.types.length; i++) {
+        if (this.types[i].name === name) {
+          return this.types[i];
+        }
+      }
+
+      throw `CharacterUtil.getTypeByName: name does not exist: ${name}`;
+    }
+
+    /**
+     * Character creation method
+     *
+     * @memberof CharUtil
+     */
+    create(type, x, y) {
+      const id = this.ids++;
+      const args = { type, x, y, id };
+      const character = new CharacterBaseClass(this.game, this.map, args);
+      this.array.push(character);
+      return id;
+    }
+
+    /**
+     * Generates a random character
+     *
+     * @memberof CharUtil
+     */
+    generateRandom() {
+      const { x, y } = this.getRandomPixelCoordinate();
+      this.create('hero', x, y);
+    }
+  }
+
   class Shadows {
     constructor(Canvas, origin, objects) {
       this.Canvas = Canvas;
@@ -1752,270 +2142,6 @@ var game = (function () {
     }
   }
 
-  // create references to the most used default tile types
-
-  const objects = [
-    {
-      type: 'tree',
-      blocking: true,
-      shadow: false,
-      light: false,
-      width: 25,
-      height: 25,
-    },
-    {
-      type: 'torch',
-      blocking: false,
-      shadow: false,
-      light: true,
-      width: 10,
-      height: 10,
-    },
-  ];
-
-  /**
-   * Provides utility methods for tiles
-   *
-   * @class TileUtil
-   */
-  class TileUtil {
-    /**
-     * Creates an instance of TileUtil.
-     * @param {number} [tileInt=0]
-     * @memberof TileUtil
-     */
-    constructor(args) {
-      // width of tiles in pixels
-      this.tileWidth = args.tileWidth;
-      this.tileHeight = args.tileHeight;
-
-      // max x / y positions
-      this.xMax = args.xMax;
-      this.yMax = args.yMax;
-
-      // define substr positions for extracting tile data
-      this.substr = {
-        type: 1,
-        blocking: 2,
-        light: 3,
-        shadow: 4,
-        x: 5,
-        y: 5 + this.xMax,
-      };
-    }
-
-    /**
-     * Creates a map tile
-     *
-     * @param {*} args
-     * @returns
-     * @memberof TileUtil
-     */
-    create(args = {}) {
-      // defaults
-      let type = 0;
-      let blocking = 0;
-      let light = 0;
-      let shadow = 0;
-
-      // randomize the tile type
-      let random = Math.random();
-      if (random > .1) {
-        type = 0; // grass
-      } else if (random > .08) {
-        type = 1; // water;
-        blocking = 1;
-      } else {
-        type = 2; // rock
-        blocking = 1;
-        shadow = 1;
-      }
-
-      // null is 0 bytes, woohoo! (grass)
-      if (type === 0) {
-        return null;
-      }
-
-      // (water)
-      if (type === 1) {
-        return '1';
-      }
-
-      // '' is 0 bytes too, woohoo (rock)
-      if (type === 2) {
-        return '';
-      }
-
-      // create and return the string
-      const string = '1' + type + '' + blocking + '' + light + '' + shadow + '';
-      return Number(string);
-    }
-
-    /**
-     * Grabs a random object from the objects array
-     *
-     * @param {*} [args={}]
-     * @returns
-     * @memberof TileUtil
-     */
-    createObject(args = {}) {
-      let type = 1;
-      
-      // if (random > .7) {
-      //   type = 1;
-      // }
-
-      return objects[type];
-    }
-    
-    maybeCreateObject() {
-      const random = Math.random();
-      if (random > .95)  {
-        return this.createObject();
-      } else {
-        return null;
-      }
-    }
-
-    /**
-     * Converts a packed tile integer into a verbose object
-     *
-     * @param {*} int
-     * @returns
-     * @memberof TileUtil
-     */
-    unpack(int) {
-      // if int is not an int, it's an aliased value
-      if (typeof int !== 'number') {
-        // TODO: Look into why i have to explicitly do this and can't use reference array
-        if (int === null) return {
-          type: 'grass',
-          blocking: false,
-          shadow: false,
-          light: false,
-        };
-
-        if (int === '1') return {
-          type: 'water',
-          blocking: true,
-          shadow: false,
-          light: false,
-        }
-
-        if (int === '') return {
-          type: 'rock',
-          blocking: true,
-          shadow: true,
-          light: false,
-        }
-      }
-
-      // convert the int to a string
-      const raw = this.toString(int);
-
-      // get the properties
-      const type = tileTypes[raw.substr(this.substr.type, 1)].type;
-      const blocking = Number(raw.substr(this.substr.blocking, 1)) === 1;
-      const light = Number(raw.substr(this.substr.light, 1)) === 1;
-      const shadow = Number(raw.substr(this.substr.shadow, 1)) === 1;
-      // const x = Number(raw.substr(this.substr.x, this.xMax));
-      // const y = Number(raw.substr(this.substr.y, this.yMax));
-      // const xPixel = x * this.tileWidth;
-      // const yPixel = y * this.tileHeight;
-      // const width = this.tileWidth;
-      // const height = this.tileHeight;
-
-      const tile = {
-        type,
-        blocking,
-        light,
-        shadow,
-        // x,
-        // y,
-        // xPixel,
-        // yPixel,
-        // width,
-        // height,
-      };
-
-      return tile;
-    }
-
-    /**
-     * Converts an int to string
-     *
-     * @param {*} int
-     * @returns
-     * @memberof TileUtil
-     */
-    toString(int) {
-      return int + "";
-    }
-
-    /**
-     * Get the type integer
-     *
-     * @returns {integer} type
-     * @memberof TileUtil
-     */
-    typeInt(int) {
-      return Number(this.toString(int).substr(this.substr.type, 1));
-    }
-
-    /**
-     * Get the human readable tile type
-     *
-     * @returns
-     * @memberof TileUtil
-     */
-    typeText(int) {
-      const index = this.typeInt(int);
-      return tileTypes[index].type;
-    }
-
-    /**
-     * Get the X map position
-     *
-     * @returns
-     * @memberof TileUtil
-     */
-    // x(int) {
-    //   const x = Number(this.toString(int).substr(this.substr.x, this.xMax));
-    //   return x;
-    // }
-
-    /**
-     * * Get the Y map position
-     *
-     * @returns
-     * @memberof TileUtil
-     */
-    // y(int) {
-    //   const y = Number(this.toString(int).substr(this.substr.y, this.yMax));
-    //   return y;
-    // }
-
-    /**
-     * Check if the tile is blocking
-     *
-     * @returns {boolean} is blocking
-     * @memberof TileUtil
-     */
-    blocking(int) {
-      return Number(this.toString(int).substr(this.substr.blocking, 1)) === 1;
-    }
-
-    /**
-     * Check if the tile casts a shadow
-     *
-     * @returns
-     * @memberof TileUtil
-     */
-    shadow(int) {
-      return Number(this.toString(int).substr(this.substr.shadow, 1)) === 1;
-    }
-  }
-
   /**
    * @class Map
    * 
@@ -2027,31 +2153,27 @@ var game = (function () {
    *  All of the above types are stored in their each respective array
    *  keyed by the map coordinates [ x + (y * xWidth)]
    *
-   *  Map has a property MainCharacter which is controlled by user input
+   *  Map has a property MainCharacter which is a reference to a character
+   *  in the character array, and is controlled by user input
    *
    *  Map has a property Camera
    *    The Camera contains a focal point which is used to
    *    calculate pixel offsets when drawing map objects
    *
    */
-  class Map {
-    constructor(args, game) {
-      this.game = game;
+  class Map extends MapBaseClass {
+    init() {
+      this.Tile = new TileUtil(this.game);
+      this.Terrain = new MapBaseClass(this.game);
+      this.Items = new ItemUtil(this.game);
+      this.Characters = new Characters(this.game, this);
 
-      // map width and height in tiles
-      this.xTotalTiles = 5000;
-      this.yTotalTiles = 5000;
-      
-      // total amount of tiles
-      this.totalTiles = this.xTotalTiles * this.yTotalTiles;
+      // generate some random characters
+      for (var i = 0; i < 20; i++) {
+        this.Characters.generateRandom();
+      }
 
-      // single tile width and height in pixels
-      this.tileWidth = 50;
-      this.tileHeight = 50;
-
-      // get the width and height of the map in total pixels
-      this.widthInPixels = this.xTotalTiles * this.tileWidth;
-      this.heightInPixels = this.yTotalTiles * this.tileHeight;
+      this.createHero();
 
       // stores the data about what exists at a particular position
       this.mapArray = [];
@@ -2064,38 +2186,24 @@ var game = (function () {
       this.visibleTileArray = [];
       this.visibleTileX = 0;
       this.visibleTileY = 0;
-
-      // tile util needs to know:
-      //  width/height of a tile in pixels
-      //  x / y total tile length
-      this.TileUtil = new TileUtil({
-        tileWidth: this.tileWidth,
-        tileHeight: this.tileHeight,
-        xMax: this.xTotalTiles.toString().length,
-        yMax: this.yTotalTiles.toString().length,
-      });
     }
 
     /**
-     * Converts x, y position to map array index
+     * TODO: assign the hero as a member of the character array
      *
-     * @param {*} x
-     * @param {*} y
-     * @param {boolean} [convertPixels=false]
-     * @returns
      * @memberof Map
      */
-    convertPosToIndex(x, y, convertPixels = false) {
-      let tileX = x;
-      let tileY = y;
-      
-      if (convertPixels) {
-        tileX = Math.round(x / this.tileWidth);
-        tileY = Math.round(y / this.tileHeight);
-      }
+    createHero() {
+      this.heroId = this.Characters.create('hero');
 
-      const index = tileX + tileY * this.yTotalTiles;
-      return index;
+      this.hero = this.Characters.getById(this.heroId);
+
+      this.moveObjectToRandomLocation(this.hero);
+
+      // set focus to hero
+      this.Canvas.Camera.x = this.hero.x;
+      this.Canvas.Camera.y = this.hero.y;
+      this.Canvas.Camera.setFocus(this.hero);
     }
 
     /**
@@ -2116,9 +2224,50 @@ var game = (function () {
           Canvas.drawTile(tileData[0]);
         }
 
+        // draw the characters
+        for (var i = 0; i < this.Characters.array.length; i++) {
+          const character = this.Characters.array[i];
+          character.draw(Canvas);
+        }
+
         // draw the shadows
         this.drawShadows();
       }
+    }
+
+    /**
+     * Gets a random x/y coord
+     *
+     * @memberof Hero
+     */
+    moveObjectToRandomLocation(object) {
+      // get random pixel coordinate
+      const { x, y } = this.getRandomPixelCoordinate();
+
+      // calculate visible tiles so we can check for collisions
+      this.calculateVisibleTiles(x, y);
+
+      // check if blocking
+      // if it is, try again
+      if (this.getCollision(x, y)) {
+        return this.moveToRandomLocation();
+      }
+
+      // set the camera focus
+      // TODO: only do if this is the hero??
+      this.Canvas.Camera.setFocus({ x, y }, true);
+
+      // remove movement easing, update position
+      // TODO: only do for the hero?
+      clearTimeout(object.targetXTimer);
+      clearTimeout(object.targetYTimer);
+      object.targetX = x;
+      object.targetY = y;
+      object.x = x;
+      object.y = y;
+
+      // tell the map to redraw
+      this.needsUpdate = true;
     }
 
     /**
@@ -2129,7 +2278,7 @@ var game = (function () {
     drawShadows() {
       // get the origin
       const scene = this.game.scene;
-      const origin = { x: scene.hero.x, y: scene.hero.y };
+      const origin = { x: this.hero.x, y: this.hero.y };
 
       // get the shadow objects
       const blocks = [];
@@ -2178,14 +2327,14 @@ var game = (function () {
       if (x1 < 1) {
         x1 = 0;
       }
-      if (x2 > this.xTotalTiles) {
-        x2 = this.xTotalTiles;
+      if (x2 > this.xTiles) {
+        x2 = this.xTiles;
       }
       if (y1 < 1) {
         y1 = 0;
       }
-      if (y2 > this.yTotalTiles) {
-        y2 = this.yTotalTiles;
+      if (y2 > this.yTiles) {
+        y2 = this.yTiles;
       }
 
       // create visible tile array from the boundaries
@@ -2194,18 +2343,18 @@ var game = (function () {
       for (let j = y1; j < y2; j++) {
         for (let i = x1; i < x2; i++) {
           // get the map array and visible array indexes
-          const mapIndex = this.convertPosToIndex(i, j);
+          const mapIndex = this.Tile.convertPosToIndex(i, j);
 
           // if the map array value is -1
           // then it has not been visible yet
           // create a tile at that index
           if (typeof this.mapArray[mapIndex] === 'undefined') {
-            const tile = this.TileUtil.create();
+            const tile = this.Tile.create();
             this.mapArray[mapIndex] = tile;
           }
 
           // add the x/y data to the object
-          const visibleTile = this.TileUtil.unpack(this.mapArray[mapIndex]);
+          const visibleTile = this.Tile.unpack(this.mapArray[mapIndex]);
           visibleTile.x = i;
           visibleTile.y = j;
           visibleTile.xPixel = i * this.tileWidth;
@@ -2238,8 +2387,8 @@ var game = (function () {
       if (
         x1 < 0
         || y1 < 0
-        || x2 > this.widthInPixels
-        || y2 > this.heightInPixels
+        || x2 > this.xPixels
+        || y2 > this.yPixels
       ) {
         return true;
       }
@@ -2262,37 +2411,23 @@ var game = (function () {
       // let 'em pass
       return false;
     }
+
+    handleInput(Keyboard) {
+      this.hero.handleInput(Keyboard);
+    }
   }
 
   class SceneGame extends Scene {
     init() {
-      this.createMap();
-      this.createHero();
+      // gets called before scene changes
     }
 
     createMap() {
-      this.map = new Map({}, this.game);
-    }
-
-    createHero() {
-      this.hero = this.Objects.create({
-        type: 'hero',
-        x: 25,
-        y: 25,
-        radius: 25,
-        fillStyle: '#800080',
-        map: this.map,
-      });
-
-      // set focus to hero
-      this.Canvas.Camera.x = this.hero.x;
-      this.Canvas.Camera.y = this.hero.y;
-      this.Canvas.Camera.setFocus(this.hero);
+      this.map = new Map(this.game);
     }
 
     prepareScene() {
       this.pushToScene(this.map);
-      this.pushToScene(this.hero);
     }
 
     clear() {
@@ -2317,10 +2452,13 @@ var game = (function () {
         this.game.setScene('pause');
       }
 
-      this.hero.handleInput(Keyboard, this.map);
+      this.map.handleInput(Keyboard);
     }
 
     transitionInCustom() {
+      // create map after scene change
+      this.createMap();
+      
       this.Canvas.setContext('primary');
 
       // do a draw
@@ -2862,6 +3000,7 @@ var game = (function () {
 
     // debug handler
     this.Debug = new Debug(this);
+    this.debug = true;
 
     // input handler
     this.Keyboard = new KeyboardController();

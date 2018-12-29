@@ -229,7 +229,13 @@ class Canvas {
     this.ctx.closePath();
   }
 
-  drawCharacter(args) {
+  /**
+   * Draws the character
+   *
+   * @param {*} args
+   * @memberof Canvas
+   */
+  drawCharacter(args) {    
     // offset for camera
     const x = args.x + this.Camera.offsetX;
     const y = args.y + this.Camera.offsetY;

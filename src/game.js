@@ -11,6 +11,7 @@ function game() {
 
   // debug handler
   this.Debug = new Debug(this);
+  this.debug = true;
 
   // input handler
   this.Keyboard = new Keyboard();

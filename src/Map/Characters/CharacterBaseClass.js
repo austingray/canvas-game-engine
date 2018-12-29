@@ -1,9 +1,22 @@
-import ObjectCircle from './ObjectCircle';
+/**
+ * The character base class
+ * keeps track of the characters individual easing to position
+ *
+ * @class CharacterBaseClass
+ */
+class CharacterBaseClass {
+  constructor(game, map, args) {
+    this.args = args;
+    
+    this.id = args.id;
+    this.x = args.x;
+    this.y = args.y;
 
-class Hero extends ObjectCircle {
-  init(map) {
     // display debug info about the hero
     this.debug = true;
+
+    // the game
+    this.game = game;
 
     // provide access to the map
     this.map = map;
@@ -30,46 +43,21 @@ class Hero extends ObjectCircle {
     // cooldown beteween movement
     this.inputCooldown = 30;
 
-    // start the hero at a random location
-    this.moveToRandomLocation();
-
     // image
     this.image = new Image(50, 50);
     this.image.src = 'img/purpleCircle.png';
+
+    this.init(args.map);
   }
 
   /**
-   * Gets a random x/y coord
+   * Subclass constructor
    *
-   * @memberof Hero
+   * @param {*} map
+   * @memberof CharacterBaseClass
    */
-  moveToRandomLocation() {
-    // get random pixel coords
-    const x = Math.round(Math.random() * this.map.widthInPixels);
-    const y = Math.round(Math.random() * this.map.heightInPixels);
-
-    // calculate visible tiles so we can check for collisions
-    this.map.calculateVisibleTiles(x, y);
-
-    // check if blocking
-    // if it is, try again
-    if (this.map.getCollision(x, y)) {
-      return this.moveToRandomLocation();
-    }
-
-    // set the camera focus
-    this.game.Canvas.Camera.setFocus({ x, y }, true);
-
-    // remove movement easing, update position
-    clearTimeout(this.targetXTimer);
-    clearTimeout(this.targetYTimer);
-    this.targetX = x;
-    this.targetY = y;
-    this.x = x;
-    this.y = y;
-
-    // tell the map to redraw
-    this.map.needsUpdate = true;
+  init(map) {
+    
   }
 
   /**
@@ -88,22 +76,6 @@ class Hero extends ObjectCircle {
       width: 50,
       height: 50,
     });
-  
-    
-
-    // Canvas.drawCircle({
-    //   fillStyle: this.fillStyle,
-    //   x: this.x,
-    //   y: this.y,
-    //   radius: this.radius,
-    //   startAngle: this.startAngle,
-    //   endAngle: this.endAngle,
-    //   anticlockwise: this.anticlockwise,
-    // });
-
-    if (this.debug) {
-      Canvas.pushDebugText('hero.maxSpeed', `Hero.maxSpeed: ${this.maxSpeed}`);
-    }
   }
 
   /**
@@ -298,4 +270,4 @@ class Hero extends ObjectCircle {
   }
 }
 
-export default Hero;
+export default CharacterBaseClass;

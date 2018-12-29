@@ -1,5 +1,9 @@
-import Shadows from './Shadows';
+import MapBaseClass from './MapBaseClass';
 import TileUtil from './TileUtil';
+import TerrainUtil from './TerrainUtil';
+import ItemUtil from './ItemUtil';
+import Characters from './Characters/index';
+import Shadows from './Shadows';
 
 /**
  * @class Map
@@ -12,31 +16,27 @@ import TileUtil from './TileUtil';
  *  All of the above types are stored in their each respective array
  *  keyed by the map coordinates [ x + (y * xWidth)]
  *
- *  Map has a property MainCharacter which is controlled by user input
+ *  Map has a property MainCharacter which is a reference to a character
+ *  in the character array, and is controlled by user input
  *
  *  Map has a property Camera
  *    The Camera contains a focal point which is used to
  *    calculate pixel offsets when drawing map objects
  *
  */
-class Map {
-  constructor(args, game) {
-    this.game = game;
+class Map extends MapBaseClass {
+  init() {
+    this.Tile = new TileUtil(this.game);
+    this.Terrain = new TerrainUtil(this.game);
+    this.Items = new ItemUtil(this.game);
+    this.Characters = new Characters(this.game, this);
 
-    // map width and height in tiles
-    this.xTotalTiles = 5000;
-    this.yTotalTiles = 5000;
-    
-    // total amount of tiles
-    this.totalTiles = this.xTotalTiles * this.yTotalTiles;
+    // generate some random characters
+    for (var i = 0; i < 20; i++) {
+      this.Characters.generateRandom();
+    }
 
-    // single tile width and height in pixels
-    this.tileWidth = 50;
-    this.tileHeight = 50;
-
-    // get the width and height of the map in total pixels
-    this.widthInPixels = this.xTotalTiles * this.tileWidth;
-    this.heightInPixels = this.yTotalTiles * this.tileHeight;
+    this.createHero();
 
     // stores the data about what exists at a particular position
     this.mapArray = [];
@@ -49,38 +49,24 @@ class Map {
     this.visibleTileArray = [];
     this.visibleTileX = 0;
     this.visibleTileY = 0;
-
-    // tile util needs to know:
-    //  width/height of a tile in pixels
-    //  x / y total tile length
-    this.TileUtil = new TileUtil({
-      tileWidth: this.tileWidth,
-      tileHeight: this.tileHeight,
-      xMax: this.xTotalTiles.toString().length,
-      yMax: this.yTotalTiles.toString().length,
-    });
   }
 
   /**
-   * Converts x, y position to map array index
+   * TODO: assign the hero as a member of the character array
    *
-   * @param {*} x
-   * @param {*} y
-   * @param {boolean} [convertPixels=false]
-   * @returns
    * @memberof Map
    */
-  convertPosToIndex(x, y, convertPixels = false) {
-    let tileX = x;
-    let tileY = y;
-    
-    if (convertPixels) {
-      tileX = Math.round(x / this.tileWidth);
-      tileY = Math.round(y / this.tileHeight);
-    }
+  createHero() {
+    this.heroId = this.Characters.create('hero');
 
-    const index = tileX + tileY * this.yTotalTiles;
-    return index;
+    this.hero = this.Characters.getById(this.heroId);
+
+    this.moveObjectToRandomLocation(this.hero);
+
+    // set focus to hero
+    this.Canvas.Camera.x = this.hero.x;
+    this.Canvas.Camera.y = this.hero.y;
+    this.Canvas.Camera.setFocus(this.hero);
   }
 
   /**
@@ -101,9 +87,50 @@ class Map {
         Canvas.drawTile(tileData[0]);
       }
 
+      // draw the characters
+      for (var i = 0; i < this.Characters.array.length; i++) {
+        const character = this.Characters.array[i];
+        character.draw(Canvas);
+      }
+
       // draw the shadows
       this.drawShadows();
     }
+  }
+
+  /**
+   * Gets a random x/y coord
+   *
+   * @memberof Hero
+   */
+  moveObjectToRandomLocation(object) {
+    // get random pixel coordinate
+    const { x, y } = this.getRandomPixelCoordinate();
+
+    // calculate visible tiles so we can check for collisions
+    this.calculateVisibleTiles(x, y);
+
+    // check if blocking
+    // if it is, try again
+    if (this.getCollision(x, y)) {
+      return this.moveToRandomLocation();
+    }
+
+    // set the camera focus
+    // TODO: only do if this is the hero??
+    this.Canvas.Camera.setFocus({ x, y }, true);
+
+    // remove movement easing, update position
+    // TODO: only do for the hero?
+    clearTimeout(object.targetXTimer);
+    clearTimeout(object.targetYTimer);
+    object.targetX = x;
+    object.targetY = y;
+    object.x = x;
+    object.y = y;
+
+    // tell the map to redraw
+    this.needsUpdate = true;
   }
 
   /**
@@ -114,7 +141,7 @@ class Map {
   drawShadows() {
     // get the origin
     const scene = this.game.scene;
-    const origin = { x: scene.hero.x, y: scene.hero.y };
+    const origin = { x: this.hero.x, y: this.hero.y };
 
     // get the shadow objects
     const blocks = [];
@@ -163,14 +190,14 @@ class Map {
     if (x1 < 1) {
       x1 = 0;
     }
-    if (x2 > this.xTotalTiles) {
-      x2 = this.xTotalTiles;
+    if (x2 > this.xTiles) {
+      x2 = this.xTiles;
     }
     if (y1 < 1) {
       y1 = 0;
     }
-    if (y2 > this.yTotalTiles) {
-      y2 = this.yTotalTiles;
+    if (y2 > this.yTiles) {
+      y2 = this.yTiles;
     }
 
     // create visible tile array from the boundaries
@@ -179,18 +206,18 @@ class Map {
     for (let j = y1; j < y2; j++) {
       for (let i = x1; i < x2; i++) {
         // get the map array and visible array indexes
-        const mapIndex = this.convertPosToIndex(i, j);
+        const mapIndex = this.Tile.convertPosToIndex(i, j);
 
         // if the map array value is -1
         // then it has not been visible yet
         // create a tile at that index
         if (typeof this.mapArray[mapIndex] === 'undefined') {
-          const tile = this.TileUtil.create();
+          const tile = this.Tile.create();
           this.mapArray[mapIndex] = tile;
         }
 
         // add the x/y data to the object
-        const visibleTile = this.TileUtil.unpack(this.mapArray[mapIndex]);
+        const visibleTile = this.Tile.unpack(this.mapArray[mapIndex]);
         visibleTile.x = i;
         visibleTile.y = j;
         visibleTile.xPixel = i * this.tileWidth;
@@ -224,8 +251,8 @@ class Map {
     if (
       x1 < 0
       || y1 < 0
-      || x2 > this.widthInPixels
-      || y2 > this.heightInPixels
+      || x2 > this.xPixels
+      || y2 > this.yPixels
     ) {
       return true;
     }
@@ -247,6 +274,10 @@ class Map {
 
     // let 'em pass
     return false;
+  }
+
+  handleInput(Keyboard) {
+    this.hero.handleInput(Keyboard);
   }
 }
 
