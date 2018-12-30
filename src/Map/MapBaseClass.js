@@ -11,8 +11,8 @@ class MapBaseClass {
     this.Objects = game.Objects;
     
     // map and tile description
-    this.xTiles = 50;
-    this.yTiles = 50;
+    this.xTiles = 10;
+    this.yTiles = 10;
     this.totalTiles = this.xTiles * this.yTiles;
     this.tileWidth = 50;
     this.tileHeight = 50;

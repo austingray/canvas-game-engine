@@ -14,15 +14,14 @@ var game = (function () {
       this.height = args.height;
       this.name = args.name;
       this.visible = (typeof args.visible === 'undefined') ? true : args.visible;
-
-      const domParent = (typeof args.appendTo === 'undefined') ? document.body : args.appendTo;
+      this.parentElement = (typeof args.appendTo === 'undefined') ? document.body : args.appendTo;
 
       // create the canvas element and add it to the document body
       const element = document.createElement('canvas');
       element.id = id;
       element.width = this.width;
       element.height = this.height;
-      domParent.appendChild(element);
+      this.parentElement.appendChild(element);
       this.element = element;
 
       if (!this.visible) {
@@ -57,6 +56,15 @@ var game = (function () {
       if (typeof this.context.clearRect !== 'undefined') {
         this.context.clearRect(0, 0, this.width, this.height);
       }
+    }
+
+    /**
+     * Deletes the layer
+     *
+     * @memberof Layer
+     */
+    delete() {
+      this.element.parentNode.removeChild(this.element);
     }
   }
 
@@ -204,7 +212,7 @@ var game = (function () {
     generateLayers() {
       // create the canvas container div
       this.canvasDiv = {};
-      this.canvasDiv.element = document.createElement('div');    this.canvasDiv.element.setAttribute('style', `width: ${this.width}px; height: ${this.height}px; background: #FFFFFF;`);
+      this.canvasDiv.element = document.createElement('div');    this.canvasDiv.element.setAttribute('style', `width: ${this.width}px; height: ${this.height}px; background: #000000;`);
       this.canvasDiv.element.id = 'domParent';
       document.body.appendChild(this.canvasDiv.element);
 
@@ -234,6 +242,115 @@ var game = (function () {
 
       // get reference to shadow layer
       this.shadowLayer = this.getLayerByName('shadow');
+
+      // create a tmp div for generating images
+      this.tmpDiv = document.createElement('div');
+      this.tmpDiv.setAttribute('style', `width: 50px; height: 50px; position: absolute; left: -99999px`);
+      this.tmpDiv.id = 'hidden';
+      document.body.appendChild(this.tmpDiv);
+
+      this.createLayer('tmp', {
+        appendTo: this.tmpDiv,
+        width: 50,
+        height: 50,
+      });
+    }
+
+    /**
+     * Creates a new canvas layer
+     *
+     * @param {*} name
+     * @param {*} [args={}]
+     * @memberof Canvas
+     */
+    createLayer(name, args = {}) {
+      // assign a unique id
+      this.canvasId++;
+      const id = `canvas-${this.canvasId}`;
+
+      // get width/height
+      const width = (typeof args.width === 'undefined') ? this.width : args.width;
+      const height = (typeof args.height === 'undefined') ? this.height : args.height;
+
+      const appendTo = (typeof args.appendTo === 'undefined') ? document.body : args.appendTo;
+
+      // context
+      const context = (typeof args.context === 'undefined') ? '2d' : args.context;
+
+      // visible
+      const visible = (typeof args.visible === 'undefined') ? true : args.visible;
+
+      // add 'er to the stack
+      this.layers.push(new Layer(id, {
+        name,
+        width,
+        height,
+        context,
+        visible,
+        appendTo,
+      }));
+    }
+
+    /**
+     * Triggers a layer's delete method
+     * TODO: remove from layer array
+     *
+     * @param {*} name
+     * @memberof Canvas
+     */
+    deleteLayer(name) {
+      const layer = this.getLayerByName(name);
+      layer.delete();
+    }
+
+    /**
+     * Creates the purple circle hero image
+     *
+     * @returns
+     * @memberof Canvas
+     */
+    createImage() {
+      const layer = this.getLayerByName('tmp');
+      layer.context.clearRect(0, 0, 50, 50);
+      const radius = 25;
+
+      // draw
+      layer.context.fillStyle = this.randomHexValue();
+      layer.context.beginPath();
+      layer.context.arc(
+        radius,
+        radius,
+        radius,
+        Math.PI / 180 * 0,
+        Math.PI / 180 * 360,
+        false
+      );
+
+      
+      layer.context.fill();
+      layer.context.closePath();
+
+      var img = layer.element.toDataURL();
+
+      return img;
+    }
+
+    /**
+     * Generates a random HEX
+     * https://jsperf.com/random-hex-color-generation
+     *
+     * @returns
+     * @memberof Canvas
+     */
+    randomHexValue() {
+      var color = '#';
+      var c = '0123456789ABCDEF'.split('');
+
+      for (var i = 0; i < 6; i++) {
+        color += c[Math.floor(Math.random() * c.length)];
+      }
+
+      return color;
     }
 
     /**
@@ -266,38 +383,6 @@ var game = (function () {
     getLayerByName(name) {
       const layer = this.layers.filter(layer => layer.name === name)[0];
       return layer;
-    }
-    
-    /**
-     * Creates a new canvas layer
-     *
-     * @param {*} name
-     * @param {*} [args={}]
-     * @memberof Canvas
-     */
-    createLayer(name, args = {}) {
-      // assign a unique id
-      this.canvasId++;
-      const id = `canvas-${this.canvasId}`;
-
-      // get width/height
-      const width = (typeof args.width === 'undefined') ? this.width : args.width;
-      const height = (typeof args.height === 'undefined') ? this.height : args.height;
-
-      // context
-      const context = (typeof args.context === 'undefined') ? '2d' : args.context;
-
-      // visible
-      const visible = (typeof args.visible === 'undefined') ? true : args.visible;
-
-      // add 'er to the stack
-      this.layers.push(new Layer(id, {
-        name,
-        width,
-        height,
-        context,
-        visible,
-      }));
     }
 
     /**
@@ -1167,8 +1252,8 @@ var game = (function () {
       this.Objects = game.Objects;
       
       // map and tile description
-      this.xTiles = 50;
-      this.yTiles = 50;
+      this.xTiles = 10;
+      this.yTiles = 10;
       this.totalTiles = this.xTiles * this.yTiles;
       this.tileWidth = 50;
       this.tileHeight = 50;
@@ -1543,7 +1628,7 @@ var game = (function () {
 
       // image
       this.image = new Image(50, 50);
-      this.image.src = 'img/purpleCircle.png';
+      this.image.src = this.game.Canvas.createImage();
 
       this.init(args.map);
     }
@@ -1681,11 +1766,13 @@ var game = (function () {
      * @memberof Hero
      */
     afterEaseMovement() {
-      // calculate
-      this.game.Canvas.Camera.setFocus({
-        x: this.x,
-        y: this.y,
-      });
+      if (this.id === this.map.heroId) {
+        // calculate
+        this.game.Canvas.Camera.setFocus({
+          x: this.x,
+          y: this.y,
+        });
+      }
 
       this.map.needsUpdate = true;
     }
@@ -2168,13 +2255,6 @@ var game = (function () {
       this.Items = new ItemUtil(this.game);
       this.Characters = new Characters(this.game, this);
 
-      // generate some random characters
-      for (var i = 0; i < 20; i++) {
-        this.Characters.generateRandom();
-      }
-
-      this.createHero();
-
       // stores the data about what exists at a particular position
       this.mapArray = [];
 
@@ -2186,6 +2266,22 @@ var game = (function () {
       this.visibleTileArray = [];
       this.visibleTileX = 0;
       this.visibleTileY = 0;
+
+      // create the main character
+      this.createHero();
+
+      // and some random characters
+      for (var i = 0; i < 10; i++) {
+        this.Characters.generateRandom();
+      }
+
+      // put them in random locations on the map
+      for (var i = 0; i < this.Characters.array.length; i++) {
+        this.moveObjectToRandomLocation(this.Characters.array[i], false);
+      }
+
+      // debug mode on
+      this.debug = true;
     }
 
     /**
@@ -2195,15 +2291,30 @@ var game = (function () {
      */
     createHero() {
       this.heroId = this.Characters.create('hero');
-
-      this.hero = this.Characters.getById(this.heroId);
-
-      this.moveObjectToRandomLocation(this.hero);
+      
+      this.changeHero(this.heroId);
 
       // set focus to hero
       this.Canvas.Camera.x = this.hero.x;
       this.Canvas.Camera.y = this.hero.y;
       this.Canvas.Camera.setFocus(this.hero);
+    }
+
+    changeHero(id) {
+      this.heroId = id;
+
+      if (id >= this.Characters.array.length) {
+        this.heroId = 0;
+      }
+
+      this.hero = this.Characters.getById(this.heroId);
+
+      // set focus to hero
+      this.Canvas.Camera.x = this.hero.x;
+      this.Canvas.Camera.y = this.hero.y;
+      this.Canvas.Camera.setFocus(this.hero);
+
+      this.needsUpdate = true;
     }
 
     /**
@@ -2232,42 +2343,12 @@ var game = (function () {
 
         // draw the shadows
         this.drawShadows();
+
+        if (this.debug) {	
+          Canvas.pushDebugText('hero.id', `Hero.id: ${this.hero.id}`);	
+          Canvas.pushDebugText('hero.maxSpeed', `Hero.maxSpeed: ${this.hero.maxSpeed}`);	
+        }
       }
-    }
-
-    /**
-     * Gets a random x/y coord
-     *
-     * @memberof Hero
-     */
-    moveObjectToRandomLocation(object) {
-      // get random pixel coordinate
-      const { x, y } = this.getRandomPixelCoordinate();
-
-      // calculate visible tiles so we can check for collisions
-      this.calculateVisibleTiles(x, y);
-
-      // check if blocking
-      // if it is, try again
-      if (this.getCollision(x, y)) {
-        return this.moveToRandomLocation();
-      }
-
-      // set the camera focus
-      // TODO: only do if this is the hero??
-      this.Canvas.Camera.setFocus({ x, y }, true);
-
-      // remove movement easing, update position
-      // TODO: only do for the hero?
-      clearTimeout(object.targetXTimer);
-      clearTimeout(object.targetYTimer);
-      object.targetX = x;
-      object.targetY = y;
-      object.x = x;
-      object.y = y;
-
-      // tell the map to redraw
-      this.needsUpdate = true;
     }
 
     /**
@@ -2292,6 +2373,41 @@ var game = (function () {
       // get and draw
       const shadows = new Shadows(this.game.Canvas, origin, blocks);
       shadows.draw();
+    }
+
+    /**
+     * Gets a random x/y coord
+     *
+     * @memberof Hero
+     */
+    moveObjectToRandomLocation(object, needsUpdate = true) {
+      // get random pixel coordinate
+      const { x, y } = this.getRandomPixelCoordinate();
+
+      // calculate visible tiles so we can check for collisions
+      this.calculateVisibleTiles(x, y);
+
+      // check if blocking, try again if so
+      if (this.getCollision(x, y)) {
+        return this.moveObjectToRandomLocation(object, needsUpdate);
+      }
+
+      // clear existing movements
+      clearTimeout(object.targetXTimer);
+      clearTimeout(object.targetYTimer);
+      object.targetX = x;
+      object.targetY = y;
+      object.x = x;
+      object.y = y;
+
+      // extra handling if it is the hero
+      if (this.heroId === object.id) {
+        // set the camera focus
+        this.Canvas.Camera.setFocus({ x, y }, true);
+
+        // tell the map to redraw
+        this.needsUpdate = needsUpdate;
+      }
     }
 
     /**
@@ -2387,8 +2503,8 @@ var game = (function () {
       if (
         x1 < 0
         || y1 < 0
-        || x2 > this.xPixels
-        || y2 > this.yPixels
+        || x2 > this.pixelWidth
+        || y2 > this.pixelHeight
       ) {
         return true;
       }
@@ -2413,13 +2529,22 @@ var game = (function () {
     }
 
     handleInput(Keyboard) {
+      if (this.debug) {
+        if (Keyboard.active.tab) {
+          const newId = this.heroId + 1;
+          this.changeHero(newId);
+          Keyboard.cooldown(200);
+        }
+      }
+
       this.hero.handleInput(Keyboard);
     }
   }
 
   class SceneGame extends Scene {
     init() {
-      // gets called before scene changes
+      // create map after scene change
+      this.createMap();
     }
 
     createMap() {
@@ -2456,9 +2581,6 @@ var game = (function () {
     }
 
     transitionInCustom() {
-      // create map after scene change
-      this.createMap();
-      
       this.Canvas.setContext('primary');
 
       // do a draw
@@ -2638,8 +2760,12 @@ var game = (function () {
       // if disabled, keyboard input will not register
       this.disabled = false;
 
+      // a cooldown timer to prevent all keyboard use
+      this.cooldownTimer = null;
+
       // raw keycodes
       this.keyCodes = {
+        9: 'tab',
         13: 'enter',
         16: 'shift',
         27: 'escape',
@@ -2674,6 +2800,7 @@ var game = (function () {
       
       // human readable key states
       this.active = {
+        tab: false,
         enter: false,
         shift: false,
         escape: false,
@@ -2756,6 +2883,8 @@ var game = (function () {
       if (typeof this.keyCodes[e.keyCode] === 'undefined') {
         return;
       }
+
+      e.preventDefault();
 
       // keep track of the active keycodes
       this.updateActiveKeyCodesArray(e.keyCode, press);
@@ -2890,6 +3019,7 @@ var game = (function () {
       this.activeKeyCodes = [];
       
       this.active = {
+        tab: false,
         enter: false,
         shift: false,
         escape: false,
@@ -2931,6 +3061,23 @@ var game = (function () {
      */
     setDisabled(disabled = true) {
       this.disabled = disabled;
+    }
+
+    /**
+     * Disables keyboard use for a period of time
+     *
+     * @param {number} [timer=100]
+     * @memberof KeyboardController
+     */
+    cooldown(timer = 100) {
+      this.setDisabled(true);
+
+      this.clear();
+
+      window.clearTimeout(this.cooldownTimer);
+      this.cooldownTimer = window.setTimeout(() => {
+        this.setDisabled(false);
+      }, timer);
     }
   }
 

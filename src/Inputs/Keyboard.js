@@ -7,8 +7,12 @@ class KeyboardController {
     // if disabled, keyboard input will not register
     this.disabled = false;
 
+    // a cooldown timer to prevent all keyboard use
+    this.cooldownTimer = null;
+
     // raw keycodes
     this.keyCodes = {
+      9: 'tab',
       13: 'enter',
       16: 'shift',
       27: 'escape',
@@ -43,6 +47,7 @@ class KeyboardController {
     
     // human readable key states
     this.active = {
+      tab: false,
       enter: false,
       shift: false,
       escape: false,
@@ -125,6 +130,8 @@ class KeyboardController {
     if (typeof this.keyCodes[e.keyCode] === 'undefined') {
       return;
     }
+
+    e.preventDefault();
 
     // keep track of the active keycodes
     this.updateActiveKeyCodesArray(e.keyCode, press);
@@ -259,6 +266,7 @@ class KeyboardController {
     this.activeKeyCodes = [];
     
     this.active = {
+      tab: false,
       enter: false,
       shift: false,
       escape: false,
@@ -300,6 +308,23 @@ class KeyboardController {
    */
   setDisabled(disabled = true) {
     this.disabled = disabled;
+  }
+
+  /**
+   * Disables keyboard use for a period of time
+   *
+   * @param {number} [timer=100]
+   * @memberof KeyboardController
+   */
+  cooldown(timer = 100) {
+    this.setDisabled(true);
+
+    this.clear();
+
+    window.clearTimeout(this.cooldownTimer);
+    this.cooldownTimer = window.setTimeout(() => {
+      this.setDisabled(false);
+    }, timer);
   }
 }
 

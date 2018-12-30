@@ -11,15 +11,14 @@ class Layer {
     this.height = args.height;
     this.name = args.name;
     this.visible = (typeof args.visible === 'undefined') ? true : args.visible;
-
-    const domParent = (typeof args.appendTo === 'undefined') ? document.body : args.appendTo;
+    this.parentElement = (typeof args.appendTo === 'undefined') ? document.body : args.appendTo;
 
     // create the canvas element and add it to the document body
     const element = document.createElement('canvas');
     element.id = id;
     element.width = this.width;
     element.height = this.height;
-    domParent.appendChild(element);
+    this.parentElement.appendChild(element);
     this.element = element;
 
     if (!this.visible) {
@@ -54,6 +53,15 @@ class Layer {
     if (typeof this.context.clearRect !== 'undefined') {
       this.context.clearRect(0, 0, this.width, this.height);
     }
+  }
+
+  /**
+   * Deletes the layer
+   *
+   * @memberof Layer
+   */
+  delete() {
+    this.element.parentNode.removeChild(this.element);
   }
 }
 

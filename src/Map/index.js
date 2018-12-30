@@ -31,13 +31,6 @@ class Map extends MapBaseClass {
     this.Items = new ItemUtil(this.game);
     this.Characters = new Characters(this.game, this);
 
-    // generate some random characters
-    for (var i = 0; i < 20; i++) {
-      this.Characters.generateRandom();
-    }
-
-    this.createHero();
-
     // stores the data about what exists at a particular position
     this.mapArray = [];
 
@@ -49,6 +42,22 @@ class Map extends MapBaseClass {
     this.visibleTileArray = [];
     this.visibleTileX = 0;
     this.visibleTileY = 0;
+
+    // create the main character
+    this.createHero();
+
+    // and some random characters
+    for (var i = 0; i < 10; i++) {
+      this.Characters.generateRandom();
+    }
+
+    // put them in random locations on the map
+    for (var i = 0; i < this.Characters.array.length; i++) {
+      this.moveObjectToRandomLocation(this.Characters.array[i], false);
+    }
+
+    // debug mode on
+    this.debug = true;
   }
 
   /**
@@ -58,15 +67,30 @@ class Map extends MapBaseClass {
    */
   createHero() {
     this.heroId = this.Characters.create('hero');
-
-    this.hero = this.Characters.getById(this.heroId);
-
-    this.moveObjectToRandomLocation(this.hero);
+    
+    this.changeHero(this.heroId);
 
     // set focus to hero
     this.Canvas.Camera.x = this.hero.x;
     this.Canvas.Camera.y = this.hero.y;
     this.Canvas.Camera.setFocus(this.hero);
+  }
+
+  changeHero(id) {
+    this.heroId = id;
+
+    if (id >= this.Characters.array.length) {
+      this.heroId = 0;
+    }
+
+    this.hero = this.Characters.getById(this.heroId);
+
+    // set focus to hero
+    this.Canvas.Camera.x = this.hero.x;
+    this.Canvas.Camera.y = this.hero.y;
+    this.Canvas.Camera.setFocus(this.hero);
+
+    this.needsUpdate = true;
   }
 
   /**
@@ -95,42 +119,12 @@ class Map extends MapBaseClass {
 
       // draw the shadows
       this.drawShadows();
+
+      if (this.debug) {	
+        Canvas.pushDebugText('hero.id', `Hero.id: ${this.hero.id}`);	
+        Canvas.pushDebugText('hero.maxSpeed', `Hero.maxSpeed: ${this.hero.maxSpeed}`);	
+      }
     }
-  }
-
-  /**
-   * Gets a random x/y coord
-   *
-   * @memberof Hero
-   */
-  moveObjectToRandomLocation(object) {
-    // get random pixel coordinate
-    const { x, y } = this.getRandomPixelCoordinate();
-
-    // calculate visible tiles so we can check for collisions
-    this.calculateVisibleTiles(x, y);
-
-    // check if blocking
-    // if it is, try again
-    if (this.getCollision(x, y)) {
-      return this.moveToRandomLocation();
-    }
-
-    // set the camera focus
-    // TODO: only do if this is the hero??
-    this.Canvas.Camera.setFocus({ x, y }, true);
-
-    // remove movement easing, update position
-    // TODO: only do for the hero?
-    clearTimeout(object.targetXTimer);
-    clearTimeout(object.targetYTimer);
-    object.targetX = x;
-    object.targetY = y;
-    object.x = x;
-    object.y = y;
-
-    // tell the map to redraw
-    this.needsUpdate = true;
   }
 
   /**
@@ -155,6 +149,41 @@ class Map extends MapBaseClass {
     // get and draw
     const shadows = new Shadows(this.game.Canvas, origin, blocks);
     shadows.draw();
+  }
+
+  /**
+   * Gets a random x/y coord
+   *
+   * @memberof Hero
+   */
+  moveObjectToRandomLocation(object, needsUpdate = true) {
+    // get random pixel coordinate
+    const { x, y } = this.getRandomPixelCoordinate();
+
+    // calculate visible tiles so we can check for collisions
+    this.calculateVisibleTiles(x, y);
+
+    // check if blocking, try again if so
+    if (this.getCollision(x, y)) {
+      return this.moveObjectToRandomLocation(object, needsUpdate);
+    }
+
+    // clear existing movements
+    clearTimeout(object.targetXTimer);
+    clearTimeout(object.targetYTimer);
+    object.targetX = x;
+    object.targetY = y;
+    object.x = x;
+    object.y = y;
+
+    // extra handling if it is the hero
+    if (this.heroId === object.id) {
+      // set the camera focus
+      this.Canvas.Camera.setFocus({ x, y }, true);
+
+      // tell the map to redraw
+      this.needsUpdate = needsUpdate;
+    }
   }
 
   /**
@@ -227,7 +256,6 @@ class Map extends MapBaseClass {
 
         // add the unpacked version of the tile to the visible tile array
         this.visibleTileArray[visibleIndex++] = [visibleTile];
-        ;
       }
     }
   }
@@ -251,8 +279,8 @@ class Map extends MapBaseClass {
     if (
       x1 < 0
       || y1 < 0
-      || x2 > this.xPixels
-      || y2 > this.yPixels
+      || x2 > this.pixelWidth
+      || y2 > this.pixelHeight
     ) {
       return true;
     }
@@ -277,6 +305,14 @@ class Map extends MapBaseClass {
   }
 
   handleInput(Keyboard) {
+    if (this.debug) {
+      if (Keyboard.active.tab) {
+        const newId = this.heroId + 1;
+        this.changeHero(newId);
+        Keyboard.cooldown(200);
+      }
+    }
+
     this.hero.handleInput(Keyboard);
   }
 }

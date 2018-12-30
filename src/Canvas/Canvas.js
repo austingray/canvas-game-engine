@@ -36,7 +36,7 @@ class Canvas {
     // create the canvas container div
     this.canvasDiv = {};
     this.canvasDiv.element = document.createElement('div');;
-    this.canvasDiv.element.setAttribute('style', `width: ${this.width}px; height: ${this.height}px; background: #FFFFFF;`);
+    this.canvasDiv.element.setAttribute('style', `width: ${this.width}px; height: ${this.height}px; background: #000000;`);
     this.canvasDiv.element.id = 'domParent';
     document.body.appendChild(this.canvasDiv.element);
 
@@ -66,6 +66,115 @@ class Canvas {
 
     // get reference to shadow layer
     this.shadowLayer = this.getLayerByName('shadow');
+
+    // create a tmp div for generating images
+    this.tmpDiv = document.createElement('div');
+    this.tmpDiv.setAttribute('style', `width: 50px; height: 50px; position: absolute; left: -99999px`);
+    this.tmpDiv.id = 'hidden';
+    document.body.appendChild(this.tmpDiv);
+
+    this.createLayer('tmp', {
+      appendTo: this.tmpDiv,
+      width: 50,
+      height: 50,
+    });
+  }
+
+  /**
+   * Creates a new canvas layer
+   *
+   * @param {*} name
+   * @param {*} [args={}]
+   * @memberof Canvas
+   */
+  createLayer(name, args = {}) {
+    // assign a unique id
+    this.canvasId++;
+    const id = `canvas-${this.canvasId}`;
+
+    // get width/height
+    const width = (typeof args.width === 'undefined') ? this.width : args.width;
+    const height = (typeof args.height === 'undefined') ? this.height : args.height;
+
+    const appendTo = (typeof args.appendTo === 'undefined') ? document.body : args.appendTo;
+
+    // context
+    const context = (typeof args.context === 'undefined') ? '2d' : args.context;
+
+    // visible
+    const visible = (typeof args.visible === 'undefined') ? true : args.visible;
+
+    // add 'er to the stack
+    this.layers.push(new Layer(id, {
+      name,
+      width,
+      height,
+      context,
+      visible,
+      appendTo,
+    }));
+  }
+
+  /**
+   * Triggers a layer's delete method
+   * TODO: remove from layer array
+   *
+   * @param {*} name
+   * @memberof Canvas
+   */
+  deleteLayer(name) {
+    const layer = this.getLayerByName(name);
+    layer.delete();
+  }
+
+  /**
+   * Creates the purple circle hero image
+   *
+   * @returns
+   * @memberof Canvas
+   */
+  createImage() {
+    const layer = this.getLayerByName('tmp');
+    layer.context.clearRect(0, 0, 50, 50);
+    const radius = 25;
+
+    // draw
+    layer.context.fillStyle = this.randomHexValue();
+    layer.context.beginPath();
+    layer.context.arc(
+      radius,
+      radius,
+      radius,
+      Math.PI / 180 * 0,
+      Math.PI / 180 * 360,
+      false
+    );
+
+    
+    layer.context.fill();
+    layer.context.closePath();
+
+    var img = layer.element.toDataURL();
+
+    return img;
+  }
+
+  /**
+   * Generates a random HEX
+   * https://jsperf.com/random-hex-color-generation
+   *
+   * @returns
+   * @memberof Canvas
+   */
+  randomHexValue() {
+    var color = '#';
+    var c = '0123456789ABCDEF'.split('');
+
+    for (var i = 0; i < 6; i++) {
+      color += c[Math.floor(Math.random() * c.length)];
+    }
+
+    return color;
   }
 
   /**
@@ -98,38 +207,6 @@ class Canvas {
   getLayerByName(name) {
     const layer = this.layers.filter(layer => layer.name === name)[0];
     return layer;
-  }
-  
-  /**
-   * Creates a new canvas layer
-   *
-   * @param {*} name
-   * @param {*} [args={}]
-   * @memberof Canvas
-   */
-  createLayer(name, args = {}) {
-    // assign a unique id
-    this.canvasId++;
-    const id = `canvas-${this.canvasId}`;
-
-    // get width/height
-    const width = (typeof args.width === 'undefined') ? this.width : args.width;
-    const height = (typeof args.height === 'undefined') ? this.height : args.height;
-
-    // context
-    const context = (typeof args.context === 'undefined') ? '2d' : args.context;
-
-    // visible
-    const visible = (typeof args.visible === 'undefined') ? true : args.visible;
-
-    // add 'er to the stack
-    this.layers.push(new Layer(id, {
-      name,
-      width,
-      height,
-      context,
-      visible,
-    }));
   }
 
   /**

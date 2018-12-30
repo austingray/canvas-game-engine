@@ -3,7 +3,8 @@ import Map from '../Map/index';
 
 class SceneGame extends Scene {
   init() {
-    // gets called before scene changes
+    // create map after scene change
+    this.createMap();
   }
 
   createMap() {
@@ -40,9 +41,6 @@ class SceneGame extends Scene {
   }
 
   transitionInCustom() {
-    // create map after scene change
-    this.createMap();
-    
     this.Canvas.setContext('primary');
 
     // do a draw

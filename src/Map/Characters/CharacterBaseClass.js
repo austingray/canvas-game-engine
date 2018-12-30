@@ -45,7 +45,7 @@ class CharacterBaseClass {
 
     // image
     this.image = new Image(50, 50);
-    this.image.src = 'img/purpleCircle.png';
+    this.image.src = this.game.Canvas.createImage();
 
     this.init(args.map);
   }
@@ -183,11 +183,13 @@ class CharacterBaseClass {
    * @memberof Hero
    */
   afterEaseMovement() {
-    // calculate
-    this.game.Canvas.Camera.setFocus({
-      x: this.x,
-      y: this.y,
-    });
+    if (this.id === this.map.heroId) {
+      // calculate
+      this.game.Canvas.Camera.setFocus({
+        x: this.x,
+        y: this.y,
+      });
+    }
 
     this.map.needsUpdate = true;
   }
