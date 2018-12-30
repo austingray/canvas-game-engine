@@ -1252,8 +1252,8 @@ var game = (function () {
       this.Objects = game.Objects;
       
       // map and tile description
-      this.xTiles = 10;
-      this.yTiles = 10;
+      this.xTiles = 50;
+      this.yTiles = 50;
       this.totalTiles = this.xTiles * this.yTiles;
       this.tileWidth = 50;
       this.tileHeight = 50;
@@ -1607,13 +1607,18 @@ var game = (function () {
       // allows keyboard input to the character
       this.allowInput = true;
 
+      // if this unit is being controlled by the player
+      this.isPlayer = false;
+
       // if the hero can move in a certain direction
       // [ up, right, down, left ];
       this.canMove = [true, true, true, true];
 
       // handle character's directional velocity
       this.velocities = [0, 0, 0, 0];
-      this.maxSpeed = 18; 
+      //this.maxSpeed = 18;
+      this.maxSpeed = Math.round(Math.random() * 50);
+
       this.rateOfIncrease = 1 + this.maxSpeed / 100;
       this.rateOfDecrease = 1 + this.maxSpeed;
 
@@ -1626,11 +1631,52 @@ var game = (function () {
       // cooldown beteween movement
       this.inputCooldown = 30;
 
+      // movement timer
+      this.isVisible = false;
+      this.npcMovementTimer;
+      this.doMovement();
+
       // image
       this.image = new Image(50, 50);
       this.image.src = this.game.Canvas.createImage();
 
       this.init(args.map);
+    }
+
+    doMovement() {
+      // bail if controlled by human
+      if (this.isPlayer) {
+        return;
+      }
+
+      // bail if not visible
+      if (!this.isVisible) {
+        return;
+      }    
+      
+      window.clearTimeout(this.npcMovementTimer);
+      const msTilNextMove = Math.random() * 1000;
+      this.npcMovementTimer = window.setTimeout(() => {
+        // get some potential target vals
+        const targetX = (Math.random() * 4 - 2) * this.maxSpeed;
+        const targetY = (Math.random() * 4 - 2) * this.maxSpeed;
+      
+
+        this.targetX = this.x + targetX;
+        this.targetXTimerHandler(targetX > 0 ? 1 : 3);
+        this.targetY = this.y + targetY;
+        this.targetYTimerHandler(targetY > 0 ? 2 : 0);
+
+        this.doMovement();
+      }, msTilNextMove);
+    }
+
+    stopMovement() {
+      window.clearTimeout(this.npcMovementTimer);
+      this.targetY = this.y;
+      this.targetX = this.x;
+      window.clearTimeout(this.targetXTimer);
+      window.clearTimeout(this.targetYTimer);
     }
 
     /**
@@ -2271,7 +2317,7 @@ var game = (function () {
       this.createHero();
 
       // and some random characters
-      for (var i = 0; i < 10; i++) {
+      for (var i = 0; i < 100; i++) {
         this.Characters.generateRandom();
       }
 
@@ -2282,39 +2328,6 @@ var game = (function () {
 
       // debug mode on
       this.debug = true;
-    }
-
-    /**
-     * TODO: assign the hero as a member of the character array
-     *
-     * @memberof Map
-     */
-    createHero() {
-      this.heroId = this.Characters.create('hero');
-      
-      this.changeHero(this.heroId);
-
-      // set focus to hero
-      this.Canvas.Camera.x = this.hero.x;
-      this.Canvas.Camera.y = this.hero.y;
-      this.Canvas.Camera.setFocus(this.hero);
-    }
-
-    changeHero(id) {
-      this.heroId = id;
-
-      if (id >= this.Characters.array.length) {
-        this.heroId = 0;
-      }
-
-      this.hero = this.Characters.getById(this.heroId);
-
-      // set focus to hero
-      this.Canvas.Camera.x = this.hero.x;
-      this.Canvas.Camera.y = this.hero.y;
-      this.Canvas.Camera.setFocus(this.hero);
-
-      this.needsUpdate = true;
     }
 
     /**
@@ -2338,7 +2351,20 @@ var game = (function () {
         // draw the characters
         for (var i = 0; i < this.Characters.array.length; i++) {
           const character = this.Characters.array[i];
-          character.draw(Canvas);
+          // only draw nearby characters
+          if (
+            character.x > (this.hero.x - this.tileWidth * this.visibleTilesPerDirection)
+            && character.x < (this.hero.x + this.tileWidth * this.visibleTilesPerDirection)
+            && character.y > (this.hero.y - this.tileHeight * this.visibleTilesPerDirection)
+            && character.y < (this.hero.y + this.tileHeight * this.visibleTilesPerDirection)
+          ) {
+            character.isVisible = true;
+            character.doMovement();
+            character.draw(Canvas);
+          } else {
+            character.stopMovement();
+            character.isVisible = false;
+          }
         }
 
         // draw the shadows
@@ -2347,6 +2373,14 @@ var game = (function () {
         if (this.debug) {	
           Canvas.pushDebugText('hero.id', `Hero.id: ${this.hero.id}`);	
           Canvas.pushDebugText('hero.maxSpeed', `Hero.maxSpeed: ${this.hero.maxSpeed}`);	
+
+          let visibleCharacterIds = [];
+          for (var i = 0; i < this.Characters.array.length; i++) {
+            if (this.Characters.array[i].isVisible) {
+              visibleCharacterIds.push(this.Characters.array[i].id);
+            }
+          }
+          Canvas.pushDebugText('visibleCharacters', `Visible Character Ids: ${JSON.stringify(visibleCharacterIds)}`);
         }
       }
     }
@@ -2373,6 +2407,51 @@ var game = (function () {
       // get and draw
       const shadows = new Shadows(this.game.Canvas, origin, blocks);
       shadows.draw();
+    }
+
+    /**
+     *
+     * @memberof Map
+     */
+    createHero() {
+      this.heroId = this.Characters.create('hero');
+      
+      this.changeHero(this.heroId);
+
+      // set focus to hero
+      this.Canvas.Camera.x = this.hero.x;
+      this.Canvas.Camera.y = this.hero.y;
+      this.Canvas.Camera.setFocus(this.hero);
+    }
+
+    /**
+     * Changes the player's hero character to the specified id
+     *
+     * @param {*} id
+     * @memberof Map
+     */
+    changeHero(id) {
+      this.heroId = id;
+
+      if (id >= this.Characters.array.length) {
+        this.heroId = 0;
+      }
+
+      // change previous hero to npc
+      if (typeof this.hero !== 'undefined') {
+        this.hero.isPlayer = false;
+        this.hero.doMovement();
+      }
+
+      this.hero = this.Characters.getById(this.heroId);
+      this.hero.isPlayer = true;
+
+      // set focus to hero
+      this.Canvas.Camera.x = this.hero.x;
+      this.Canvas.Camera.y = this.hero.y;
+      this.Canvas.Camera.setFocus(this.hero);
+
+      this.needsUpdate = true;
     }
 
     /**

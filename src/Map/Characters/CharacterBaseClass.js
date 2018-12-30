@@ -24,13 +24,18 @@ class CharacterBaseClass {
     // allows keyboard input to the character
     this.allowInput = true;
 
+    // if this unit is being controlled by the player
+    this.isPlayer = false;
+
     // if the hero can move in a certain direction
     // [ up, right, down, left ];
     this.canMove = [true, true, true, true];
 
     // handle character's directional velocity
     this.velocities = [0, 0, 0, 0];
-    this.maxSpeed = 18; 
+    //this.maxSpeed = 18;
+    this.maxSpeed = Math.round(Math.random() * 50);
+
     this.rateOfIncrease = 1 + this.maxSpeed / 100;
     this.rateOfDecrease = 1 + this.maxSpeed;
 
@@ -43,11 +48,52 @@ class CharacterBaseClass {
     // cooldown beteween movement
     this.inputCooldown = 30;
 
+    // movement timer
+    this.isVisible = false;
+    this.npcMovementTimer;
+    this.doMovement();
+
     // image
     this.image = new Image(50, 50);
     this.image.src = this.game.Canvas.createImage();
 
     this.init(args.map);
+  }
+
+  doMovement() {
+    // bail if controlled by human
+    if (this.isPlayer) {
+      return;
+    }
+
+    // bail if not visible
+    if (!this.isVisible) {
+      return;
+    }    
+    
+    window.clearTimeout(this.npcMovementTimer);
+    const msTilNextMove = Math.random() * 1000;
+    this.npcMovementTimer = window.setTimeout(() => {
+      // get some potential target vals
+      const targetX = (Math.random() * 4 - 2) * this.maxSpeed;
+      const targetY = (Math.random() * 4 - 2) * this.maxSpeed;
+    
+
+      this.targetX = this.x + targetX;
+      this.targetXTimerHandler(targetX > 0 ? 1 : 3);
+      this.targetY = this.y + targetY;
+      this.targetYTimerHandler(targetY > 0 ? 2 : 0);
+
+      this.doMovement();
+    }, msTilNextMove);
+  }
+
+  stopMovement() {
+    window.clearTimeout(this.npcMovementTimer);
+    this.targetY = this.y;
+    this.targetX = this.x;
+    window.clearTimeout(this.targetXTimer);
+    window.clearTimeout(this.targetYTimer);
   }
 
   /**
