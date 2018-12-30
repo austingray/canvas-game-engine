@@ -2307,18 +2307,7 @@ var game = (function () {
       this.visibleTileX = 0;
       this.visibleTileY = 0;
 
-      // create the main character
-      this.createHero();
-
-      // and some random characters
-      for (var i = 0; i < 100; i++) {
-        this.Characters.generateRandom();
-      }
-
-      // put them in random locations on the map
-      for (var i = 0; i < this.Characters.array.length; i++) {
-        this.moveObjectToRandomLocation(this.Characters.array[i], false);
-      }
+      this.generateCharacters();
 
       // debug mode on
       this.debug = true;
@@ -2404,18 +2393,23 @@ var game = (function () {
     }
 
     /**
+     * Generates the characters on the map and sets the player's character
      *
      * @memberof Map
      */
-    createHero() {
-      this.heroId = this.Characters.create('hero');
-      
-      this.changeHero(this.heroId);
+    generateCharacters() {
+      // and some random characters
+      for (var i = 0; i < 100; i++) {
+        this.Characters.generateRandom();
+      }
 
-      // set focus to hero
-      this.Canvas.Camera.x = this.hero.x;
-      this.Canvas.Camera.y = this.hero.y;
-      this.Canvas.Camera.setFocus(this.hero);
+      // put them in random locations on the map
+      for (var i = 0; i < this.Characters.array.length; i++) {
+        this.moveObjectToRandomLocation(this.Characters.array[i], false);
+      }
+
+      // set the hero to the first generated character
+      this.setHeroCharacter(0);
     }
 
     /**
@@ -2424,7 +2418,7 @@ var game = (function () {
      * @param {*} id
      * @memberof Map
      */
-    changeHero(id) {
+    setHeroCharacter(id) {
       this.heroId = id;
 
       if (id >= this.Characters.array.length) {
@@ -2605,7 +2599,7 @@ var game = (function () {
       if (this.debug) {
         if (Keyboard.active.tab) {
           const newId = this.heroId + 1;
-          this.changeHero(newId);
+          this.setHeroCharacter(newId);
           Keyboard.cooldown(200);
         }
       }
