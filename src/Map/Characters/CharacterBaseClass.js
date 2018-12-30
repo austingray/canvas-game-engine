@@ -6,26 +6,19 @@
  */
 class CharacterBaseClass {
   constructor(game, map, args) {
-    this.args = args;
-    
+    // display debug info
+    this.debug = true;
+
+    // handle args
+    this.game = game;
+    this.map = map;
     this.id = args.id;
     this.x = args.x;
     this.y = args.y;
 
-    // display debug info about the hero
-    this.debug = true;
-
-    // the game
-    this.game = game;
-
-    // provide access to the map
-    this.map = map;
-
-    // allows keyboard input to the character
-    this.allowInput = true;
-
-    // if this unit is being controlled by the player
+    // player input handling
     this.isPlayer = false;
+    this.allowInput = true;
 
     // if the hero can move in a certain direction
     // [ up, right, down, left ];
@@ -33,6 +26,7 @@ class CharacterBaseClass {
 
     // handle character's directional velocity
     this.velocities = [0, 0, 0, 0];
+    
     //this.maxSpeed = 18;
     this.maxSpeed = Math.round(Math.random() * 50);
 

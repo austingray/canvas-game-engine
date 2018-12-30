@@ -220,15 +220,15 @@ var game = (function () {
       this.canvasId = 0;
 
       // create canvas layers
-      this.createLayer('background', { appendTo: this.canvasDiv.element });
-      this.createLayer('primary', { appendTo: this.canvasDiv.element });
-      this.createLayer('character', { appendTo: this.canvasDiv.element });
-      this.createLayer('secondary', { appendTo: this.canvasDiv.element });
-      this.createLayer('override', { appendTo: this.canvasDiv.element });
-      this.createLayer('shadow', { appendTo: this.canvasDiv.element });
-      this.createLayer('hud', { appendTo: this.canvasDiv.element });
-      this.createLayer('menu', { appendTo: this.canvasDiv.element });
-      this.createLayer('debug', { appendTo: this.canvasDiv.element });
+      this.createLayer('background');
+      this.createLayer('primary');
+      this.createLayer('character');
+      this.createLayer('secondary');
+      this.createLayer('override');
+      this.createLayer('shadow');
+      this.createLayer('hud');
+      this.createLayer('menu');
+      this.createLayer('debug');
 
       // get explicit reference to debug layer
       this.debugLayer = this.getLayerByName('debug');
@@ -1589,26 +1589,19 @@ var game = (function () {
    */
   class CharacterBaseClass {
     constructor(game, map, args) {
-      this.args = args;
-      
+      // display debug info
+      this.debug = true;
+
+      // handle args
+      this.game = game;
+      this.map = map;
       this.id = args.id;
       this.x = args.x;
       this.y = args.y;
 
-      // display debug info about the hero
-      this.debug = true;
-
-      // the game
-      this.game = game;
-
-      // provide access to the map
-      this.map = map;
-
-      // allows keyboard input to the character
-      this.allowInput = true;
-
-      // if this unit is being controlled by the player
+      // player input handling
       this.isPlayer = false;
+      this.allowInput = true;
 
       // if the hero can move in a certain direction
       // [ up, right, down, left ];
@@ -1616,6 +1609,7 @@ var game = (function () {
 
       // handle character's directional velocity
       this.velocities = [0, 0, 0, 0];
+      
       //this.maxSpeed = 18;
       this.maxSpeed = Math.round(Math.random() * 50);
 
@@ -2380,7 +2374,7 @@ var game = (function () {
               visibleCharacterIds.push(this.Characters.array[i].id);
             }
           }
-          Canvas.pushDebugText('visibleCharacters', `Visible Character Ids: ${JSON.stringify(visibleCharacterIds)}`);
+          Canvas.pushDebugText('visibleCharacters', `Visible Characters: ${JSON.stringify(visibleCharacterIds)}`);
         }
       }
     }

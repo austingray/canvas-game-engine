@@ -110,7 +110,7 @@ class Map extends MapBaseClass {
             visibleCharacterIds.push(this.Characters.array[i].id);
           }
         }
-        Canvas.pushDebugText('visibleCharacters', `Visible Character Ids: ${JSON.stringify(visibleCharacterIds)}`);
+        Canvas.pushDebugText('visibleCharacters', `Visible Characters: ${JSON.stringify(visibleCharacterIds)}`);
       }
     }
   }
