@@ -15,12 +15,12 @@ const tiles = [
     shadow: false,
     light: false,
   }, 
-  {
-    type: 'rock',
-    blocking: true,
-    shadow: true,
-    light: false,
-  },
+  // {
+  //   type: 'rock',
+  //   blocking: true,
+  //   shadow: true,
+  //   light: false,
+  // },
 ];
 
 const objects = [
@@ -105,14 +105,14 @@ class TileUtil extends MapBaseClass {
     let random = Math.random();
     if (random > .1) {
       type = 0; // grass
-    } else if (random > .08) {
+    } else if (random > 0) {
       type = 1 // water;
       blocking = 1;
-    } else {
-      type = 2; // rock
-      blocking = 1;
-      shadow = 1;
-    }
+    } // else {
+    //   type = 2; // rock
+    //   blocking = 1;
+    //   shadow = 1;
+    // }
 
     // null is 0 bytes, woohoo! (grass)
     if (type === 0) {

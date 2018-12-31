@@ -15,6 +15,9 @@ class CharacterBaseClass {
     this.id = args.id;
     this.x = args.x;
     this.y = args.y;
+    this.width = 50;
+    this.height = 50;
+    this.blocking = true;
 
     // player input handling
     this.isPlayer = false;

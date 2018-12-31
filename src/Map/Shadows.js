@@ -17,13 +17,13 @@ class Shadows {
 
     for (let i = 0; i < objects.length; i++) {
       const object = objects[i];
-      const x1 = object.xPixel;
-      const y1 = object.yPixel;
+      const x1 = object.x;
+      const y1 = object.y;
       const block = {
-        x1: object.xPixel,
-        y1: object.yPixel,
-        x2: object.xPixel + object.width,
-        y2: object.yPixel + object.height,
+        x1: object.x,
+        y1: object.y,
+        x2: object.x + object.width,
+        y2: object.y + object.height,
         width: object.width,
         height: object.height,
       };

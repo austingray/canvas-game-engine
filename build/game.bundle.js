@@ -508,8 +508,8 @@ var game = (function () {
 
     drawTile(tile) {
       // draw the tile
-      const x = tile.xPixel + this.Camera.offsetX;
-      const y = tile.yPixel + this.Camera.offsetY;
+      const x = tile.x + this.Camera.offsetX;
+      const y = tile.y + this.Camera.offsetY;
 
       this.ctx = this.primaryLayer.context;
       switch (tile.type) {
@@ -637,6 +637,55 @@ var game = (function () {
       grd.addColorStop(1, '#000000');
       this.ctx.fillStyle = grd;
       this.ctx.fillRect(0, 0, this.width, this.height);
+    }
+
+    /**
+     * Creates a rounded rectangle
+     * https://stackoverflow.com/questions/1255512/how-to-draw-a-rounded-rectangle-on-html-canvas
+     *
+     * @param {*} ctx
+     * @param {*} x
+     * @param {*} y
+     * @param {*} width
+     * @param {*} height
+     * @param {*} radius
+     * @param {*} fill
+     * @param {*} stroke
+     * @memberof Canvas
+     */
+    roundRect(ctx, x, y, width, height, radius, fill, stroke) {
+      if (typeof stroke == 'undefined') {
+        stroke = true;
+      }
+      if (typeof radius === 'undefined') {
+        radius = 5;
+      }
+      if (typeof radius === 'number') {
+        radius = {tl: radius, tr: radius, br: radius, bl: radius};
+      } else {
+        var defaultRadius = {tl: 0, tr: 0, br: 0, bl: 0};
+        for (var side in defaultRadius) {
+          radius[side] = radius[side] || defaultRadius[side];
+        }
+      }
+      ctx.beginPath();
+      ctx.moveTo(x + radius.tl, y);
+      ctx.lineTo(x + width - radius.tr, y);
+      ctx.quadraticCurveTo(x + width, y, x + width, y + radius.tr);
+      ctx.lineTo(x + width, y + height - radius.br);
+      ctx.quadraticCurveTo(x + width, y + height, x + width - radius.br, y + height);
+      ctx.lineTo(x + radius.bl, y + height);
+      ctx.quadraticCurveTo(x, y + height, x, y + height - radius.bl);
+      ctx.lineTo(x, y + radius.tl);
+      ctx.quadraticCurveTo(x, y, x + radius.tl, y);
+      ctx.closePath();
+      if (fill) {
+        ctx.fill();
+      }
+      if (stroke) {
+        ctx.stroke();
+      }
+
     }
   }
 
@@ -1383,14 +1432,14 @@ var game = (function () {
       let random = Math.random();
       if (random > .1) {
         type = 0; // grass
-      } else if (random > .08) {
+      } else if (random > 0) {
         type = 1; // water;
         blocking = 1;
-      } else {
-        type = 2; // rock
-        blocking = 1;
-        shadow = 1;
-      }
+      } // else {
+      //   type = 2; // rock
+      //   blocking = 1;
+      //   shadow = 1;
+      // }
 
       // null is 0 bytes, woohoo! (grass)
       if (type === 0) {
@@ -1577,8 +1626,49 @@ var game = (function () {
     }
   }
 
-  class ItemUtil extends MapBaseClass {
+  const itemList = [
+    {
+      name: 'rock',
+      blocking: true,
+      shadow: true,
+      width: 50,
+      height: 50,
+      draw(Canvas) {
+        const x = this.x + Canvas.Camera.offsetX;
+        const y = this.y + Canvas.Camera.offsetY;
 
+        const ctx = Canvas.overrideLayer.context;
+        ctx.fillStyle = '#888787';
+        ctx.fillRect(x, y, this.width, this.height);
+        // Canvas.roundRect(ctx, x, y, this.width, this.height, 20, '#888787', 0);
+      },
+    }
+  ];
+
+  class Items extends MapBaseClass {
+    init() {
+      // holds all items currently on the map
+      this.array = [];
+
+      for (var i = 0; i < 100; i++) {
+        const tileCoords = this.getRandomTileCoordinate();
+        const { x: xTile, y: yTile } = tileCoords;
+        const item = Object.assign({}, itemList[0], { 
+          x: xTile * this.tileWidth,
+          y: yTile * this.tileHeight,
+        });
+        this.array.push(item);
+      }
+    }
+
+    draw(Canvas) {
+      for (var i = 0; i < this.array.length; i++) {
+        const item = this.array[i];
+        if (Canvas.Camera.inViewport(item.x, item.y, item.x + item.width, item.y + item.height)) {
+          item.draw(Canvas);
+        }
+      }
+    }
   }
 
   /**
@@ -1598,6 +1688,9 @@ var game = (function () {
       this.id = args.id;
       this.x = args.x;
       this.y = args.y;
+      this.width = 50;
+      this.height = 50;
+      this.blocking = true;
 
       // player input handling
       this.isPlayer = false;
@@ -1915,6 +2008,21 @@ var game = (function () {
       ];
     }
 
+    draw(Canvas) {
+      for (var i = 0; i < this.array.length; i++) {
+        const char = this.array[i];
+
+        if (Canvas.Camera.inViewport(char.x, char.y, char.x + char.width, char.y + char.height)) {
+          char.isVisible = true;
+          char.doMovement();
+          char.draw(Canvas);
+        } else {
+          char.stopMovement();
+          char.isVisible = false;
+        }
+      }
+    }
+
     getById(id) {
       for (var i = 0; i < this.array.length; i++) {
         if (this.array[i].id === id) {
@@ -1985,13 +2093,13 @@ var game = (function () {
 
       for (let i = 0; i < objects.length; i++) {
         const object = objects[i];
-        const x1 = object.xPixel;
-        const y1 = object.yPixel;
+        const x1 = object.x;
+        const y1 = object.y;
         const block = {
-          x1: object.xPixel,
-          y1: object.yPixel,
-          x2: object.xPixel + object.width,
-          y2: object.yPixel + object.height,
+          x1: object.x,
+          y1: object.y,
+          x2: object.x + object.width,
+          y2: object.y + object.height,
           width: object.width,
           height: object.height,
         };
@@ -2273,33 +2381,29 @@ var game = (function () {
    * @class Map
    * 
    *  Types of information stored in the Map class are
-   *    - Terrain
+   *    - Tiles
    *    - Items
    *    - Characters
    *
    *  All of the above types are stored in their each respective array
    *  keyed by the map coordinates [ x + (y * xWidth)]
    *
-   *  Map has a property MainCharacter which is a reference to a character
+   *  Map has a property hero which is a reference to a character
    *  in the character array, and is controlled by user input
-   *
-   *  Map has a property Camera
-   *    The Camera contains a focal point which is used to
-   *    calculate pixel offsets when drawing map objects
    *
    */
   class Map extends MapBaseClass {
     init() {
+      // debug mode on
+      this.debug = true;
+
+      // class utilites
       this.Tile = new TileUtil(this.game);
-      this.Terrain = new MapBaseClass(this.game);
-      this.Items = new ItemUtil(this.game);
+      this.Items = new Items(this.game);
       this.Characters = new Characters(this.game, this);
 
       // stores the data about what exists at a particular position
       this.mapArray = [];
-
-      // stores the objects on the current map
-      this.objectArray = [];
 
       // keep track of visible tiles
       this.visibleTilesPerDirection = 16;
@@ -2308,9 +2412,6 @@ var game = (function () {
       this.visibleTileY = 0;
 
       this.generateCharacters();
-
-      // debug mode on
-      this.debug = true;
     }
 
     /**
@@ -2327,28 +2428,15 @@ var game = (function () {
 
         // draw the tiles
         for (var i = 0; i < this.visibleTileArray.length; i++) {
-          const tileData = this.visibleTileArray[i];
-          Canvas.drawTile(tileData[0]);
+          const tile = this.visibleTileArray[i];
+          Canvas.drawTile(tile);
         }
 
+        // draw the items
+        this.Items.draw(Canvas);
+
         // draw the characters
-        for (var i = 0; i < this.Characters.array.length; i++) {
-          const character = this.Characters.array[i];
-          // only draw nearby characters
-          if (
-            character.x > (this.hero.x - this.tileWidth * this.visibleTilesPerDirection)
-            && character.x < (this.hero.x + this.tileWidth * this.visibleTilesPerDirection)
-            && character.y > (this.hero.y - this.tileHeight * this.visibleTilesPerDirection)
-            && character.y < (this.hero.y + this.tileHeight * this.visibleTilesPerDirection)
-          ) {
-            character.isVisible = true;
-            character.doMovement();
-            character.draw(Canvas);
-          } else {
-            character.stopMovement();
-            character.isVisible = false;
-          }
-        }
+        this.Characters.draw(Canvas);
 
         // draw the shadows
         this.drawShadows();
@@ -2378,12 +2466,18 @@ var game = (function () {
       const scene = this.game.scene;
       const origin = { x: this.hero.x, y: this.hero.y };
 
+      const objectsToCheck = [
+        // ...this.visibleTileArray,
+        ...this.Items.array,
+        ...this.Characters.array,
+      ];
+
       // get the shadow objects
       const blocks = [];
-      for (var i = 0; i < this.visibleTileArray.length; i++) {
-        const tile = this.visibleTileArray[i][0];
-        if (tile.shadow) {
-          blocks.push(tile);
+      for (var i = 0; i < objectsToCheck.length; i++) {
+        const object = objectsToCheck[i];
+        if (object.shadow) {
+          blocks.push(object);
         }
       }
 
@@ -2538,15 +2632,15 @@ var game = (function () {
 
           // add the x/y data to the object
           const visibleTile = this.Tile.unpack(this.mapArray[mapIndex]);
-          visibleTile.x = i;
-          visibleTile.y = j;
-          visibleTile.xPixel = i * this.tileWidth;
-          visibleTile.yPixel = j * this.tileHeight;
+          visibleTile.xTile = i;
+          visibleTile.yTile = j;
+          visibleTile.x = i * this.tileWidth;
+          visibleTile.y = j * this.tileHeight;
           visibleTile.width = this.tileWidth;
           visibleTile.height = this.tileHeight;
 
           // add the unpacked version of the tile to the visible tile array
-          this.visibleTileArray[visibleIndex++] = [visibleTile];
+          this.visibleTileArray[visibleIndex++] = visibleTile;
         }
       }
     }
@@ -2559,12 +2653,12 @@ var game = (function () {
      * @returns
      * @memberof Map
      */
-    getCollision(xPixel, yPixel) {
+    getCollision(x, y) {
       // hardcode the hero
-      const x1 = xPixel + 10;
-      const x2 = xPixel + 40;
-      const y1 = yPixel + 10;
-      const y2 = yPixel + 40;
+      const x1 = x + 10;
+      const x2 = x + 40;
+      const y1 = y + 10;
+      const y2 = y + 40;
       
       // map boundaries
       if (
@@ -2576,15 +2670,20 @@ var game = (function () {
         return true;
       }
 
+      const objectsToCheck = [
+        ...this.visibleTileArray,
+        ...this.Items.array,
+      ];
+
       // tile blocking
-      for (let i = 0; i < this.visibleTileArray.length; i++) {
-        const tile = this.visibleTileArray[i][0];
-        if (tile.blocking) {
+      for (let i = 0; i < objectsToCheck.length; i++) {
+        const object = objectsToCheck[i];
+        if (object.blocking) {
           if (
-            x2 > tile.xPixel
-            && x1 < tile.xPixel + tile.width
-            && y2 > tile.yPixel
-            && y1 < tile.yPixel + tile.height
+            x2 > object.x
+            && x1 < object.x + object.width
+            && y2 > object.y
+            && y1 < object.y + object.height
           ) {
             return true;
           }

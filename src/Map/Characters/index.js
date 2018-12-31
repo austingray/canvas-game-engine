@@ -19,7 +19,22 @@ class Characters extends MapBaseClass {
       {
         name: 'hero',
       }
-    ]
+    ];
+  }
+
+  draw(Canvas) {
+    for (var i = 0; i < this.array.length; i++) {
+      const char = this.array[i];
+
+      if (Canvas.Camera.inViewport(char.x, char.y, char.x + char.width, char.y + char.height)) {
+        char.isVisible = true;
+        char.doMovement();
+        char.draw(Canvas);
+      } else {
+        char.stopMovement();
+        char.isVisible = false;
+      }
+    }
   }
 
   getById(id) {

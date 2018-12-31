@@ -1,7 +1,6 @@
 import MapBaseClass from './MapBaseClass';
-import TileUtil from './TileUtil';
-import TerrainUtil from './TerrainUtil';
-import ItemUtil from './ItemUtil';
+import Tiles from './Tiles';
+import Items from './Items/index';
 import Characters from './Characters/index';
 import Shadows from './Shadows';
 
@@ -9,33 +8,29 @@ import Shadows from './Shadows';
  * @class Map
  * 
  *  Types of information stored in the Map class are
- *    - Terrain
+ *    - Tiles
  *    - Items
  *    - Characters
  *
  *  All of the above types are stored in their each respective array
  *  keyed by the map coordinates [ x + (y * xWidth)]
  *
- *  Map has a property MainCharacter which is a reference to a character
+ *  Map has a property hero which is a reference to a character
  *  in the character array, and is controlled by user input
- *
- *  Map has a property Camera
- *    The Camera contains a focal point which is used to
- *    calculate pixel offsets when drawing map objects
  *
  */
 class Map extends MapBaseClass {
   init() {
-    this.Tile = new TileUtil(this.game);
-    this.Terrain = new TerrainUtil(this.game);
-    this.Items = new ItemUtil(this.game);
+    // debug mode on
+    this.debug = true;
+
+    // class utilites
+    this.Tile = new Tiles(this.game);
+    this.Items = new Items(this.game);
     this.Characters = new Characters(this.game, this);
 
     // stores the data about what exists at a particular position
     this.mapArray = [];
-
-    // stores the objects on the current map
-    this.objectArray = [];
 
     // keep track of visible tiles
     this.visibleTilesPerDirection = 16;
@@ -44,9 +39,6 @@ class Map extends MapBaseClass {
     this.visibleTileY = 0;
 
     this.generateCharacters();
-
-    // debug mode on
-    this.debug = true;
   }
 
   /**
@@ -63,28 +55,15 @@ class Map extends MapBaseClass {
 
       // draw the tiles
       for (var i = 0; i < this.visibleTileArray.length; i++) {
-        const tileData = this.visibleTileArray[i];
-        Canvas.drawTile(tileData[0]);
+        const tile = this.visibleTileArray[i];
+        Canvas.drawTile(tile);
       }
 
+      // draw the items
+      this.Items.draw(Canvas);
+
       // draw the characters
-      for (var i = 0; i < this.Characters.array.length; i++) {
-        const character = this.Characters.array[i];
-        // only draw nearby characters
-        if (
-          character.x > (this.hero.x - this.tileWidth * this.visibleTilesPerDirection)
-          && character.x < (this.hero.x + this.tileWidth * this.visibleTilesPerDirection)
-          && character.y > (this.hero.y - this.tileHeight * this.visibleTilesPerDirection)
-          && character.y < (this.hero.y + this.tileHeight * this.visibleTilesPerDirection)
-        ) {
-          character.isVisible = true;
-          character.doMovement();
-          character.draw(Canvas);
-        } else {
-          character.stopMovement();
-          character.isVisible = false;
-        }
-      }
+      this.Characters.draw(Canvas);
 
       // draw the shadows
       this.drawShadows();
@@ -114,12 +93,18 @@ class Map extends MapBaseClass {
     const scene = this.game.scene;
     const origin = { x: this.hero.x, y: this.hero.y };
 
+    const objectsToCheck = [
+      // ...this.visibleTileArray,
+      ...this.Items.array,
+      ...this.Characters.array,
+    ];
+
     // get the shadow objects
     const blocks = [];
-    for (var i = 0; i < this.visibleTileArray.length; i++) {
-      const tile = this.visibleTileArray[i][0];
-      if (tile.shadow) {
-        blocks.push(tile);
+    for (var i = 0; i < objectsToCheck.length; i++) {
+      const object = objectsToCheck[i];
+      if (object.shadow) {
+        blocks.push(object);
       }
     }
 
@@ -274,15 +259,15 @@ class Map extends MapBaseClass {
 
         // add the x/y data to the object
         const visibleTile = this.Tile.unpack(this.mapArray[mapIndex]);
-        visibleTile.x = i;
-        visibleTile.y = j;
-        visibleTile.xPixel = i * this.tileWidth;
-        visibleTile.yPixel = j * this.tileHeight;
+        visibleTile.xTile = i;
+        visibleTile.yTile = j;
+        visibleTile.x = i * this.tileWidth;
+        visibleTile.y = j * this.tileHeight;
         visibleTile.width = this.tileWidth;
         visibleTile.height = this.tileHeight;
 
         // add the unpacked version of the tile to the visible tile array
-        this.visibleTileArray[visibleIndex++] = [visibleTile];
+        this.visibleTileArray[visibleIndex++] = visibleTile;
       }
     }
   }
@@ -295,12 +280,12 @@ class Map extends MapBaseClass {
    * @returns
    * @memberof Map
    */
-  getCollision(xPixel, yPixel) {
+  getCollision(x, y) {
     // hardcode the hero
-    const x1 = xPixel + 10;
-    const x2 = xPixel + 40;
-    const y1 = yPixel + 10;
-    const y2 = yPixel + 40;
+    const x1 = x + 10;
+    const x2 = x + 40;
+    const y1 = y + 10;
+    const y2 = y + 40;
     
     // map boundaries
     if (
@@ -312,15 +297,20 @@ class Map extends MapBaseClass {
       return true;
     }
 
+    const objectsToCheck = [
+      ...this.visibleTileArray,
+      ...this.Items.array,
+    ];
+
     // tile blocking
-    for (let i = 0; i < this.visibleTileArray.length; i++) {
-      const tile = this.visibleTileArray[i][0];
-      if (tile.blocking) {
+    for (let i = 0; i < objectsToCheck.length; i++) {
+      const object = objectsToCheck[i];
+      if (object.blocking) {
         if (
-          x2 > tile.xPixel
-          && x1 < tile.xPixel + tile.width
-          && y2 > tile.yPixel
-          && y1 < tile.yPixel + tile.height
+          x2 > object.x
+          && x1 < object.x + object.width
+          && y2 > object.y
+          && y1 < object.y + object.height
         ) {
           return true;
         }
