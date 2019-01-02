@@ -161,10 +161,10 @@ class Map extends MapBaseClass {
       this.Characters.draw(Canvas);
 
       this.Canvas.Shadows.draw(this.Canvas);
-      this.Canvas.Shadows2.draw();
+      // this.Canvas.Shadows2.draw();
 
       // draw the shadows
-      // this.drawShadows();
+      this.drawShadows();
 
       if (this.debug) {	
         Canvas.pushDebugText('hero.id', `Hero.id: ${this.hero.id}`);	

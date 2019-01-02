@@ -89,7 +89,7 @@ class Shadows {
         light.y1 + offsetY + light.height / 2,
         100
       );
-      gradient.addColorStop(0, `rgba(0, 0, 0, ${Math.random() + .7})`);
+      gradient.addColorStop(0, `rgba(0, 0, 0, 1)`);
       gradient.addColorStop(0.9, 'rgba(0, 0, 0, 0');
       this.ctx.fillStyle = gradient;
       this.ctx.fillRect(

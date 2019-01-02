@@ -39,15 +39,7 @@ class Shadows2 {
     this.light.position.set( 0, 0, -25 );
     this.scene.add(this.light);
 
-    // this.directionalLight = new THREE.DirectionalLight( 0x333333, 0.5 );
-    // this.scene.add( this.directionalLight );
-    // this.directionalLight.castShadow = true;
-    // this.directionalLightTarget =  new THREE.Object3D();
-    // this.scene.add(this.directionalLightTarget);
-    // this.directionalLight.target = this.directionalLightTarget;
-
-    //Set up shadow properties for the light
-    
+    //Set up shadow properties for the light    
     this.light.shadow.mapSize.width = 512;  // default
     this.light.shadow.mapSize.height = 512; // default
     this.light.shadow.camera.near = 0.5;       // default
@@ -72,19 +64,13 @@ class Shadows2 {
     });
     
     const geometry = new THREE.BoxGeometry(this.width, this.height, 1);
+    
     this.plane = new THREE.Mesh( geometry, material );
 
-    // var planeGeometry = new THREE.PlaneBufferGeometry(this.width, this.height, 32, 32 );
-    // var planeMaterial = new THREE.MeshStandardMaterial( { color: 0x00ff00 } )
-    // this.plane = new THREE.Mesh(planeGeometry, planeMaterial)
-
     this.scene.add(this.plane);
-    this.plane.receiveShadow = true;
-    // this.plane.scale.x = -1
   }
 
   draw() {
-
     this.plane.material.alphaMap.needsUpdate = true;
     
     // render
