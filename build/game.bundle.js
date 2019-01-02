@@ -214,7 +214,7 @@ var game = (function () {
 
       var invertEffect = new THREE.ShaderPass( THREE.InvertShader );
       invertEffect.renderToScreen = true;
-      // this.composer.addPass(invertEffect);
+      this.composer.addPass(invertEffect);
     }
 
     init() {
