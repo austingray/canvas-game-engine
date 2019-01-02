@@ -181,6 +181,46 @@ var game = (function () {
     }
   }
 
+  /**
+   * @author Austin Gray / 
+   *
+   * InvertShader
+   * Inverts the colors on the scene
+   */
+
+  const InvertShader = {
+
+  	uniforms: {
+  		"tDiffuse": { value: null },
+  	},
+
+  	vertexShader: [
+
+  	  "varying vec2 vUv;",
+
+  		"void main() {",
+        "vUv = uv;",
+        "gl_Position = projectionMatrix * modelViewMatrix * vec4( position, 1.0 );",
+  		"}"
+
+  	].join( "\n" ),
+
+  	fragmentShader: [
+
+  	"uniform sampler2D tDiffuse;",
+  	"varying vec2 vUv;",
+
+  	"void main() {",
+      "vec4 color = texture2D( tDiffuse, vUv );",
+  		"vec3 c = color.rgb;",
+
+  	  "gl_FragColor = vec4(1.0 - c.r, 1.0 - c.g, 1.0 - c.b, 1);",
+  	"}",
+
+  	].join( "\n" )
+
+  };
+
   class Shadows {
     /**
      * Create core three.js items
@@ -193,16 +233,27 @@ var game = (function () {
       this.width = args.width;
       this.height = args.height;
 
+      // set this to true to invert the scene's colors
+      this.invert = false;
+      
+      // create the scene, lights, plane
       this.init();
       this.createLights();
-      this.createPlane();
 
-      // postprocessing
-      this.composer = new THREE.EffectComposer( this.renderer );
-      this.composer.addPass( new THREE.RenderPass( this.scene, this.camera ) );
-      var invertEffect = new THREE.ShaderPass( THREE.InvertShader );
-      invertEffect.renderToScreen = true;
-      // this.composer.addPass(invertEffect);
+      // Use different material depending on if we are inverting the colors.
+      // If we are inverting the colors we are using the scene as
+      // an alpha map for a separate shadow layer.
+      // If we are not then we are using the scene as a shadow layer.
+      const material = this.invert
+        ? new THREE.MeshPhongMaterial({
+            color: 0xFFFFFF,
+            opacity: 1,
+            transparent: false,
+            specular: new THREE.Color(0x000000),
+            shininess: 0,
+          })
+        : new THREE.ShadowMaterial();
+      this.createPlane(material);
     }
 
     init() {
@@ -214,15 +265,36 @@ var game = (function () {
         canvas: this.domElement,
         antialias: true,
       });
-      this.renderer.setSize( window.innerWidth, window.innerHeight );
+      this.renderer.setSize(window.innerWidth, window.innerHeight);
       this.renderer.shadowMap.enabled = true;
+      this.renderer.shadowMap.type = THREE.PCFSoftShadowMap; // the default is THREE.PCFShadowMap
 
+      // call the effect composer
+      if (this.invert) {
+        this.invertSceneColors();
+      }
+
+      // resize handling
       window.addEventListener( 'resize', () => {
         this.camera.aspect = window.innerWidth / window.innerHeight;
         this.camera.updateProjectionMatrix();
 
         this.renderer.setSize( window.innerWidth, window.innerHeight );
       }, false );
+    }
+
+    invertSceneColors() {
+      // postprocessing
+      this.composer = new THREE.EffectComposer(this.renderer);
+      
+      // add invert effect
+      const invertEffect = new THREE.ShaderPass(InvertShader);
+      invertEffect.renderToScreen = true;
+      this.composer.addPass(invertEffect);
+
+      // add renderer
+      const renderPass = new THREE.RenderPass(this.scene, this.camera);
+      this.composer.addPass(renderPass);
     }
 
     /**
@@ -248,18 +320,7 @@ var game = (function () {
      *
      * @memberof Shadows
      */
-    createPlane() {
-      // create the plane that the shadows get cast to
-      // const material = new THREE.MeshPhongMaterial({
-      //   color: 0xFFFFFF,
-      //   opacity: 1,
-      //   transparent: true,
-      //   specular: new THREE.Color(0x000000),
-      //   shininess: 0,
-      // });
-
-      const material = new THREE.ShadowMaterial({});
-      
+    createPlane(material) {
       const geometry = new THREE.BoxGeometry(this.width, this.height, 1);
       this.plane = new THREE.Mesh( geometry, material );
 
@@ -284,92 +345,15 @@ var game = (function () {
       this.camera.rotation.z = 180 * Math.PI / 180;
       this.camera.rotation.y = 180 * Math.PI / 180;
 
-      // render
-      this.renderer.render(this.scene, this.camera);
-      // this.composer.render();
+      // avoid duplicate rendering with effect composer
+      if (this.invert) {
+        this.composer.render();
+      } else {
+        this.renderer.render(this.scene, this.camera);
+      }
       
       // update
       this.plane.material.needsUpdate = true;
-    }
-  }
-
-  class Shadows2 {
-    /**
-     * Create core three.js items
-     * @param {*} args
-     * @memberof Shadows
-     */
-    constructor(args) {
-      // parse args
-      this.domElement = args.domElement;
-      this.canvasElement = args.canvasElement;
-      this.width = args.width;
-      this.height = args.height;
-
-      this.init();
-      this.createLights();
-      this.createPlane();
-    }
-
-    init() {
-      // init canvas
-      this.scene = new THREE.Scene();
-      this.camera = new THREE.OrthographicCamera( this.width / - 2, this.width / 2, this.height / 2, this.height / - 2, 1, 5000 );
-      this.camera.position.x = 0;
-      this.camera.position.y = 0;
-      this.camera.position.z = 1000;
-      this.renderer = new THREE.WebGLRenderer({
-        alpha: true,
-        canvas: this.domElement,
-        antialias: true,
-      });
-      this.renderer.setSize( window.innerWidth, window.innerHeight );
-      this.renderer.setClearAlpha(1);
-      this.renderer.setClearColor( 0xFFFFFF, 0);
-    }
-
-    createLights() {
-      this.light = new THREE.PointLight( 0xFFFFFF, 20, 300, .5 );
-      this.light.castShadow = true;
-      this.light.position.set( 0, 0, -25 );
-      this.scene.add(this.light);
-
-      //Set up shadow properties for the light    
-      this.light.shadow.mapSize.width = 512;  // default
-      this.light.shadow.mapSize.height = 512; // default
-      this.light.shadow.camera.near = 0.5;       // default
-      this.light.shadow.camera.far = this.width;      // default
-      // this.light.shadow.radius = 5;
-    }
-
-    /**
-     * The surface that receives shadows
-     *
-     * @memberof Shadows
-     */
-    createPlane() {
-      const texture = new THREE.CanvasTexture( this.canvasElement );
-      
-      const material = new THREE.MeshBasicMaterial({
-        alphaMap: texture,
-        opacity: 1,
-        transparent: true,
-        color: 0x000000,
-        alphaTest: 0,
-      });
-      
-      const geometry = new THREE.BoxGeometry(this.width, this.height, 1);
-      
-      this.plane = new THREE.Mesh( geometry, material );
-
-      this.scene.add(this.plane);
-    }
-
-    draw() {
-      this.plane.material.alphaMap.needsUpdate = true;
-      
-      // render
-      this.renderer.render(this.scene, this.camera);
     }
   }
 
@@ -405,15 +389,13 @@ var game = (function () {
         domElement: this.getLayerByName('shadow3d').element,
       });
 
-      // shadows
-      this.Shadows2 = new Shadows2({
-        width: this.width,
-        height: this.height,
-        domElement: this.getLayerByName('shadow3dtexture').element,
-        canvasElement: this.getLayerByName('shadow3d').element,
-      });
-
-      console.log(this.getLayerByName('shadow3d').context);
+      // shadows as canvas texture
+      // this.CanvasTexture = new CanvasTexture({
+      //   width: this.width,
+      //   height: this.height,
+      //   domElement: this.getLayerByName('shadow3dtexture').element,
+      //   canvasElement: this.getLayerByName('shadow3d').element,
+      // });
     }
 
     /**

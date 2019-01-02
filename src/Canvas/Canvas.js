@@ -1,7 +1,6 @@
 import Layer from './Layer';
 import Camera from './Camera';
-import Shadows from './Shadows';
-import Shadows2 from './Shadows2';
+import Shadows from './Three/Shadows';
 
 /**
  * Creates a canvas and provides methods for drawing to it
@@ -35,15 +34,13 @@ class Canvas {
       domElement: this.getLayerByName('shadow3d').element,
     });
 
-    // shadows
-    this.Shadows2 = new Shadows2({
-      width: this.width,
-      height: this.height,
-      domElement: this.getLayerByName('shadow3dtexture').element,
-      canvasElement: this.getLayerByName('shadow3d').element,
-    });
-
-    console.log(this.getLayerByName('shadow3d').context);
+    // shadows as canvas texture
+    // this.CanvasTexture = new CanvasTexture({
+    //   width: this.width,
+    //   height: this.height,
+    //   domElement: this.getLayerByName('shadow3dtexture').element,
+    //   canvasElement: this.getLayerByName('shadow3d').element,
+    // });
   }
 
   /**

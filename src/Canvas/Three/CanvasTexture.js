@@ -1,4 +1,18 @@
-class Shadows2 {
+/**
+ * Uses the provided canvas as a texture
+ *
+ * This is not in use. It was originally used when trying to
+ * fully render shadows via Three.js but when introducing many lights
+ * into the scene to simulate a torch effect, the performance suffered
+ * too much.
+ *
+ * To achieve the desired effect, pass the Shadow's canvas as an arg.
+ * You must also call the Shadow's invertSceneColors method in the constructor
+ * because it gets used as an alphaMap in this scene.
+ *
+ * @class CanvasTexture
+ */
+class CanvasTexture {
   /**
    * Create core three.js items
    * @param {*} args
@@ -78,4 +92,4 @@ class Shadows2 {
   }
 }
 
-export default Shadows2;
+export default CanvasTexture;

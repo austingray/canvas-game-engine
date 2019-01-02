@@ -1,3 +1,5 @@
+import InvertShader from './Shaders/InvertShader';
+
 class Shadows {
   /**
    * Create core three.js items
@@ -10,16 +12,27 @@ class Shadows {
     this.width = args.width;
     this.height = args.height;
 
+    // set this to true to invert the scene's colors
+    this.invert = false;
+    
+    // create the scene, lights, plane
     this.init();
     this.createLights();
-    this.createPlane();
 
-    // postprocessing
-    this.composer = new THREE.EffectComposer( this.renderer );
-    this.composer.addPass( new THREE.RenderPass( this.scene, this.camera ) );
-    var invertEffect = new THREE.ShaderPass( THREE.InvertShader );
-    invertEffect.renderToScreen = true;
-    // this.composer.addPass(invertEffect);
+    // Use different material depending on if we are inverting the colors.
+    // If we are inverting the colors we are using the scene as
+    // an alpha map for a separate shadow layer.
+    // If we are not then we are using the scene as a shadow layer.
+    const material = this.invert
+      ? new THREE.MeshPhongMaterial({
+          color: 0xFFFFFF,
+          opacity: 1,
+          transparent: false,
+          specular: new THREE.Color(0x000000),
+          shininess: 0,
+        })
+      : new THREE.ShadowMaterial();
+    this.createPlane(material);
   }
 
   init() {
@@ -31,15 +44,36 @@ class Shadows {
       canvas: this.domElement,
       antialias: true,
     });
-    this.renderer.setSize( window.innerWidth, window.innerHeight );
+    this.renderer.setSize(window.innerWidth, window.innerHeight);
     this.renderer.shadowMap.enabled = true;
+    this.renderer.shadowMap.type = THREE.PCFSoftShadowMap; // the default is THREE.PCFShadowMap
 
+    // call the effect composer
+    if (this.invert) {
+      this.invertSceneColors();
+    }
+
+    // resize handling
     window.addEventListener( 'resize', () => {
       this.camera.aspect = window.innerWidth / window.innerHeight;
       this.camera.updateProjectionMatrix();
 
       this.renderer.setSize( window.innerWidth, window.innerHeight );
     }, false );
+  }
+
+  invertSceneColors() {
+    // postprocessing
+    this.composer = new THREE.EffectComposer(this.renderer);
+    
+    // add invert effect
+    const invertEffect = new THREE.ShaderPass(InvertShader);
+    invertEffect.renderToScreen = true;
+    this.composer.addPass(invertEffect);
+
+    // add renderer
+    const renderPass = new THREE.RenderPass(this.scene, this.camera)
+    this.composer.addPass(renderPass);
   }
 
   /**
@@ -65,18 +99,7 @@ class Shadows {
    *
    * @memberof Shadows
    */
-  createPlane() {
-    // create the plane that the shadows get cast to
-    // const material = new THREE.MeshPhongMaterial({
-    //   color: 0xFFFFFF,
-    //   opacity: 1,
-    //   transparent: true,
-    //   specular: new THREE.Color(0x000000),
-    //   shininess: 0,
-    // });
-
-    const material = new THREE.ShadowMaterial({});
-    
+  createPlane(material) {
     const geometry = new THREE.BoxGeometry(this.width, this.height, 1);
     this.plane = new THREE.Mesh( geometry, material );
 
@@ -101,9 +124,12 @@ class Shadows {
     this.camera.rotation.z = 180 * Math.PI / 180;
     this.camera.rotation.y = 180 * Math.PI / 180;
 
-    // render
-    this.renderer.render(this.scene, this.camera);
-    // this.composer.render();
+    // avoid duplicate rendering with effect composer
+    if (this.invert) {
+      this.composer.render();
+    } else {
+      this.renderer.render(this.scene, this.camera);
+    }
     
     // update
     this.plane.material.needsUpdate = true;
