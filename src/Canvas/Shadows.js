@@ -33,6 +33,13 @@ class Shadows {
     });
     this.renderer.setSize( window.innerWidth, window.innerHeight );
     this.renderer.shadowMap.enabled = true;
+
+    window.addEventListener( 'resize', () => {
+      this.camera.aspect = window.innerWidth / window.innerHeight;
+      this.camera.updateProjectionMatrix();
+
+      this.renderer.setSize( window.innerWidth, window.innerHeight );
+    }, false );
   }
 
   /**
