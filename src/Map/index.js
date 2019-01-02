@@ -39,78 +39,7 @@ class Map extends MapBaseClass {
     this.visibleTileY = 0;
 
     this.generateCharacters();
-  }
-
-  /**
-   * Draws the map tiles and shawdows
-   * only if the map needs an update
-   *
-   * @param {*} Canvas
-   * @memberof Map
-   */
-  draw(Canvas) {
-    if (this.needsUpdate) {
-      // calculate the visible tiles
-      this.calculateVisibleTiles();
-
-      // draw the tiles
-      for (var i = 0; i < this.visibleTileArray.length; i++) {
-        const tile = this.visibleTileArray[i];
-        Canvas.drawTile(tile);
-      }
-
-      // draw the items
-      this.Items.draw(Canvas);
-
-      // draw the characters
-      this.Characters.draw(Canvas);
-
-      // draw the shadows
-      this.drawShadows();
-
-      if (this.debug) {	
-        Canvas.pushDebugText('hero.id', `Hero.id: ${this.hero.id}`);	
-        Canvas.pushDebugText('hero.maxSpeed', `Hero.maxSpeed: ${this.hero.maxSpeed}`);	
-
-        let visibleCharacterIds = [];
-        for (var i = 0; i < this.Characters.array.length; i++) {
-          if (this.Characters.array[i].isVisible) {
-            visibleCharacterIds.push(this.Characters.array[i].id);
-          }
-        }
-        Canvas.pushDebugText('visibleCharacters', `Visible Characters: ${JSON.stringify(visibleCharacterIds)}`);
-      }
-    }
-  }
-
-  /**
-   * Draws the shadows
-   *
-   * @memberof Map
-   */
-  drawShadows() {
-    // get the origin
-    const scene = this.game.scene;
-    const origin = { x: this.hero.x, y: this.hero.y };
-
-    const objectsToCheck = [
-      // ...this.visibleTileArray,
-      ...this.Items.array,
-      ...this.Characters.array,
-    ];
-
-    // get the shadow objects
-    const blocks = [];
-    for (var i = 0; i < objectsToCheck.length; i++) {
-      const object = objectsToCheck[i];
-      if (object.shadow) {
-        blocks.push(object);
-      }
-    }
-
-    // get and draw
-    const shadows = new Shadows(this.game.Canvas, origin, blocks);
-    shadows.draw();
+    this.generateItems();
   }
 
   /**
@@ -164,6 +93,15 @@ class Map extends MapBaseClass {
   }
 
   /**
+   * Generate items for the map
+   *
+   * @memberof Map
+   */
+  generateItems() {
+    this.Items.generateItems();
+  }
+
+  /**
    * Gets a random x/y coord
    *
    * @memberof Hero
@@ -196,6 +134,89 @@ class Map extends MapBaseClass {
       // tell the map to redraw
       this.needsUpdate = needsUpdate;
     }
+  }
+
+  /**
+   * Draws the map tiles and shawdows
+   * only if the map needs an update
+   *
+   * @param {*} Canvas
+   * @memberof Map
+   */
+  draw(Canvas) {
+    if (this.needsUpdate) {
+      // calculate everything that's visible
+      this.calculateVisible();
+
+      // draw the tiles
+      for (var i = 0; i < this.visibleTileArray.length; i++) {
+        const tile = this.visibleTileArray[i];
+        Canvas.drawTile(tile);
+      }
+
+      // draw the items
+      this.Items.draw(Canvas);
+
+      // draw the characters
+      this.Characters.draw(Canvas);
+
+      this.Canvas.Shadows.draw(this.Canvas);
+      this.Canvas.Shadows2.draw();
+
+      // draw the shadows
+      // this.drawShadows();
+
+      if (this.debug) {	
+        Canvas.pushDebugText('hero.id', `Hero.id: ${this.hero.id}`);	
+        Canvas.pushDebugText('hero.maxSpeed', `Hero.maxSpeed: ${this.hero.maxSpeed}`);	
+        Canvas.pushDebugText('visibleCharacters', `Visible Characters: ${this.Characters.visible.length}`);
+        Canvas.pushDebugText('visibleItems', `Visible Items: ${this.Items.visible.length}`);
+      }
+    }
+  }
+
+  /**
+   * Draws the shadows
+   *
+   * @memberof Map
+   */
+  drawShadows() {
+    // get the origin
+    const scene = this.game.scene;
+    const origin = { x: this.hero.x, y: this.hero.y };
+
+    const objectsToCheck = [
+      // ...this.visibleTileArray,
+      ...this.Items.array,
+      ...this.Characters.array,
+    ];
+
+    // get the shadow objects
+    const blocks = [];
+    for (var i = 0; i < objectsToCheck.length; i++) {
+      const object = objectsToCheck[i];
+      if (
+        object.shadow
+        || object.light
+      ) {
+        blocks.push(object);
+      }
+    }
+
+    // get and draw
+    const shadows = new Shadows(this.game.Canvas, origin, blocks);
+    shadows.draw();
+  }
+
+  calculateVisible() {
+    // calculate the visible tiles
+    this.calculateVisibleTiles();
+
+    // calculate the visible characters
+    this.Characters.calculateVisible();
+
+    // calculate the visible items
+    this.Items.calculateVisible();
   }
 
   /**

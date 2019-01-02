@@ -23,25 +23,6 @@ const tiles = [
   // },
 ];
 
-const objects = [
-  {
-    type: 'tree',
-    blocking: true,
-    shadow: false,
-    light: false,
-    width: 25,
-    height: 25,
-  },
-  {
-    type: 'torch',
-    blocking: false,
-    shadow: false,
-    light: true,
-    width: 10,
-    height: 10,
-  },
-];
-
 /**
  * Provides utility methods for tiles
  *
@@ -132,33 +113,6 @@ class TileUtil extends MapBaseClass {
     // create and return the string
     const string = '1' + type + '' + blocking + '' + light + '' + shadow + '';
     return Number(string);
-  }
-
-  /**
-   * Grabs a random object from the objects array
-   *
-   * @param {*} [args={}]
-   * @returns
-   * @memberof TileUtil
-   */
-  createObject(args = {}) {
-    const random = Math.random();
-    let type = 1;
-    
-    // if (random > .7) {
-    //   type = 1;
-    // }
-
-    return objects[type];
-  }
-  
-  maybeCreateObject() {
-    const random = Math.random();
-    if (random > .95)  {
-      return this.createObject();
-    } else {
-      return null;
-    }
   }
 
   /**

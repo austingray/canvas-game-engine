@@ -1,5 +1,7 @@
 import Layer from './Layer';
 import Camera from './Camera';
+import Shadows from './Shadows';
+import Shadows2 from './Shadows2';
 
 /**
  * Creates a canvas and provides methods for drawing to it
@@ -25,6 +27,23 @@ class Canvas {
     
     // camera
     this.Camera = new Camera(this.width, this.height);
+
+    // shadows
+    this.Shadows = new Shadows({
+      width: this.width,
+      height: this.height,
+      domElement: this.getLayerByName('shadow3d').element,
+    });
+
+    // shadows
+    this.Shadows2 = new Shadows2({
+      width: this.width,
+      height: this.height,
+      domElement: this.getLayerByName('shadow3dtexture').element,
+      canvasElement: this.getLayerByName('shadow3d').element,
+    });
+
+    console.log(this.getLayerByName('shadow3d').context);
   }
 
   /**
@@ -50,6 +69,14 @@ class Canvas {
     this.createLayer('secondary');
     this.createLayer('override');
     this.createLayer('shadow');
+    this.createLayer('shadow3d', {
+      context: 'webgl',
+      // left: '-9999px',
+      // top: '-9999px',
+    });
+    this.createLayer('shadow3dtexture', {
+      context: 'webgl',
+    });
     this.createLayer('hud');
     this.createLayer('menu');
     this.createLayer('debug');
@@ -95,6 +122,8 @@ class Canvas {
     // get width/height
     const width = (typeof args.width === 'undefined') ? this.width : args.width;
     const height = (typeof args.height === 'undefined') ? this.height : args.height;
+    const left = (typeof args.left === 'undefined') ? 0 : args.left;
+    const top = (typeof args.top === 'undefined') ? 0 : args.top;
 
     const appendTo = (typeof args.appendTo === 'undefined') ? document.body : args.appendTo;
 
@@ -112,6 +141,8 @@ class Canvas {
       context,
       visible,
       appendTo,
+      left,
+      top,
     }));
   }
 

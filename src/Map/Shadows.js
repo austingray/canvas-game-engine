@@ -32,7 +32,6 @@ class Shadows {
         this.blocks.push(block);
       }
 
-      // TODO: All blocks currently have shadow,
       // TODO: Add light handling
       if (object.light === true) {
         this.lights.push(block);
@@ -82,7 +81,6 @@ class Shadows {
     // lights
     this.ctx.globalCompositeOperation = 'destination-out';
     this.lights.forEach(light => {
-      debugger;
       const gradient = this.ctx.createRadialGradient(
         light.x1 + offsetX + light.width / 2,
         light.y1 + offsetY + light.height / 2,
@@ -118,7 +116,7 @@ class Shadows {
         { x: pos.x2, y: pos.y2 },
       ];
 
-      this.drawShadows(points, pos, offsetX, offsetY);
+      // this.drawShadows(points, pos, offsetX, offsetY);
     }
   }
 

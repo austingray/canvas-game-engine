@@ -10,6 +10,7 @@ class Characters extends MapBaseClass {
   init() {
     // holds all characters
     this.array = [];
+    this.visible = [];
 
     // used to give each character a unique id
     this.ids = 0;
@@ -23,17 +24,8 @@ class Characters extends MapBaseClass {
   }
 
   draw(Canvas) {
-    for (var i = 0; i < this.array.length; i++) {
-      const char = this.array[i];
-
-      if (Canvas.Camera.inViewport(char.x, char.y, char.x + char.width, char.y + char.height)) {
-        char.isVisible = true;
-        char.doMovement();
-        char.draw(Canvas);
-      } else {
-        char.stopMovement();
-        char.isVisible = false;
-      }
+    for (var i = 0; i < this.visible.length; i++) {
+      this.visible[i].draw(Canvas);
     }
   }
 
@@ -85,6 +77,33 @@ class Characters extends MapBaseClass {
   generateRandom() {
     const { x, y } = this.getRandomPixelCoordinate();
     this.create('hero', x, y);
+  }
+
+  /**
+   * Calculate visible characters
+   *
+   * @param {*} inViewport
+   * @memberof Characters
+   */
+  calculateVisible(inViewport) {
+    const visible = [];
+
+    for (var i = 0; i < this.array.length; i++) {
+      const x1 = this.array[i].x;
+      const y1 = this.array[i].y;
+      const x2 = x1 + this.array[i].width;
+      const y2 = y1 + this.array[i].height;
+      if (this.Canvas.Camera.inViewport(x1, y1, x2, y2)) {
+        this.array[i].isVisible = true;
+        this.array[i].doMovement();
+        visible.push(this.array[i]);
+      } else {
+        this.array[i].stopMovement();
+        this.array[i].isVisible = false;
+      }
+    }
+
+    this.visible = visible;
   }
 }
 

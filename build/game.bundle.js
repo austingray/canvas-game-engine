@@ -21,6 +21,8 @@ var game = (function () {
       element.id = id;
       element.width = this.width;
       element.height = this.height;
+      element.style.left = args.left;
+      element.style.top = args.top;
       this.parentElement.appendChild(element);
       this.element = element;
 
@@ -40,10 +42,11 @@ var game = (function () {
     toggleVisible() {
       if (this.visible) {
         this.visible = false;
-        this.element.setAttribute('style', 'display: none;');
+        // this.element.setAttribute('style', 'display: none;');
+        this.element.style.display = 'none';
       } else {
         this.visible = true;
-        this.element.setAttribute('style', '');
+        this.element.style.display = 'block';
       }
     }
 
@@ -178,6 +181,360 @@ var game = (function () {
     }
   }
 
+  class Shadows {
+    /**
+     * Create core three.js items
+     * @param {*} args
+     * @memberof Shadows
+     */
+    constructor(args) {
+      // parse args
+      this.domElement = args.domElement;
+      this.width = args.width;
+      this.height = args.height;
+
+      this.init();
+      this.createLights();
+      this.createPlane();
+      // this.helper = new THREE.CameraHelper( this.camera );
+      // this.scene.add( this.helper );
+
+      // postprocessing
+      this.composer = new THREE.EffectComposer( this.renderer );
+      this.composer.addPass( new THREE.RenderPass( this.scene, this.camera ) );
+
+      // var dotScreenEffect = new THREE.ShaderPass( THREE.DotScreenShader );
+      // dotScreenEffect.uniforms[ 'scale' ].value = 4;
+      // this.composer.addPass( dotScreenEffect );
+
+      // var rgbEffect = new THREE.ShaderPass( THREE.RGBShiftShader );
+      // rgbEffect.uniforms[ 'amount' ].value = 0.0015;
+      // rgbEffect.renderToScreen = true;
+      // this.composer.addPass( rgbEffect );
+
+      var invertEffect = new THREE.ShaderPass( THREE.InvertShader );
+      invertEffect.renderToScreen = true;
+      // this.composer.addPass(invertEffect);
+    }
+
+    init() {
+      // init canvas
+      this.scene = new THREE.Scene();
+      this.camera = new THREE.OrthographicCamera( this.width / - 2, this.width / 2, this.height / 2, this.height / - 2, 1, 5000 );
+      this.renderer = new THREE.WebGLRenderer({
+        alpha: true,
+        canvas: this.domElement,
+        antialias: true,
+      });
+      this.renderer.setSize( window.innerWidth, window.innerHeight );
+      this.renderer.setClearAlpha(0);
+      this.renderer.setClearColor( 0xFFFFFF, 0);
+      this.renderer.shadowMap.enabled = true;
+      // this.renderer.shadowMap.type = THREE.PCFSoftShadowMap; // default THREE.PCFShadowMap
+
+      // const fogColor = new THREE.Color(0x000000);
+      // this.scene.fog = new THREE.Fog(fogColor, 0.0025, 5000);
+    }
+
+    /**
+     * Create light sources
+     *
+     * @memberof Shadows
+     */
+    createLights() {
+      this.light = new THREE.PointLight( 0xFFFFFF, 5, 300, 0.5 );
+      this.light.castShadow = true;
+      this.light.position.set( 0, 0, -25 );
+      this.scene.add(this.light);
+      
+      this.light.shadow.mapSize.width = 512;  // default
+      this.light.shadow.mapSize.height = 512; // default
+      this.light.shadow.camera.near = 0.5;       // default
+      this.light.shadow.camera.far = this.width;      // default
+      this.light.shadow.radius = 5;
+    }
+
+    /**
+     * The surface that receives shadows
+     *
+     * @memberof Shadows
+     */
+    createPlane() {
+      // create the plane that the shadows get cast to
+      const material = new THREE.MeshPhongMaterial({
+        color: 0xFFFFFF,
+        opacity: 1,
+        transparent: true,
+      });
+
+      // material.shininess = 0;
+      // material.specular = new THREE.Color(0x000000);
+
+      
+      // const transparentPng = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=';
+      // const texture = new THREE.TextureLoader().load(transparentPng);
+      // texture.wrapS = THREE.RepeatWrapping;
+      // texture.wrapT = THREE.RepeatWrapping;
+      // texture.repeat.set( 999999, 999999 );
+      
+      // const material = new THREE.MeshPhongMaterial({
+      //   map: texture,
+      //   alphaMap
+      //   opacity: 1,
+      //   transparent: true,
+      //   visible: false,
+      //   color: 0x333333,
+      //   blending: THREE.NoBlending,
+      //   side: THREE.DoubleSide,
+      //   alphaTest: 0.5,
+      // });
+
+      // material.blending = THREE.CustomBlending;
+      // material.blendEquation = THREE.AddEquation; //default
+      // material.blendEquation = THREE.MaxEquation;
+
+      // test blending
+      // this.sourceFactors = [
+      //   THREE.ZeroFactor,
+      //   THREE.OneFactor,
+      //   THREE.SrcColorFactor,
+      //   THREE.OneMinusSrcColorFactor,
+      //   THREE.SrcAlphaFactor,
+      //   THREE.OneMinusSrcAlphaFactor,
+      //   THREE.DstAlphaFactor,
+      //   THREE.OneMinusDstAlphaFactor,
+      //   THREE.DstColorFactor,
+      //   THREE.OneMinusDstColorFactor,
+      //   THREE.SrcAlphaSaturateFactor,
+      // ];
+
+      // this.i = 0;
+      // this.j = 0;
+      // // this.j = 0;
+      // window.setInterval(() => {
+      //   this.plane.material.opacity += .1;
+        
+      //   if (this.plane.material.opacity >= 1) {
+      //     this.plane.material.opacity = 0;
+
+      //     // this.plane.material.blendSrc = this.sourceFactors[this.i];
+      //     this.plane.material.blendDst = this.sourceFactors[this.i];
+      //     if (this.i === this.sourceFactors.length - 1) {
+      //       this.i = 0;
+      //     } else {
+      //       this.i++;
+      //     }
+      //   }
+      // }, 100);
+
+      // material.blendSrc = this.sourceFactors[4]; //default
+      // material.blendDst = this.sourceFactors[0]; //default
+      
+      // const material = new THREE.ShadowMaterial();
+      // material.onBeforeCompile = function(shader) {
+      //   shadoer.fragmentShader = `
+      //     precision mediump float;
+
+      //     varying vec2 vUv;
+
+      //     void main( void ) {
+      //       gl_FragColor = vec4( vec3( 0 ), vUv.y );
+      //     }
+
+      //     ${shader.fragmentShader}
+      //   `;
+
+      //   shader.vertexShader = `
+      //     precision highp float;
+      //     precision highp int;
+
+      //     uniform mat4 modelMatrix;
+      //     uniform mat4 modelViewMatrix;
+      //     uniform mat4 projectionMatrix;
+      //     uniform mat4 viewMatrix;
+      //     uniform mat3 normalMatrix;
+
+      //     attribute vec3 position;
+      //     attribute vec3 normal;
+      //     attribute vec2 uv;
+      //     attribute vec2 uv2;
+
+      //     varying vec2 vUv;
+
+      //     void main() {
+      //       vUv = uv;
+      //       gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+      //     }
+
+      //     ${shader.vertexShader}
+      //   `;
+      // }
+      // material.opacity = 1;
+
+        // material.fog = true;
+      
+      // const material = new THREE.ShaderMaterial({
+      //   vertexShader: document.getElementById( 'vertexShader' ).textContent,
+      //   fragmentShader: document.getElementById( 'fragmentShader' ).textContent
+      // });
+      
+      const geometry = new THREE.BoxGeometry(this.width, this.height, 1);
+      this.plane = new THREE.Mesh( geometry, material );
+
+      // var planeGeometry = new THREE.PlaneBufferGeometry(this.width, this.height, 32, 32 );
+      // var planeMaterial = new THREE.MeshStandardMaterial( { color: 0x00ff00 } )
+      // this.plane = new THREE.Mesh(planeGeometry, planeMaterial)
+
+      this.scene.add(this.plane);
+      this.plane.receiveShadow = true;
+   }
+
+    draw(Canvas) {
+      const Camera = Canvas.Camera;
+      
+      // update the shadow receive plane position
+      this.plane.position.x = 0;
+      this.plane.position.y = 0;
+
+      this.light.position.x = Camera.x + Camera.offsetX - Camera.width / 2 + 25;
+      this.light.position.y = Camera.y + Camera.offsetY - Camera.height / 2 + 25;
+      // this.light.position.z = 100;
+      // this.light.position.x = 0;
+      // this.light.position.y = 0;
+
+      // this.directionalLight.position.x = 0;
+      // this.directionalLight.position.y = 0;
+      // this.directionalLight.position.z = -100;
+      // this.directionalLightTarget.x = Camera.x + Camera.offsetX - Camera.width / 2 + 25;
+      // this.directionalLightTarget.y = Camera.y + Camera.offsetY - Camera.height / 2 + 25;
+      // this.directionalLightTarget.z = 0;
+      
+      // update camera position
+      this.camera.position.x = 0;
+      this.camera.position.y = 0;
+      // this.camera.position.x = Camera.x + Camera.offsetX - Camera.width / 2;
+      // this.camera.position.y = Camera.y + Camera.offsetY - Camera.height / 2;
+      this.camera.position.z = -5000;
+      // this.camera.lookAt(new THREE.Vector3(Camera.x, Camera.y, 0));
+      this.camera.rotation.z = 180 * Math.PI / 180;
+      this.camera.rotation.y = 180 * Math.PI / 180;
+
+      // render
+      this.renderer.render(this.scene, this.camera);
+      this.composer.render();
+
+      Canvas.pushDebugText('blendSrc', `this.plane.material.blendSrc: ${this.plane.material.blendSrc}`);
+      Canvas.pushDebugText('blendDst', `this.plane.material.blendDst ${this.plane.material.blendDst}`);
+
+      const gl = Canvas.shadowLayer.context;
+      // glEnable(GL_BLEND);
+      // glBlendFunc(GL_ONE_MINUS_DST_COLOR, GL_ZERO);
+      // gl.enable(gl.BLEND);
+      // gl.blendFunc(gl.ONE_MINUS_DST_COLOR, gl.ZERO);
+      // gl.getParameter(gl.BLEND_SRC_RGB) == gl.SRC_COLOR;
+      // gl_FragColor = vec4(1.0 - textureColor.r,1.0 -textureColor.g,1.0 -textureColor.b,1)
+
+      // gl.enable(gl.BLEND);
+      // gl.blendFunc(gl.ONE_MINUS_DST_COLOR, gl.ZERO);
+      // gl.fragColor = gl.vec4(1.0, 1.0, 1.0, 1.0);
+      this.plane.material.needsUpdate = true;
+    }
+  }
+
+  class Shadows2 {
+    /**
+     * Create core three.js items
+     * @param {*} args
+     * @memberof Shadows
+     */
+    constructor(args) {
+      // parse args
+      this.domElement = args.domElement;
+      this.canvasElement = args.canvasElement;
+      this.width = args.width;
+      this.height = args.height;
+
+      this.init();
+      this.createLights();
+      this.createPlane();
+    }
+
+    init() {
+      // init canvas
+      this.scene = new THREE.Scene();
+      this.camera = new THREE.OrthographicCamera( this.width / - 2, this.width / 2, this.height / 2, this.height / - 2, 1, 5000 );
+      this.camera.position.x = 0;
+      this.camera.position.y = 0;
+      this.camera.position.z = 1000;
+      this.renderer = new THREE.WebGLRenderer({
+        alpha: true,
+        canvas: this.domElement,
+        antialias: true,
+      });
+      this.renderer.setSize( window.innerWidth, window.innerHeight );
+      this.renderer.setClearAlpha(1);
+      this.renderer.setClearColor( 0xFFFFFF, 0);
+    }
+
+    createLights() {
+      this.light = new THREE.PointLight( 0xFFFFFF, 20, 300, .5 );
+      this.light.castShadow = true;
+      this.light.position.set( 0, 0, -25 );
+      this.scene.add(this.light);
+
+      // this.directionalLight = new THREE.DirectionalLight( 0x333333, 0.5 );
+      // this.scene.add( this.directionalLight );
+      // this.directionalLight.castShadow = true;
+      // this.directionalLightTarget =  new THREE.Object3D();
+      // this.scene.add(this.directionalLightTarget);
+      // this.directionalLight.target = this.directionalLightTarget;
+
+      //Set up shadow properties for the light
+      
+      this.light.shadow.mapSize.width = 512;  // default
+      this.light.shadow.mapSize.height = 512; // default
+      this.light.shadow.camera.near = 0.5;       // default
+      this.light.shadow.camera.far = this.width;      // default
+      // this.light.shadow.radius = 5;
+    }
+
+    /**
+     * The surface that receives shadows
+     *
+     * @memberof Shadows
+     */
+    createPlane() {
+      const texture = new THREE.CanvasTexture( this.canvasElement );
+      
+      const material = new THREE.MeshBasicMaterial({
+        alphaMap: texture,
+        opacity: 1,
+        transparent: true,
+        color: 0x000000,
+        alphaTest: 0,
+      });
+      
+      const geometry = new THREE.BoxGeometry(this.width, this.height, 1);
+      this.plane = new THREE.Mesh( geometry, material );
+
+      // var planeGeometry = new THREE.PlaneBufferGeometry(this.width, this.height, 32, 32 );
+      // var planeMaterial = new THREE.MeshStandardMaterial( { color: 0x00ff00 } )
+      // this.plane = new THREE.Mesh(planeGeometry, planeMaterial)
+
+      this.scene.add(this.plane);
+      this.plane.receiveShadow = true;
+      // this.plane.scale.x = -1
+    }
+
+    draw() {
+
+      this.plane.material.alphaMap.needsUpdate = true;
+      
+      // render
+      this.renderer.render(this.scene, this.camera);
+    }
+  }
+
   /**
    * Creates a canvas and provides methods for drawing to it
    * @class Canvas
@@ -202,6 +559,23 @@ var game = (function () {
       
       // camera
       this.Camera = new Camera(this.width, this.height);
+
+      // shadows
+      this.Shadows = new Shadows({
+        width: this.width,
+        height: this.height,
+        domElement: this.getLayerByName('shadow3d').element,
+      });
+
+      // shadows
+      this.Shadows2 = new Shadows2({
+        width: this.width,
+        height: this.height,
+        domElement: this.getLayerByName('shadow3dtexture').element,
+        canvasElement: this.getLayerByName('shadow3d').element,
+      });
+
+      console.log(this.getLayerByName('shadow3d').context);
     }
 
     /**
@@ -226,6 +600,14 @@ var game = (function () {
       this.createLayer('secondary');
       this.createLayer('override');
       this.createLayer('shadow');
+      this.createLayer('shadow3d', {
+        context: 'webgl',
+        // left: '-9999px',
+        // top: '-9999px',
+      });
+      this.createLayer('shadow3dtexture', {
+        context: 'webgl',
+      });
       this.createLayer('hud');
       this.createLayer('menu');
       this.createLayer('debug');
@@ -271,6 +653,8 @@ var game = (function () {
       // get width/height
       const width = (typeof args.width === 'undefined') ? this.width : args.width;
       const height = (typeof args.height === 'undefined') ? this.height : args.height;
+      const left = (typeof args.left === 'undefined') ? 0 : args.left;
+      const top = (typeof args.top === 'undefined') ? 0 : args.top;
 
       const appendTo = (typeof args.appendTo === 'undefined') ? document.body : args.appendTo;
 
@@ -288,6 +672,8 @@ var game = (function () {
         context,
         visible,
         appendTo,
+        left,
+        top,
       }));
     }
 
@@ -1350,25 +1736,6 @@ var game = (function () {
     }
   }
 
-  const objects = [
-    {
-      type: 'tree',
-      blocking: true,
-      shadow: false,
-      light: false,
-      width: 25,
-      height: 25,
-    },
-    {
-      type: 'torch',
-      blocking: false,
-      shadow: false,
-      light: true,
-      width: 10,
-      height: 10,
-    },
-  ];
-
   /**
    * Provides utility methods for tiles
    *
@@ -1459,32 +1826,6 @@ var game = (function () {
       // create and return the string
       const string = '1' + type + '' + blocking + '' + light + '' + shadow + '';
       return Number(string);
-    }
-
-    /**
-     * Grabs a random object from the objects array
-     *
-     * @param {*} [args={}]
-     * @returns
-     * @memberof TileUtil
-     */
-    createObject(args = {}) {
-      let type = 1;
-      
-      // if (random > .7) {
-      //   type = 1;
-      // }
-
-      return objects[type];
-    }
-    
-    maybeCreateObject() {
-      const random = Math.random();
-      if (random > .95)  {
-        return this.createObject();
-      } else {
-        return null;
-      }
     }
 
     /**
@@ -1631,43 +1972,143 @@ var game = (function () {
       name: 'rock',
       blocking: true,
       shadow: true,
+      light: false,
       width: 50,
       height: 50,
+      spawnRate: .1,
+      snapToGrid: true,
       draw(Canvas) {
         const x = this.x + Canvas.Camera.offsetX;
         const y = this.y + Canvas.Camera.offsetY;
+        
+        this.mesh.position.x = x - Canvas.Camera.width / 2 + 25;
+        this.mesh.position.y = y - Canvas.Camera.height / 2 + 25;
+        this.mesh.position.z = 0;
 
         const ctx = Canvas.overrideLayer.context;
         ctx.fillStyle = '#888787';
         ctx.fillRect(x, y, this.width, this.height);
         // Canvas.roundRect(ctx, x, y, this.width, this.height, 20, '#888787', 0);
       },
-    }
+      createMesh() {
+        const material = new THREE.MeshPhongMaterial({
+          color: 0x333333,
+          opacity: 0,
+          transparent: true,
+        });
+        const depth = 50;
+        const geometry = new THREE.BoxGeometry( this.width, this.height, depth );
+        this.mesh = new THREE.Mesh( geometry, material );
+        this.mesh.castShadow = true;
+        this.mesh.receiveShadow = true;
+      },
+    },
+    {
+      name: 'torch',
+      blocking: false,
+      shadow: false,
+      light: true,
+      width: 10,
+      height: 10,
+      spawnRate: .01,
+      snapToGrid: false,
+      draw(Canvas) {
+        const x = this.x + Canvas.Camera.offsetX;
+        const y = this.y + Canvas.Camera.offsetY;
+        const radius = 10;
+        const startAngle = Math.PI / 180 * 0;
+        const endAngle = Math.PI / 180 * 360;
+        const anticlockwise = false;
+        
+        const ctx = Canvas.primaryLayer.context;
+
+        ctx.fillStyle = 'rgba(255, 155, 0, 1)';
+        ctx.beginPath();
+        ctx.arc(x, y, radius, startAngle, endAngle, anticlockwise);
+        ctx.fill();
+        // this.ctx.strokeStyle = '#500050';
+        // this.ctx.lineWidth = 1;
+        // this.ctx.stroke();
+        ctx.closePath();
+      },
+    },
   ];
 
   class Items extends MapBaseClass {
     init() {
       // holds all items currently on the map
       this.array = [];
+      this.visible = [];
 
-      for (var i = 0; i < 100; i++) {
-        const tileCoords = this.getRandomTileCoordinate();
-        const { x: xTile, y: yTile } = tileCoords;
-        const item = Object.assign({}, itemList[0], { 
-          x: xTile * this.tileWidth,
-          y: yTile * this.tileHeight,
-        });
-        this.array.push(item);
+      // reference the item list
+      this.itemList = itemList;
+    }
+
+    generateItems() {
+      // generate items for the map
+      for (var i = 0; i < this.totalTiles; i++) {
+        for (var j = 0; j < this.itemList.length; j++) {
+          const item = this.itemList[j];
+
+          const shouldSpawn = item.spawnRate > Math.random();
+          
+          if (shouldSpawn) {
+            let x, y;
+
+            if (item.snapToGrid) {
+              const tile = this.getRandomTileCoordinate();
+              x = tile.x * this.tileWidth;
+              y = tile.y * this.tileHeight;
+            } else {
+              const coords = this.getRandomPixelCoordinate();
+              x = coords.x;
+              y = coords.y;
+            }
+            
+            const Item = Object.assign({}, item, { x, y });
+            if (typeof Item.createMesh !== 'undefined') {
+              // create the three.js mesh for this object
+              Item.createMesh();
+            }
+
+            this.array.push(Item);
+          }
+        }
       }
     }
 
     draw(Canvas) {
+      for (var i = 0; i < this.visible.length; i++) {
+        const item = this.visible[i];
+        item.draw(Canvas);
+      }
+    }
+
+    /**
+     * Calculate visible characters
+     *
+     * @param {*} inViewport
+     * @memberof Characters
+     */
+    calculateVisible() {
+      const visible = [];
+
       for (var i = 0; i < this.array.length; i++) {
         const item = this.array[i];
-        if (Canvas.Camera.inViewport(item.x, item.y, item.x + item.width, item.y + item.height)) {
-          item.draw(Canvas);
+        if (this.Canvas.Camera.inViewport(item.x, item.y, item.x + item.width, item.y + item.height)) {
+          visible.push(item);
+
+          if (typeof item.mesh !== 'undefined') {
+            this.Canvas.Shadows.scene.add(item.mesh);
+          }
+        } else {
+          if (typeof item.mesh !== 'undefined') {
+            this.Canvas.Shadows.scene.remove(item.mesh);
+          }
         }
       }
+
+      this.visible = visible;
     }
   }
 
@@ -1996,6 +2437,7 @@ var game = (function () {
     init() {
       // holds all characters
       this.array = [];
+      this.visible = [];
 
       // used to give each character a unique id
       this.ids = 0;
@@ -2009,17 +2451,8 @@ var game = (function () {
     }
 
     draw(Canvas) {
-      for (var i = 0; i < this.array.length; i++) {
-        const char = this.array[i];
-
-        if (Canvas.Camera.inViewport(char.x, char.y, char.x + char.width, char.y + char.height)) {
-          char.isVisible = true;
-          char.doMovement();
-          char.draw(Canvas);
-        } else {
-          char.stopMovement();
-          char.isVisible = false;
-        }
+      for (var i = 0; i < this.visible.length; i++) {
+        this.visible[i].draw(Canvas);
       }
     }
 
@@ -2072,9 +2505,36 @@ var game = (function () {
       const { x, y } = this.getRandomPixelCoordinate();
       this.create('hero', x, y);
     }
+
+    /**
+     * Calculate visible characters
+     *
+     * @param {*} inViewport
+     * @memberof Characters
+     */
+    calculateVisible(inViewport) {
+      const visible = [];
+
+      for (var i = 0; i < this.array.length; i++) {
+        const x1 = this.array[i].x;
+        const y1 = this.array[i].y;
+        const x2 = x1 + this.array[i].width;
+        const y2 = y1 + this.array[i].height;
+        if (this.Canvas.Camera.inViewport(x1, y1, x2, y2)) {
+          this.array[i].isVisible = true;
+          this.array[i].doMovement();
+          visible.push(this.array[i]);
+        } else {
+          this.array[i].stopMovement();
+          this.array[i].isVisible = false;
+        }
+      }
+
+      this.visible = visible;
+    }
   }
 
-  class Shadows {
+  class Shadows$1 {
     constructor(Canvas, origin, objects) {
       this.Canvas = Canvas;
 
@@ -2108,7 +2568,6 @@ var game = (function () {
           this.blocks.push(block);
         }
 
-        // TODO: All blocks currently have shadow,
         // TODO: Add light handling
         if (object.light === true) {
           this.lights.push(block);
@@ -2158,7 +2617,6 @@ var game = (function () {
       // lights
       this.ctx.globalCompositeOperation = 'destination-out';
       this.lights.forEach(light => {
-        debugger;
         const gradient = this.ctx.createRadialGradient(
           light.x1 + offsetX + light.width / 2,
           light.y1 + offsetY + light.height / 2,
@@ -2194,7 +2652,7 @@ var game = (function () {
           { x: pos.x2, y: pos.y2 },
         ];
 
-        this.drawShadows(points, pos, offsetX, offsetY);
+        // this.drawShadows(points, pos, offsetX, offsetY);
       }
     }
 
@@ -2412,78 +2870,7 @@ var game = (function () {
       this.visibleTileY = 0;
 
       this.generateCharacters();
-    }
-
-    /**
-     * Draws the map tiles and shawdows
-     * only if the map needs an update
-     *
-     * @param {*} Canvas
-     * @memberof Map
-     */
-    draw(Canvas) {
-      if (this.needsUpdate) {
-        // calculate the visible tiles
-        this.calculateVisibleTiles();
-
-        // draw the tiles
-        for (var i = 0; i < this.visibleTileArray.length; i++) {
-          const tile = this.visibleTileArray[i];
-          Canvas.drawTile(tile);
-        }
-
-        // draw the items
-        this.Items.draw(Canvas);
-
-        // draw the characters
-        this.Characters.draw(Canvas);
-
-        // draw the shadows
-        this.drawShadows();
-
-        if (this.debug) {	
-          Canvas.pushDebugText('hero.id', `Hero.id: ${this.hero.id}`);	
-          Canvas.pushDebugText('hero.maxSpeed', `Hero.maxSpeed: ${this.hero.maxSpeed}`);	
-
-          let visibleCharacterIds = [];
-          for (var i = 0; i < this.Characters.array.length; i++) {
-            if (this.Characters.array[i].isVisible) {
-              visibleCharacterIds.push(this.Characters.array[i].id);
-            }
-          }
-          Canvas.pushDebugText('visibleCharacters', `Visible Characters: ${JSON.stringify(visibleCharacterIds)}`);
-        }
-      }
-    }
-
-    /**
-     * Draws the shadows
-     *
-     * @memberof Map
-     */
-    drawShadows() {
-      // get the origin
-      const scene = this.game.scene;
-      const origin = { x: this.hero.x, y: this.hero.y };
-
-      const objectsToCheck = [
-        // ...this.visibleTileArray,
-        ...this.Items.array,
-        ...this.Characters.array,
-      ];
-
-      // get the shadow objects
-      const blocks = [];
-      for (var i = 0; i < objectsToCheck.length; i++) {
-        const object = objectsToCheck[i];
-        if (object.shadow) {
-          blocks.push(object);
-        }
-      }
-
-      // get and draw
-      const shadows = new Shadows(this.game.Canvas, origin, blocks);
-      shadows.draw();
+      this.generateItems();
     }
 
     /**
@@ -2537,6 +2924,15 @@ var game = (function () {
     }
 
     /**
+     * Generate items for the map
+     *
+     * @memberof Map
+     */
+    generateItems() {
+      this.Items.generateItems();
+    }
+
+    /**
      * Gets a random x/y coord
      *
      * @memberof Hero
@@ -2569,6 +2965,89 @@ var game = (function () {
         // tell the map to redraw
         this.needsUpdate = needsUpdate;
       }
+    }
+
+    /**
+     * Draws the map tiles and shawdows
+     * only if the map needs an update
+     *
+     * @param {*} Canvas
+     * @memberof Map
+     */
+    draw(Canvas) {
+      if (this.needsUpdate) {
+        // calculate everything that's visible
+        this.calculateVisible();
+
+        // draw the tiles
+        for (var i = 0; i < this.visibleTileArray.length; i++) {
+          const tile = this.visibleTileArray[i];
+          Canvas.drawTile(tile);
+        }
+
+        // draw the items
+        this.Items.draw(Canvas);
+
+        // draw the characters
+        this.Characters.draw(Canvas);
+
+        this.Canvas.Shadows.draw(this.Canvas);
+        this.Canvas.Shadows2.draw();
+
+        // draw the shadows
+        // this.drawShadows();
+
+        if (this.debug) {	
+          Canvas.pushDebugText('hero.id', `Hero.id: ${this.hero.id}`);	
+          Canvas.pushDebugText('hero.maxSpeed', `Hero.maxSpeed: ${this.hero.maxSpeed}`);	
+          Canvas.pushDebugText('visibleCharacters', `Visible Characters: ${this.Characters.visible.length}`);
+          Canvas.pushDebugText('visibleItems', `Visible Items: ${this.Items.visible.length}`);
+        }
+      }
+    }
+
+    /**
+     * Draws the shadows
+     *
+     * @memberof Map
+     */
+    drawShadows() {
+      // get the origin
+      const scene = this.game.scene;
+      const origin = { x: this.hero.x, y: this.hero.y };
+
+      const objectsToCheck = [
+        // ...this.visibleTileArray,
+        ...this.Items.array,
+        ...this.Characters.array,
+      ];
+
+      // get the shadow objects
+      const blocks = [];
+      for (var i = 0; i < objectsToCheck.length; i++) {
+        const object = objectsToCheck[i];
+        if (
+          object.shadow
+          || object.light
+        ) {
+          blocks.push(object);
+        }
+      }
+
+      // get and draw
+      const shadows = new Shadows$1(this.game.Canvas, origin, blocks);
+      shadows.draw();
+    }
+
+    calculateVisible() {
+      // calculate the visible tiles
+      this.calculateVisibleTiles();
+
+      // calculate the visible characters
+      this.Characters.calculateVisible();
+
+      // calculate the visible items
+      this.Items.calculateVisible();
     }
 
     /**

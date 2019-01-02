@@ -18,6 +18,8 @@ class Layer {
     element.id = id;
     element.width = this.width;
     element.height = this.height;
+    element.style.left = args.left;
+    element.style.top = args.top;
     this.parentElement.appendChild(element);
     this.element = element;
 
@@ -37,10 +39,11 @@ class Layer {
   toggleVisible() {
     if (this.visible) {
       this.visible = false;
-      this.element.setAttribute('style', 'display: none;');
+      // this.element.setAttribute('style', 'display: none;');
+      this.element.style.display = 'none';
     } else {
       this.visible = true;
-      this.element.setAttribute('style', '');
+      this.element.style.display = 'block';
     }
   }
 

@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html>
+	<head>
+    <script src="https://ajax.googleapis.com/ajax/libs/threejs/r84/three.min.js"></script>
+    <style>
+      body {
+        margin: 0;
+      }
+    </style>
+	</head>
+	<body>
+
+		<script>
+      const width = window.innerWidth;
+      const height = window.innerHeight;
+
+      const tileWidth = 50;
+      const tileHeight = 50;
+      const tileDepth = 50;
+
+      const centerX = tileWidth * 50 / 2;
+      const centerY = tileHeight * 50 / 2;
+
+      var scene = new THREE.Scene();
+      // var camera = new THREE.PerspectiveCamera( 75, window.innerWidth / window.innerHeight, 0.1, 5000 );
+      var camera = new THREE.OrthographicCamera( width / - 2, width / 2, height / 2, height / - 2, 1, 5000 );
+
+      var renderer = new THREE.WebGLRenderer({
+        alpha: true,
+        // antialias: true,
+      });
+      renderer.setSize( window.innerWidth, window.innerHeight );
+      renderer.shadowMap.enabled = true;
+      // renderer.shadowMap.type = THREE.PCFSoftShadowMap; // default THREE.PCFShadowMap
+      document.body.appendChild( renderer.domElement );
+
+      function addLight(x, y, z) {
+        var light = new THREE.PointLight( 0xffffff, 10, 1000 );
+        light.castShadow = true;
+        light.position.set( x, y, z );
+        scene.add( light );
+
+        //Set up shadow properties for the light
+        light.shadow.mapSize.width = 512;  // default
+        light.shadow.mapSize.height = 512; // default
+        light.shadow.camera.near = 0.5;       // default
+        light.shadow.camera.far = 500      // default
+        light.shadow.radius = 1;
+      }
+
+      addLight(centerX, centerY, 75);
+      addLight(centerX, centerY, 90);
+
+      // var geometry = new THREE.BoxGeometry( 1, 1, 1 );
+      // var cube = new THREE.Mesh( geometry, material );
+      // scene.add( cube );
+
+      camera.position.z = 500;
+      camera.position.x = centerX;
+      camera.position.y = centerY;
+
+      camera.up = new THREE.Vector3(0,0,1);
+      // camera.lookAt(new THREE.Vector3(0,0,0));
+      
+      // tiles
+      for (let i = 0; i < 50; i++) {
+        for (let j = 0; j < 50; j++) {
+          const x = i * (tileWidth + 0);
+          const y = j * (tileHeight + 0);
+          
+          const material = new THREE.MeshPhongMaterial( { color: 0x00ff00 } );
+          const geometry = new THREE.BoxGeometry( tileWidth, tileHeight, tileDepth );
+          const cube = new THREE.Mesh( geometry, material );
+          scene.add(cube);
+          // cube.castShadow = true;
+          cube.receiveShadow = true;
+          
+          cube.position.z = 0;
+          cube.position.x = x;
+          cube.position.y = y;
+        }
+      }
+
+      // blocks
+      for (let i = 0; i < 50; i++) {
+        for (let j = 0; j < 50; j++) {
+          if (.3 > Math.random()) {
+            const x = i * (tileWidth);
+            const y = j * (tileHeight);
+            
+            const material = new THREE.MeshPhongMaterial({
+              color: 0x333333,
+              opacity: 0,
+              transparent: true,
+            });
+            const geometry = new THREE.BoxGeometry( tileWidth, tileHeight, tileDepth );
+            const cube = new THREE.Mesh( geometry, material );
+            scene.add(cube);
+            cube.castShadow = true;
+            cube.receiveShadow = true;
+
+            cube.position.z = 50;
+            cube.position.x = x;
+            cube.position.y = y;
+          }
+        }
+      }
+
+      function animate() {
+        requestAnimationFrame( animate );
+        // camera.rotation.x += 0.01;
+        // camera.rotation.y += 0.01;
+        // light.position.z -= 0.01;
+        // camera.position.z -= 1;
+        renderer.render( scene, camera );
+      }
+      animate();
+    </script>
+	</body>
+</html>
