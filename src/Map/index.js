@@ -203,11 +203,11 @@ class Map extends MapBaseClass {
       // let tileX = Math.round(tilePixelX / this.tileWidth);
       // let tileY = Math.round(tilePixelY this.tileHeight);
 
-      const mapArray = this.mapArray[tileX + tileY * tileX];
-      const mapArrayIndex = tileX + tileY * tileX;
+      const mapArrayIndex = this.Tile.convertPosToIndex(tileX, tileY);
 
       const drawMouseX = tileX * this.tileWidth + this.Canvas.Camera.offsetX;
       const drawMouseY = tileY * this.tileHeight + this.Canvas.Camera.offsetY;
+
       
       if (typeof this.mapArray[mapArrayIndex] !== 'undefined') {
         const tile = this.Tile.unpack(this.mapArray[mapArrayIndex]);
@@ -215,13 +215,12 @@ class Map extends MapBaseClass {
           drawMouseX,
           drawMouseY
         );
+
+        const debugTile = Object.assign({}, tile, { x: tileX, y: tileY });
+        Canvas.pushDebugText('mouseTile', `mouseTile: ${JSON.stringify(debugTile)}`);
       }
       
       if (this.debug) {	
-        Canvas.pushDebugText('mouseTileX', `mouseTileX: ${tileX}`);
-        Canvas.pushDebugText('mouseTileY', `mouseTileY: ${tileY}`);
-        Canvas.pushDebugText('mouseMapX', `mouseMapX: ${drawMouseX}`);
-        Canvas.pushDebugText('mouseMapY', `mouseMapY: ${drawMouseY}`);
         Canvas.pushDebugText('hero.id', `Hero.id: ${this.hero.id}`);	
         Canvas.pushDebugText('hero.maxSpeed', `Hero.maxSpeed: ${this.hero.maxSpeed}`);	
         Canvas.pushDebugText('visibleCharacters', `Visible Characters: ${this.Characters.visible.length}`);
