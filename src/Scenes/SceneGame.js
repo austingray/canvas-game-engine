@@ -18,7 +18,7 @@ class SceneGame extends Scene {
   clear() {
     // clear the primary layer
     if (this.map.needsUpdate) {
-      this.Canvas.clearLayers(['primary', 'secondary', 'override', 'character']);
+      this.Canvas.clearLayers(['primary', 'secondary', 'override', 'character', 'mouse']);
     }
   }
 
@@ -29,7 +29,7 @@ class SceneGame extends Scene {
    * @returns {void}
    * @memberof SceneMainMenu
    */
-  handleInput(Keyboard) {
+  handleInput(Keyboard, Mouse) {
     // pause the game
     if (Keyboard.active.escape) {
       // cache the current scene in case we're just pausing
@@ -37,7 +37,7 @@ class SceneGame extends Scene {
       this.game.setScene('pause');
     }
 
-    this.map.handleInput(Keyboard);
+    this.map.handleInput(Keyboard, Mouse);
   }
 
   transitionInCustom() {

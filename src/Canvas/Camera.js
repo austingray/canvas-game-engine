@@ -66,8 +66,12 @@ class Camera {
       this.offsetY = Math.round(this.height / 2  - this.y);
     } else {
       // convert floats to integers
-      this.offsetX = Math.round(this.offsetX);
-      this.offsetY = Math.round(this.offsetY);
+      // TODO: Rounding these numbers removes gridlines from the tiles but also produces shaky player movement
+      // this.offsetX = Math.round(this.offsetX);
+      // this.offsetY = Math.round(this.offsetY);
+
+      this.offsetX = this.offsetX;
+      this.offsetY = this.offsetY;
     }
 
     // update this

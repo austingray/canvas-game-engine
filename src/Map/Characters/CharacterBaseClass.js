@@ -251,6 +251,11 @@ class CharacterBaseClass {
       return;
     }
 
+    if (Keyboard.active.space) {
+      this.x = 0;
+      this.y = 0;
+    }
+
     if (Keyboard.active.plus) {
       this.increaseSpeed();
     }

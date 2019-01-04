@@ -2,6 +2,7 @@ import Canvas from './Canvas/Canvas';
 import Objects from './Objects/index';
 import Scenes from './Scenes/index';
 import Keyboard from './Inputs/Keyboard';
+import Mouse from './Inputs/Mouse';
 import Debug from './Debug/index';
 
 function game() {
@@ -15,6 +16,7 @@ function game() {
 
   // input handler
   this.Keyboard = new Keyboard();
+  this.Mouse = new Mouse();
 
   // create the canvas
   this.Canvas = new Canvas({
@@ -75,12 +77,10 @@ function game() {
     this.scene.draw();
 
     // handle keyboard input
-    if (this.Keyboard.activeKeyCodes.length > 0) {
-      this.scene.handleInput(this.Keyboard);
+    this.scene.handleInput(this.Keyboard, this.Mouse);
 
-      if (this.debug) {
-        this.Debug.handleInput();
-      }
+    if (this.debug) {
+      this.Debug.handleInput();
     }
 
     // maybe show debug info

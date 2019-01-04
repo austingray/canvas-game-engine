@@ -74,6 +74,7 @@ class Canvas {
     this.createLayer('shadow3dtexture', {
       context: 'webgl',
     });
+    this.createLayer('mouse');
     this.createLayer('hud');
     this.createLayer('menu');
     this.createLayer('debug');
@@ -267,6 +268,13 @@ class Canvas {
     for (let i = 0; i < layers.length; i++) {
       this.getLayerByName(layers[i]).clear();
     }
+  }
+
+  drawMouse(x, y) {
+    const ctx = this.getLayerByName('mouse').context;
+    ctx.fillStyle = '#e2c55a';
+    ctx.strokeStyle = '#d0ab25';
+    ctx.strokeRect(x, y, 50, 50);
   }
 
   /**

@@ -139,8 +139,12 @@ var game = (function () {
         this.offsetY = Math.round(this.height / 2  - this.y);
       } else {
         // convert floats to integers
-        this.offsetX = Math.round(this.offsetX);
-        this.offsetY = Math.round(this.offsetY);
+        // TODO: Rounding these numbers removes gridlines from the tiles but also produces shaky player movement
+        // this.offsetX = Math.round(this.offsetX);
+        // this.offsetY = Math.round(this.offsetY);
+
+        this.offsetX = this.offsetX;
+        this.offsetY = this.offsetY;
       }
 
       // update this
@@ -428,6 +432,7 @@ var game = (function () {
       this.createLayer('shadow3dtexture', {
         context: 'webgl',
       });
+      this.createLayer('mouse');
       this.createLayer('hud');
       this.createLayer('menu');
       this.createLayer('debug');
@@ -621,6 +626,13 @@ var game = (function () {
       for (let i = 0; i < layers.length; i++) {
         this.getLayerByName(layers[i]).clear();
       }
+    }
+
+    drawMouse(x, y) {
+      const ctx = this.getLayerByName('mouse').context;
+      ctx.fillStyle = '#e2c55a';
+      ctx.strokeStyle = '#d0ab25';
+      ctx.strokeRect(x, y, 50, 50);
     }
 
     /**
@@ -2199,6 +2211,11 @@ var game = (function () {
         return;
       }
 
+      if (Keyboard.active.space) {
+        this.x = 0;
+        this.y = 0;
+      }
+
       if (Keyboard.active.plus) {
         this.increaseSpeed();
       }
@@ -2688,6 +2705,7 @@ var game = (function () {
     init() {
       // debug mode on
       this.debug = true;
+      this.Mouse = this.game.Mouse;
 
       // class utilites
       this.Tile = new TileUtil(this.game);
@@ -2809,6 +2827,7 @@ var game = (function () {
      * @memberof Map
      */
     draw(Canvas) {
+      //  TODO: after adding a lot of objects it is always going to "needsUpdate" - remove it
       if (this.needsUpdate) {
         // calculate everything that's visible
         this.calculateVisible();
@@ -2831,7 +2850,62 @@ var game = (function () {
         // draw the shadows
         this.drawShadows();
 
+        // draw mouse
+        // const index = this.Tile.convertPosToIndex(this.Mouse.x + this.Canvas.Camera.offsetX, this.Mouse.y + this.Canvas.Camera.offsetY);
+        // const tile = this.Tile.unpack(this.mapArray[index]);
+        // debugger;
+
+        const offsetX = this.Canvas.width / 2 - this.Canvas.Camera.x;
+        const offsetY = this.Canvas.height / 2  - this.Canvas.Camera.y;
+
+        // const mouseX = offsetX - this.Canvas.Camera.width / 2 + this.Mouse.x;
+        // const mouseY = offsetY - this.Canvas.Camera.height / 2 + this.Mouse.y;
+        // Canvas.drawMouse(
+        //   Math.round(mouseX / this.tileWidth) * this.tileWidth + this.Canvas.Camera.x,
+        //   Math.round(mouseY / this.tileHeight) * this.tileHeight + this.Canvas.Camera.y
+        // );
+
+        // const mouseX = (this.Canvas.Camera.x + this.Canvas.Camera.offsetX) + (this.Mouse.x) - (this.Canvas.width / 2);
+        // const mouseY = (this.Canvas.Camera.y + this.Canvas.Camera.offsetY) + (this.Mouse.y) - (this.Canvas.height /2);
+        
+        // const mouseX =     this.Canvas.Camera.x + this.Mouse.x - this.Canvas.width / 2 + this.Canvas.Camera.offsetX;
+        // const mouseY =     this.Canvas.Camera.y + this.Mouse.y - this.Canvas.height / 2 + this.Canvas.Camera.offsetY;
+
+        // const tilePixelX = this.Canvas.Camera.x - this.Canvas.Camera.screenPushX + this.Mouse.x - this.Canvas.width / 2;
+        
+        const tilePixelX = this.Canvas.Camera.offsetX - this.Mouse.x + 25;
+        const tilePixelY = this.Canvas.Camera.offsetY - this.Mouse.y + 25;
+        const tileX = Math.abs(Math.round(tilePixelX / this.tileWidth));
+        const tileY = Math.abs(Math.round(tilePixelY / this.tileHeight));
+
+        // TODO: This is kind of crazy, but essentially we need to check if
+        // tileX or tileY is a positive number. If it is a positive number it is out of bounds to the left or top
+        // tileX or tileY has a negative value greater than -(this.tileWidth - 1), then it is out of bounds right or bottom
+        // don't draw the mouse cursor if that is the case
+        // let tileX = Math.round(tilePixelX / this.tileWidth);
+        // let tileY = Math.round(tilePixelY this.tileHeight);
+
+        console.log();
+
+        const mapArray = this.mapArray[tileX + tileY * tileX];
+        const mapArrayIndex = tileX + tileY * tileX;
+
+        const drawMouseX = tileX * this.tileWidth + this.Canvas.Camera.offsetX;
+        const drawMouseY = tileY * this.tileHeight + this.Canvas.Camera.offsetY;
+        
+        if (typeof this.mapArray[mapArrayIndex] !== 'undefined') {
+          const tile = this.Tile.unpack(this.mapArray[mapArrayIndex]);
+          Canvas.drawMouse(
+            drawMouseX,
+            drawMouseY
+          );
+        }
+        
         if (this.debug) {	
+          Canvas.pushDebugText('mouseTileX', `mouseTileX: ${tileX}`);
+          Canvas.pushDebugText('mouseTileY', `mouseTileY: ${tileY}`);
+          Canvas.pushDebugText('mouseMapX', `mouseMapX: ${drawMouseX}`);
+          Canvas.pushDebugText('mouseMapY', `mouseMapY: ${drawMouseY}`);
           Canvas.pushDebugText('hero.id', `Hero.id: ${this.hero.id}`);	
           Canvas.pushDebugText('hero.maxSpeed', `Hero.maxSpeed: ${this.hero.maxSpeed}`);	
           Canvas.pushDebugText('visibleCharacters', `Visible Characters: ${this.Characters.visible.length}`);
@@ -2873,6 +2947,11 @@ var game = (function () {
       shadows.draw();
     }
 
+    /**
+     * Calculates visible items
+     *
+     * @memberof Map
+     */
     calculateVisible() {
       // calculate the visible tiles
       this.calculateVisibleTiles();
@@ -3007,7 +3086,7 @@ var game = (function () {
       return false;
     }
 
-    handleInput(Keyboard) {
+    handleInput(Keyboard, Mouse) {
       if (this.debug) {
         if (Keyboard.active.tab) {
           const newId = this.heroId + 1;
@@ -3037,7 +3116,7 @@ var game = (function () {
     clear() {
       // clear the primary layer
       if (this.map.needsUpdate) {
-        this.Canvas.clearLayers(['primary', 'secondary', 'override', 'character']);
+        this.Canvas.clearLayers(['primary', 'secondary', 'override', 'character', 'mouse']);
       }
     }
 
@@ -3048,7 +3127,7 @@ var game = (function () {
      * @returns {void}
      * @memberof SceneMainMenu
      */
-    handleInput(Keyboard) {
+    handleInput(Keyboard, Mouse) {
       // pause the game
       if (Keyboard.active.escape) {
         // cache the current scene in case we're just pausing
@@ -3056,7 +3135,7 @@ var game = (function () {
         this.game.setScene('pause');
       }
 
-      this.map.handleInput(Keyboard);
+      this.map.handleInput(Keyboard, Mouse);
     }
 
     transitionInCustom() {
@@ -3560,6 +3639,23 @@ var game = (function () {
     }
   }
 
+  class Mouse {
+    constructor() {
+      this.x = 0;
+      this.y = 0;
+
+      this.addEventListeners();
+    }
+
+    addEventListeners() {
+      document.addEventListener('mousemove', (e) => {
+
+        this.x = e.clientX;
+        this.y = e.clientY;
+      });
+    }
+  }
+
   class Debug {
     /**
      * Creates an instance of Debug.
@@ -3630,6 +3726,7 @@ var game = (function () {
 
     // input handler
     this.Keyboard = new KeyboardController();
+    this.Mouse = new Mouse();
 
     // create the canvas
     this.Canvas = new Canvas({
@@ -3690,12 +3787,10 @@ var game = (function () {
       this.scene.draw();
 
       // handle keyboard input
-      if (this.Keyboard.activeKeyCodes.length > 0) {
-        this.scene.handleInput(this.Keyboard);
+      this.scene.handleInput(this.Keyboard, this.Mouse);
 
-        if (this.debug) {
-          this.Debug.handleInput();
-        }
+      if (this.debug) {
+        this.Debug.handleInput();
       }
 
       // maybe show debug info
