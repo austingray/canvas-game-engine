@@ -203,8 +203,6 @@ class Map extends MapBaseClass {
       // let tileX = Math.round(tilePixelX / this.tileWidth);
       // let tileY = Math.round(tilePixelY this.tileHeight);
 
-      console.log();
-
       const mapArray = this.mapArray[tileX + tileY * tileX];
       const mapArrayIndex = tileX + tileY * tileX;
 
