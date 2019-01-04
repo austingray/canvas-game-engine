@@ -140,11 +140,11 @@ var game = (function () {
       } else {
         // convert floats to integers
         // TODO: Rounding these numbers removes gridlines from the tiles but also produces shaky player movement
-        // this.offsetX = Math.round(this.offsetX);
-        // this.offsetY = Math.round(this.offsetY);
+        this.offsetX = Math.round(this.offsetX);
+        this.offsetY = Math.round(this.offsetY);
 
-        this.offsetX = this.offsetX;
-        this.offsetY = this.offsetY;
+        // this.offsetX = this.offsetX;
+        // this.offsetY = this.offsetY;
       }
 
       // update this
@@ -1384,7 +1384,7 @@ var game = (function () {
      * @memberof SceneMainMenu
      */
     createLogo() {
-      const text = 'Canvas Game Engine';
+      const text = 'Auger\'s Sick AF Game';
       const font = '44px Arial';
       this.logo = this.Objects.create({
         type: 'text',
@@ -1629,7 +1629,7 @@ var game = (function () {
 
       // randomize the tile type
       let random = Math.random();
-      if (random > .1) {
+      if (random > .05) {
         type = 0; // grass
       } else if (random > 0) {
         type = 1; // water;
@@ -1842,7 +1842,7 @@ var game = (function () {
       light: true,
       width: 16,
       height: 16,
-      spawnRate: .01,
+      spawnRate: .02,
       snapToGrid: false,
       draw(Canvas) {
         const x = this.x + Canvas.Camera.offsetX + 5;

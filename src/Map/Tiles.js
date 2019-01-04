@@ -84,7 +84,7 @@ class TileUtil extends MapBaseClass {
 
     // randomize the tile type
     let random = Math.random();
-    if (random > .1) {
+    if (random > .05) {
       type = 0; // grass
     } else if (random > 0) {
       type = 1 // water;

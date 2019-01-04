@@ -41,7 +41,7 @@ const itemList = [
     light: true,
     width: 16,
     height: 16,
-    spawnRate: .01,
+    spawnRate: .02,
     snapToGrid: false,
     draw(Canvas) {
       const x = this.x + Canvas.Camera.offsetX + 5;

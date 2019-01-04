@@ -67,11 +67,11 @@ class Camera {
     } else {
       // convert floats to integers
       // TODO: Rounding these numbers removes gridlines from the tiles but also produces shaky player movement
-      // this.offsetX = Math.round(this.offsetX);
-      // this.offsetY = Math.round(this.offsetY);
+      this.offsetX = Math.round(this.offsetX);
+      this.offsetY = Math.round(this.offsetY);
 
-      this.offsetX = this.offsetX;
-      this.offsetY = this.offsetY;
+      // this.offsetX = this.offsetX;
+      // this.offsetY = this.offsetY;
     }
 
     // update this

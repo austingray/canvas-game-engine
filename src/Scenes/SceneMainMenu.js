@@ -34,7 +34,7 @@ class SceneMainMenu extends Scene {
    * @memberof SceneMainMenu
    */
   createLogo() {
-    const text = 'Canvas Game Engine';
+    const text = 'Auger\'s Sick AF Game';
     const font = '44px Arial';
     this.logo = this.Objects.create({
       type: 'text',
