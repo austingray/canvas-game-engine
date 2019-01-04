@@ -39,14 +39,14 @@ const itemList = [
     blocking: false,
     shadow: false,
     light: true,
-    width: 10,
-    height: 10,
+    width: 16,
+    height: 16,
     spawnRate: .01,
     snapToGrid: false,
     draw(Canvas) {
       const x = this.x + Canvas.Camera.offsetX + 5;
       const y = this.y + Canvas.Camera.offsetY + 5;
-      const radius = 10;
+      const radius = 8;
       const startAngle = Math.PI / 180 * 0;
       const endAngle = Math.PI / 180 * 360;
       const anticlockwise = false;

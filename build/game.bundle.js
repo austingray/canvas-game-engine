@@ -1840,14 +1840,14 @@ var game = (function () {
       blocking: false,
       shadow: false,
       light: true,
-      width: 10,
-      height: 10,
+      width: 16,
+      height: 16,
       spawnRate: .01,
       snapToGrid: false,
       draw(Canvas) {
         const x = this.x + Canvas.Camera.offsetX + 5;
         const y = this.y + Canvas.Camera.offsetY + 5;
-        const radius = 10;
+        const radius = 8;
         const startAngle = Math.PI / 180 * 0;
         const endAngle = Math.PI / 180 * 360;
         const anticlockwise = false;
@@ -2851,58 +2851,70 @@ var game = (function () {
         this.drawShadows();
 
         // draw mouse
-        // const index = this.Tile.convertPosToIndex(this.Mouse.x + this.Canvas.Camera.offsetX, this.Mouse.y + this.Canvas.Camera.offsetY);
-        // const tile = this.Tile.unpack(this.mapArray[index]);
-        // debugger;
-
-        const offsetX = this.Canvas.width / 2 - this.Canvas.Camera.x;
-        const offsetY = this.Canvas.height / 2  - this.Canvas.Camera.y;
-
-        // const mouseX = offsetX - this.Canvas.Camera.width / 2 + this.Mouse.x;
-        // const mouseY = offsetY - this.Canvas.Camera.height / 2 + this.Mouse.y;
-        // Canvas.drawMouse(
-        //   Math.round(mouseX / this.tileWidth) * this.tileWidth + this.Canvas.Camera.x,
-        //   Math.round(mouseY / this.tileHeight) * this.tileHeight + this.Canvas.Camera.y
-        // );
-
-        // const mouseX = (this.Canvas.Camera.x + this.Canvas.Camera.offsetX) + (this.Mouse.x) - (this.Canvas.width / 2);
-        // const mouseY = (this.Canvas.Camera.y + this.Canvas.Camera.offsetY) + (this.Mouse.y) - (this.Canvas.height /2);
-        
-        // const mouseX =     this.Canvas.Camera.x + this.Mouse.x - this.Canvas.width / 2 + this.Canvas.Camera.offsetX;
-        // const mouseY =     this.Canvas.Camera.y + this.Mouse.y - this.Canvas.height / 2 + this.Canvas.Camera.offsetY;
-
-        // const tilePixelX = this.Canvas.Camera.x - this.Canvas.Camera.screenPushX + this.Mouse.x - this.Canvas.width / 2;
-        
-        const tilePixelX = this.Canvas.Camera.offsetX - this.Mouse.x + 25;
-        const tilePixelY = this.Canvas.Camera.offsetY - this.Mouse.y + 25;
-        const tileX = Math.abs(Math.round(tilePixelX / this.tileWidth));
-        const tileY = Math.abs(Math.round(tilePixelY / this.tileHeight));
+        // TODO: refactor/optimize this garbage
+        const tilePixelX = Math.abs(this.Canvas.Camera.offsetX - this.Mouse.x + 25);
+        const tilePixelY = Math.abs(this.Canvas.Camera.offsetY - this.Mouse.y + 25);
+        const tileX = Math.round(tilePixelX / this.tileWidth);
+        const tileY = Math.round(tilePixelY / this.tileHeight);
 
         // TODO: This is kind of crazy, but essentially we need to check if
         // tileX or tileY is a positive number. If it is a positive number it is out of bounds to the left or top
         // tileX or tileY has a negative value greater than -(this.tileWidth - 1), then it is out of bounds right or bottom
         // don't draw the mouse cursor if that is the case
+        //
         // let tileX = Math.round(tilePixelX / this.tileWidth);
         // let tileY = Math.round(tilePixelY this.tileHeight);
 
         const mapArrayIndex = this.Tile.convertPosToIndex(tileX, tileY);
-
         const drawMouseX = tileX * this.tileWidth + this.Canvas.Camera.offsetX;
         const drawMouseY = tileY * this.tileHeight + this.Canvas.Camera.offsetY;
 
-        
+        let itemDebugText = `mouseItem: {}`;
+        let charDebugText = `mouseCharacter: {}`;
+
+        // mouse hover
         if (typeof this.mapArray[mapArrayIndex] !== 'undefined') {
-          const tile = this.Tile.unpack(this.mapArray[mapArrayIndex]);
           Canvas.drawMouse(
             drawMouseX,
             drawMouseY
           );
 
+          // get mouse hovering tile info
+          const tile = this.Tile.unpack(this.mapArray[mapArrayIndex]);
           const debugTile = Object.assign({}, tile, { x: tileX, y: tileY });
           Canvas.pushDebugText('mouseTile', `mouseTile: ${JSON.stringify(debugTile)}`);
+
+          // get mouse hovering item info
+          for (var i = 0; i < this.Items.visible.length; i++) {
+            const item = this.Items.visible[i];
+            const itemX = item.x - 25;
+            const itemY = item.y - 25;
+            if (this.pointIntersects(tilePixelX, tilePixelY, itemX, itemY, itemX + item.width, itemY + item.height)) {
+              itemDebugText = `mouseItem: ${JSON.stringify(item)}`;
+              break;
+            }
+          }
+
+          // get mouse hovering character info
+          for (var i = 0; i < this.Characters.visible.length; i++) {
+            const char = this.Characters.visible[i];
+            const charX = char.x - 25;
+            const charY = char.y - 25;
+            if (this.pointIntersects(tilePixelX, tilePixelY, charX, charY, charX + char.width, charY + char.height)) {
+              const debugChar = {
+                id: char.id,
+                x: char.x,
+                y: char.y,
+              };
+              charDebugText = `mouseCharacter: ${JSON.stringify(debugChar)}`;
+              break;
+            }
+          }
         }
         
         if (this.debug) {	
+          Canvas.pushDebugText('mouseChar', charDebugText);
+          Canvas.pushDebugText('mouseItem', itemDebugText);
           Canvas.pushDebugText('hero.id', `Hero.id: ${this.hero.id}`);	
           Canvas.pushDebugText('hero.maxSpeed', `Hero.maxSpeed: ${this.hero.maxSpeed}`);	
           Canvas.pushDebugText('visibleCharacters', `Visible Characters: ${this.Characters.visible.length}`);
@@ -3083,6 +3095,45 @@ var game = (function () {
       return false;
     }
 
+    /**
+     * Tests if a point intersects an object
+     *
+     * @param {*} pX
+     * @param {*} pY
+     * @param {*} x1
+     * @param {*} y1
+     * @param {*} x2
+     * @param {*} y2
+     * @returns
+     * @memberof Map
+     */
+    pointIntersects(pX, pY, x1, y1, x2, y2) {
+      if (pX < x1) {
+        return false;
+      }
+
+      if (pX > x2) {
+        return false;
+      }
+
+      if (pY < y1) {
+        return false;
+      }
+
+      if (pY > y2) {
+        return false;
+      }
+
+      return true;
+    }
+
+    /**
+     * Delegates input handling
+     *
+     * @param {*} Keyboard
+     * @param {*} Mouse
+     * @memberof Map
+     */
     handleInput(Keyboard, Mouse) {
       if (this.debug) {
         if (Keyboard.active.tab) {
