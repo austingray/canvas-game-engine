@@ -6,19 +6,21 @@ An HTML5 canvas game engine, because drawing is fun!
 - Rollup.js: `npm install -g rollup`
 
 ## Development
-Not much to see here. Files in `src` compile to the file in `build`. To build/watch:
+Install node deps:
 
 ```bash
-$ npm start
+npm install
 ```
 
-Include `build/game.bundle.js` in your `index.html`, and then include this script in the document body:
+Files in `src` compile to the file in `build`. To build/watch:
 
-```javascript
-const g = new game();
+```bash
+npm run watch
 ```
 
-`index.html` exists in the repo already for convenience.
+## Play
+You can play directly in the browser by opening `index.html` or you can run in a minimal Electron container with:
 
-## Notes
-This is just a fun work in progress.
+```bash
+npm start
+```
