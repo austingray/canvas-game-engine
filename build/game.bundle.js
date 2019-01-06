@@ -9,29 +9,33 @@ var game = (function () {
      * @memberof Layer
      */
     constructor(id, args = {}) {
-      // get width/height
+      this.name = args.name;
       this.width = args.width;
       this.height = args.height;
-      this.name = args.name;
-      this.visible = (typeof args.visible === 'undefined') ? true : args.visible;
-      this.parentElement = (typeof args.appendTo === 'undefined') ? document.body : args.appendTo;
 
       // create the canvas element and add it to the document body
-      const element = document.createElement('canvas');
-      element.id = id;
-      element.width = this.width;
-      element.height = this.height;
-      element.style.left = args.left;
-      element.style.top = args.top;
-      this.parentElement.appendChild(element);
-      this.element = element;
+      this.element = document.createElement('canvas');
+      this.element.id = id;
+      this.element.width = this.width;
+      this.element.height = this.height;
 
+      // custom css
+      this.element.style.left = (typeof args.left === 'undefined') ? 0 : args.left;
+      this.element.style.top = (typeof args.top === 'undefined') ? 0 : args.top;
+
+      // append the canvas element to the specified parent dom node
+      this.parentElement = (typeof args.appendTo === 'undefined') ? document.body : args.appendTo;
+      this.parentElement.appendChild(this.element);
+
+      // can default to invisible
+      this.visible = (typeof args.visible === 'undefined') ? true : args.visible;
       if (!this.visible) {
-        element.setAttribute('style', 'display: none;');
+        this.element.style.display = 'none';
       }
 
-      // get the context
-      this.context = element.getContext(args.context);
+      // set/get the context: 2d, webgl
+      const context = (typeof args.context === 'undefined') ? '2d' : args.context;
+      this.context = this.element.getContext(context) ;
     }
 
     /**
@@ -475,35 +479,19 @@ var game = (function () {
      * @memberof Canvas
      */
     createLayer(name, args = {}) {
-      // assign a unique id
+      // get a unique id
       this.canvasId++;
       const id = `canvas-${this.canvasId}`;
 
-      // get width/height
-      const width = (typeof args.width === 'undefined') ? this.width : args.width;
-      const height = (typeof args.height === 'undefined') ? this.height : args.height;
-      const left = (typeof args.left === 'undefined') ? 0 : args.left;
-      const top = (typeof args.top === 'undefined') ? 0 : args.top;
-
-      const appendTo = (typeof args.appendTo === 'undefined') ? document.body : args.appendTo;
-
-      // context
-      const context = (typeof args.context === 'undefined') ? '2d' : args.context;
-
-      // visible
-      const visible = (typeof args.visible === 'undefined') ? true : args.visible;
+      // merge args with defaults
+      const layerArgs = Object.assign({}, args, {
+        name,
+        width: this.width,
+        height: this.height,
+      });
 
       // add 'er to the stack
-      this.layers.push(new Layer(id, {
-        name,
-        width,
-        height,
-        context,
-        visible,
-        appendTo,
-        left,
-        top,
-      }));
+      this.layers.push(new Layer(id, layerArgs));
     }
 
     /**

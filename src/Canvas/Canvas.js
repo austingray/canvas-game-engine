@@ -115,35 +115,19 @@ class Canvas {
    * @memberof Canvas
    */
   createLayer(name, args = {}) {
-    // assign a unique id
+    // get a unique id
     this.canvasId++;
     const id = `canvas-${this.canvasId}`;
 
-    // get width/height
-    const width = (typeof args.width === 'undefined') ? this.width : args.width;
-    const height = (typeof args.height === 'undefined') ? this.height : args.height;
-    const left = (typeof args.left === 'undefined') ? 0 : args.left;
-    const top = (typeof args.top === 'undefined') ? 0 : args.top;
-
-    const appendTo = (typeof args.appendTo === 'undefined') ? document.body : args.appendTo;
-
-    // context
-    const context = (typeof args.context === 'undefined') ? '2d' : args.context;
-
-    // visible
-    const visible = (typeof args.visible === 'undefined') ? true : args.visible;
+    // merge args with defaults
+    const layerArgs = Object.assign({}, args, {
+      name,
+      width: this.width,
+      height: this.height,
+    })
 
     // add 'er to the stack
-    this.layers.push(new Layer(id, {
-      name,
-      width,
-      height,
-      context,
-      visible,
-      appendTo,
-      left,
-      top,
-    }));
+    this.layers.push(new Layer(id, layerArgs));
   }
 
   /**

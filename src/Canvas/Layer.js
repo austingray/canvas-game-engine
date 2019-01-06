@@ -6,29 +6,33 @@ class Layer {
    * @memberof Layer
    */
   constructor(id, args = {}) {
-    // get width/height
-    this.width = args.width;
-    this.height = args.height;
     this.name = args.name;
-    this.visible = (typeof args.visible === 'undefined') ? true : args.visible;
-    this.parentElement = (typeof args.appendTo === 'undefined') ? document.body : args.appendTo;
+    this.width = args.width;
+    this.height = args.height
 
     // create the canvas element and add it to the document body
-    const element = document.createElement('canvas');
-    element.id = id;
-    element.width = this.width;
-    element.height = this.height;
-    element.style.left = args.left;
-    element.style.top = args.top;
-    this.parentElement.appendChild(element);
-    this.element = element;
+    this.element = document.createElement('canvas');
+    this.element.id = id;
+    this.element.width = this.width;
+    this.element.height = this.height;
 
+    // custom css
+    this.element.style.left = (typeof args.left === 'undefined') ? 0 : args.left;
+    this.element.style.top = (typeof args.top === 'undefined') ? 0 : args.top;
+
+    // append the canvas element to the specified parent dom node
+    this.parentElement = (typeof args.appendTo === 'undefined') ? document.body : args.appendTo;
+    this.parentElement.appendChild(this.element);
+
+    // can default to invisible
+    this.visible = (typeof args.visible === 'undefined') ? true : args.visible;
     if (!this.visible) {
-      element.setAttribute('style', 'display: none;');
+      this.element.style.display = 'none';
     }
 
-    // get the context
-    this.context = element.getContext(args.context);
+    // set/get the context: 2d, webgl
+    const context = (typeof args.context === 'undefined') ? '2d' : args.context;
+    this.context = this.element.getContext(context) ;
   }
 
   /**
