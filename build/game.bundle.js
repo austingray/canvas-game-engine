@@ -237,6 +237,9 @@ var game = (function () {
       this.width = args.width;
       this.height = args.height;
 
+      // specify the vantage point of the scene lighting camera
+      this.cameraZ = (typeof args.cameraZ !== 'undefined') ? args.cameraZ : 25;
+
       // set this to true to invert the scene's colors
       this.invert = false;
       
@@ -307,16 +310,16 @@ var game = (function () {
      * @memberof Shadows
      */
     createLights() {
-      this.light = new THREE.PointLight( 0xFFFFFF, 5, 300, 0.5 );
+
+      this.light = new THREE.PointLight( 0xFFFFFF, 1, 0, 0.5 );
       this.light.castShadow = true;
-      this.light.position.set( 0, 0, -25 );
-      this.scene.add(this.light);
-      
+      this.light.position.set( 0, 0, -this.cameraZ );      
       this.light.shadow.mapSize.width = 512;  // default
       this.light.shadow.mapSize.height = 512; // default
       this.light.shadow.camera.near = 0.5;       // default
       this.light.shadow.camera.far = this.width;      // default
-      // this.light.shadow.radius = 5;
+
+      this.scene.add(this.light);
     }
 
     /**
@@ -338,7 +341,6 @@ var game = (function () {
       // update the shadow receive plane position
       this.plane.position.x = 0;
       this.plane.position.y = 0;
-
       this.light.position.x = Camera.x + Camera.offsetX - Camera.width / 2 + 25;
       this.light.position.y = Camera.y + Camera.offsetY - Camera.height / 2 + 25;
       
@@ -393,6 +395,13 @@ var game = (function () {
         domElement: this.getLayerByName('shadow3d').element,
       });
 
+      this.Objects = new Shadows({
+        width: this.width,
+        height: this.height,
+        domElement: this.getLayerByName('objects3d').element,
+        cameraZ: 300,
+      });
+
       // shadows as canvas texture
       // this.CanvasTexture = new CanvasTexture({
       //   width: this.width,
@@ -421,17 +430,12 @@ var game = (function () {
       this.createLayer('background');
       this.createLayer('primary');
       this.createLayer('character');
+      this.createLayer('objects3d', { context: 'webgl' });
       this.createLayer('secondary');
       this.createLayer('override');
       this.createLayer('shadow');
-      this.createLayer('shadow3d', {
-        context: 'webgl',
-        // left: '-9999px',
-        // top: '-9999px',
-      });
-      this.createLayer('shadow3dtexture', {
-        context: 'webgl',
-      });
+      this.createLayer('shadow3d', { context: 'webgl' });
+      this.createLayer('shadow3dtexture', { context: 'webgl' });
       this.createLayer('mouse');
       this.createLayer('hud');
       this.createLayer('menu');
@@ -1823,7 +1827,7 @@ var game = (function () {
         // Canvas.roundRect(ctx, x, y, this.width, this.height, 20, '#888787', 0);
       },
       createMesh() {
-        const material = new THREE.MeshPhongMaterial({
+        const material = new THREE.MeshBasicMaterial({
           color: 0x333333,
           opacity: 0,
           transparent: true,
@@ -1832,7 +1836,7 @@ var game = (function () {
         const geometry = new THREE.BoxGeometry( this.width, this.height, depth );
         this.mesh = new THREE.Mesh( geometry, material );
         this.mesh.castShadow = true;
-        this.mesh.receiveShadow = true;
+        this.mesh.receiveShadow = false;
       },
     },
     {
@@ -2016,6 +2020,21 @@ var game = (function () {
 
       this.init(args.map);
     }
+    
+    createMesh() {
+      const color = new THREE.Color( 0xffffff );
+      color.setHex( Math.random() * 0xffffff );
+      const material = new THREE.MeshLambertMaterial({
+        opacity: 1,
+        transparent: false,
+        color,
+      });
+
+      const geometry = new THREE.SphereGeometry( this.width / 2, 32, 32 );
+      this.mesh = new THREE.Mesh( geometry, material );
+      this.mesh.castShadow = true;
+      this.mesh.receiveShadow = false;
+    }
 
     doMovement() {
       // bail if controlled by human
@@ -2070,8 +2089,13 @@ var game = (function () {
      * @memberof Hero
      */
     draw(Canvas) {
-      Canvas.setContext('character');
+      const x = this.x + Canvas.Camera.offsetX;
+      const y = this.y + Canvas.Camera.offsetY;
+      this.mesh.position.x = x - Canvas.Camera.width / 2 + 25;
+      this.mesh.position.y = y - Canvas.Camera.height / 2 + 25;
+      this.mesh.position.z = -1;
 
+      Canvas.setContext('character');
       Canvas.drawCharacter({
         image: this.image,
         x: this.x,
@@ -2344,6 +2368,12 @@ var game = (function () {
       const args = { type, x, y, id };
       const character = new CharacterBaseClass(this.game, this.map, args);
       this.array.push(character);
+
+      if (typeof character.createMesh !== 'undefined') {
+        // create the three.js mesh for this object
+        character.createMesh();
+      }
+
       return id;
     }
 
@@ -2375,9 +2405,17 @@ var game = (function () {
           this.array[i].isVisible = true;
           this.array[i].doMovement();
           visible.push(this.array[i]);
+
+          if (typeof this.array[i].mesh !== 'undefined') {
+            this.Canvas.Objects.scene.add(this.array[i].mesh);
+          }
         } else {
           this.array[i].stopMovement();
           this.array[i].isVisible = false;
+
+          if (typeof this.array[i].mesh !== 'undefined') {
+            this.Canvas.Objects.scene.remove(this.array[i].mesh);
+          }
         }
       }
 
@@ -2846,6 +2884,8 @@ var game = (function () {
 
         this.Canvas.Shadows.draw(this.Canvas);
         // this.Canvas.Shadows2.draw();
+        
+        this.Canvas.Objects.draw(this.Canvas);
 
         // draw the shadows
         this.drawShadows();
@@ -3770,7 +3810,7 @@ var game = (function () {
 
     // debug handler
     this.Debug = new Debug(this);
-    this.debug = true;
+    this.debug = false;
 
     // input handler
     this.Keyboard = new KeyboardController();

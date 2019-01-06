@@ -56,6 +56,21 @@ class CharacterBaseClass {
 
     this.init(args.map);
   }
+  
+  createMesh() {
+    const color = new THREE.Color( 0xffffff );
+    color.setHex( Math.random() * 0xffffff );
+    const material = new THREE.MeshLambertMaterial({
+      opacity: 1,
+      transparent: false,
+      color,
+    });
+
+    const geometry = new THREE.SphereGeometry( this.width / 2, 32, 32 );
+    this.mesh = new THREE.Mesh( geometry, material );
+    this.mesh.castShadow = true;
+    this.mesh.receiveShadow = false;
+  }
 
   doMovement() {
     // bail if controlled by human
@@ -110,8 +125,13 @@ class CharacterBaseClass {
    * @memberof Hero
    */
   draw(Canvas) {
-    Canvas.setContext('character');
+    const x = this.x + Canvas.Camera.offsetX;
+    const y = this.y + Canvas.Camera.offsetY;
+    this.mesh.position.x = x - Canvas.Camera.width / 2 + 25;
+    this.mesh.position.y = y - Canvas.Camera.height / 2 + 25;
+    this.mesh.position.z = -1;
 
+    Canvas.setContext('character');
     Canvas.drawCharacter({
       image: this.image,
       x: this.x,

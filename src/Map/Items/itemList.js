@@ -22,7 +22,7 @@ const itemList = [
       // Canvas.roundRect(ctx, x, y, this.width, this.height, 20, '#888787', 0);
     },
     createMesh() {
-      const material = new THREE.MeshPhongMaterial({
+      const material = new THREE.MeshBasicMaterial({
         color: 0x333333,
         opacity: 0,
         transparent: true,
@@ -31,7 +31,7 @@ const itemList = [
       const geometry = new THREE.BoxGeometry( this.width, this.height, depth );
       this.mesh = new THREE.Mesh( geometry, material );
       this.mesh.castShadow = true;
-      this.mesh.receiveShadow = true;
+      this.mesh.receiveShadow = false;
     },
   },
   {

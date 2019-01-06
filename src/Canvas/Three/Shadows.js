@@ -12,6 +12,9 @@ class Shadows {
     this.width = args.width;
     this.height = args.height;
 
+    // specify the vantage point of the scene lighting camera
+    this.cameraZ = (typeof args.cameraZ !== 'undefined') ? args.cameraZ : 25;
+
     // set this to true to invert the scene's colors
     this.invert = false;
     
@@ -82,16 +85,16 @@ class Shadows {
    * @memberof Shadows
    */
   createLights() {
-    this.light = new THREE.PointLight( 0xFFFFFF, 5, 300, 0.5 );
+
+    this.light = new THREE.PointLight( 0xFFFFFF, 1, 0, 0.5 );
     this.light.castShadow = true;
-    this.light.position.set( 0, 0, -25 );
-    this.scene.add(this.light);
-    
+    this.light.position.set( 0, 0, -this.cameraZ );      
     this.light.shadow.mapSize.width = 512;  // default
     this.light.shadow.mapSize.height = 512; // default
     this.light.shadow.camera.near = 0.5;       // default
     this.light.shadow.camera.far = this.width      // default
-    // this.light.shadow.radius = 5;
+
+    this.scene.add(this.light);
   }
 
   /**
@@ -113,7 +116,6 @@ class Shadows {
     // update the shadow receive plane position
     this.plane.position.x = 0;
     this.plane.position.y = 0;
-
     this.light.position.x = Camera.x + Camera.offsetX - Camera.width / 2 + 25;
     this.light.position.y = Camera.y + Camera.offsetY - Camera.height / 2 + 25;
     

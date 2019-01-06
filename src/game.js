@@ -12,7 +12,7 @@ function game() {
 
   // debug handler
   this.Debug = new Debug(this);
-  this.debug = true;
+  this.debug = false;
 
   // input handler
   this.Keyboard = new Keyboard();

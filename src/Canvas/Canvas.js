@@ -34,6 +34,13 @@ class Canvas {
       domElement: this.getLayerByName('shadow3d').element,
     });
 
+    this.Objects = new Shadows({
+      width: this.width,
+      height: this.height,
+      domElement: this.getLayerByName('objects3d').element,
+      cameraZ: 300,
+    });
+
     // shadows as canvas texture
     // this.CanvasTexture = new CanvasTexture({
     //   width: this.width,
@@ -63,17 +70,12 @@ class Canvas {
     this.createLayer('background');
     this.createLayer('primary');
     this.createLayer('character');
+    this.createLayer('objects3d', { context: 'webgl' });
     this.createLayer('secondary');
     this.createLayer('override');
     this.createLayer('shadow');
-    this.createLayer('shadow3d', {
-      context: 'webgl',
-      // left: '-9999px',
-      // top: '-9999px',
-    });
-    this.createLayer('shadow3dtexture', {
-      context: 'webgl',
-    });
+    this.createLayer('shadow3d', { context: 'webgl' });
+    this.createLayer('shadow3dtexture', { context: 'webgl' });
     this.createLayer('mouse');
     this.createLayer('hud');
     this.createLayer('menu');

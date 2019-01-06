@@ -164,6 +164,8 @@ class Map extends MapBaseClass {
 
       this.Canvas.Shadows.draw(this.Canvas);
       // this.Canvas.Shadows2.draw();
+      
+      this.Canvas.Objects.draw(this.Canvas);
 
       // draw the shadows
       this.drawShadows();

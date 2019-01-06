@@ -66,6 +66,12 @@ class Characters extends MapBaseClass {
     const args = { type, x, y, id };
     const character = new CharacterBaseClass(this.game, this.map, args);
     this.array.push(character);
+
+    if (typeof character.createMesh !== 'undefined') {
+      // create the three.js mesh for this object
+      character.createMesh();
+    }
+
     return id;
   }
 
@@ -97,9 +103,17 @@ class Characters extends MapBaseClass {
         this.array[i].isVisible = true;
         this.array[i].doMovement();
         visible.push(this.array[i]);
+
+        if (typeof this.array[i].mesh !== 'undefined') {
+          this.Canvas.Objects.scene.add(this.array[i].mesh);
+        }
       } else {
         this.array[i].stopMovement();
         this.array[i].isVisible = false;
+
+        if (typeof this.array[i].mesh !== 'undefined') {
+          this.Canvas.Objects.scene.remove(this.array[i].mesh);
+        }
       }
     }
 
