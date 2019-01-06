@@ -24,3 +24,10 @@ You can play directly in the browser by opening `index.html` or you can run in a
 ```bash
 npm start
 ```
+
+Controls:
+- arrow keys/wasd: move character
+- tab: switch character
+- +/-: increase/decrease movement speed
+- space: teleport character to tile 0,0
+- 0-9: toggle canvas layer visibility
