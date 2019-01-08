@@ -62,6 +62,7 @@ class Camera {
       this.y = object.y;
       this.screenPushX = this.width / 2;
       this.screenPushY = this.height / 2;
+      // would floor be more efficient here?
       this.offsetX = Math.round(this.width / 2 - this.x);
       this.offsetY = Math.round(this.height / 2  - this.y);
     } else {
