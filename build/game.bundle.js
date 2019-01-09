@@ -391,8 +391,64 @@ var game = (function () {
       
       // camera
       this.Camera = new Camera(this.width, this.height);
+    }
 
-      // shadows
+    /**
+     * Generates all the layers, called in constructor
+     *
+     * @memberof Canvas
+     */
+    generateLayers() {
+      // create the canvas container div
+      this.canvasDiv = {};
+      this.canvasDiv.element = document.createElement('div');    this.canvasDiv.element.setAttribute('style', `width: ${this.width}px; height: ${this.height}px; background: #000000;`);
+      this.canvasDiv.element.id = 'domParent';
+      document.body.appendChild(this.canvasDiv.element);
+
+      this.layers = [];
+      this.canvasId = 0;
+
+      // create canvas layers
+      this.createLayer2D('background');
+      this.createLayer2D('primary');
+      this.createLayer2D('character');
+      this.createLayer3D('objects3d');
+      this.createLayer2D('secondary');
+      this.createLayer2D('override');
+      this.createLayer2D('shadow');
+      this.createLayer3D('shadow3d');
+      this.createLayer3D('shadow3dtexture');
+      this.createLayer2D('mouse');
+      this.createLayer2D('hud');
+      this.createLayer2D('menu');
+      this.createLayer2D('debug');
+
+      // get explicit reference to debug layer
+      this.debugLayer = this.getLayerByName('debug');
+      this.debugKeys = [];
+      this.debugText = [];
+
+      // primary, secondary, override
+      this.primaryLayer = this.getLayerByName('primary');
+      this.secondaryLayer = this.getLayerByName('secondary');
+      this.overrideLayer = this.getLayerByName('override');
+
+      // get reference to shadow layer
+      this.shadowLayer = this.getLayerByName('shadow');
+
+      // create a tmp div for generating images
+      this.tmpDiv = document.createElement('div');
+      this.tmpDiv.setAttribute('style', `width: 50px; height: 50px; position: absolute; left: -99999px`);
+      this.tmpDiv.id = 'hidden';
+      document.body.appendChild(this.tmpDiv);
+
+      this.createLayer2D('tmp', {
+        appendTo: this.tmpDiv,
+        width: 50,
+        height: 50,
+      });
+
+      // 3d layers
       this.Shadows = new Shadows({
         width: this.width,
         height: this.height,
@@ -416,69 +472,13 @@ var game = (function () {
     }
 
     /**
-     * Generates all the layers, called in constructor
-     *
-     * @memberof Canvas
-     */
-    generateLayers() {
-      // create the canvas container div
-      this.canvasDiv = {};
-      this.canvasDiv.element = document.createElement('div');    this.canvasDiv.element.setAttribute('style', `width: ${this.width}px; height: ${this.height}px; background: #000000;`);
-      this.canvasDiv.element.id = 'domParent';
-      document.body.appendChild(this.canvasDiv.element);
-
-      this.layers = [];
-      this.canvasId = 0;
-
-      // create canvas layers
-      this.createLayer('background');
-      this.createLayer('primary');
-      this.createLayer('character');
-      this.createLayer('objects3d', { context: 'webgl' });
-      this.createLayer('secondary');
-      this.createLayer('override');
-      this.createLayer('shadow');
-      this.createLayer('shadow3d', { context: 'webgl' });
-      this.createLayer('shadow3dtexture', { context: 'webgl' });
-      this.createLayer('mouse');
-      this.createLayer('hud');
-      this.createLayer('menu');
-      this.createLayer('debug');
-
-      // get explicit reference to debug layer
-      this.debugLayer = this.getLayerByName('debug');
-      this.debugKeys = [];
-      this.debugText = [];
-
-      // primary, secondary, override
-      this.primaryLayer = this.getLayerByName('primary');
-      this.secondaryLayer = this.getLayerByName('secondary');
-      this.overrideLayer = this.getLayerByName('override');
-
-      // get reference to shadow layer
-      this.shadowLayer = this.getLayerByName('shadow');
-
-      // create a tmp div for generating images
-      this.tmpDiv = document.createElement('div');
-      this.tmpDiv.setAttribute('style', `width: 50px; height: 50px; position: absolute; left: -99999px`);
-      this.tmpDiv.id = 'hidden';
-      document.body.appendChild(this.tmpDiv);
-
-      this.createLayer('tmp', {
-        appendTo: this.tmpDiv,
-        width: 50,
-        height: 50,
-      });
-    }
-
-    /**
      * Creates a new canvas layer
      *
      * @param {*} name
      * @param {*} [args={}]
      * @memberof Canvas
      */
-    createLayer(name, args = {}) {
+    createLayer2D(name, args = {}) {
       // get a unique id
       this.canvasId++;
       const id = `canvas-${this.canvasId}`;
@@ -488,10 +488,35 @@ var game = (function () {
         name,
         width: this.width,
         height: this.height,
+        context: '2d',
       });
 
+      const layer = new Layer(id, layerArgs);
+
       // add 'er to the stack
-      this.layers.push(new Layer(id, layerArgs));
+      this.layers.push(layer);
+    }
+
+    createLayer3D(name, args) {
+      // get a unique id
+      this.canvasId++;
+      const id = `canvas-${this.canvasId}`;
+
+      // merge args with defaults
+      const layerArgs = Object.assign({}, args, {
+        name,
+        width: this.width,
+        height: this.height,
+        context: 'webgl',
+      });
+
+      // create new layer
+      const layer = new Layer(id, layerArgs);
+      
+      // setup threejs
+      layer.Three =  new ThreeLayer();
+
+      this.layers.push(layer);
     }
 
     /**
