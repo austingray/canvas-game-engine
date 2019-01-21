@@ -1,17 +1,132 @@
 var game = (function () {
   'use strict';
 
-  class Layer {
+  class CanvasBaseClass {
+    constructor() {
+      this.width = window.innerWidth;
+      this.height = window.innerHeight;
+      
+      // subclass constructor
+      this.init();
+    }
+
+    init() {
+      // overwrite in subclass
+    }
+  }
+
+  class ThreeLayer extends CanvasBaseClass {
+    /**
+     * Creates a three.js scene
+     * @param {*} args
+     * @memberof Shadows
+     */
+    create(args) {
+      // parse args
+      this.domElement = args.domElement;
+
+      // specify the vantage point of the scene lighting camera
+      this.lightCameraZ = (typeof args.lightCameraZ !== 'undefined') ? args.lightCameraZ : 25;
+
+      // create the scene, lights, plane
+      this.init();
+      this.createLights();
+      this.createPlane();
+    }
+
+    init() {
+      // init canvas
+      this.scene = new THREE.Scene();
+      this.camera = new THREE.OrthographicCamera( this.width / - 2, this.width / 2, this.height / 2, this.height / - 2, 1, 5000 );
+      this.renderer = new THREE.WebGLRenderer({
+        alpha: true,
+        canvas: this.domElement,
+        antialias: true,
+      });
+      this.renderer.setSize(window.innerWidth, window.innerHeight);
+      this.renderer.shadowMap.enabled = true;
+      this.renderer.shadowMap.type = THREE.PCFSoftShadowMap; // the default is THREE.PCFShadowMap
+
+      // call the effect composer
+      if (this.invert) {
+        this.invertSceneColors();
+      }
+
+      // resize handling
+      window.addEventListener( 'resize', () => {
+        this.camera.aspect = window.innerWidth / window.innerHeight;
+        this.camera.updateProjectionMatrix();
+
+        this.renderer.setSize( window.innerWidth, window.innerHeight );
+      }, false );
+    }
+
+    /**
+     * Create light sources
+     *
+     * @memberof Shadows
+     */
+    createLights() {
+      this.light = new THREE.PointLight( 0xFFFFFF, 1, 0, 0.5 );
+      this.light.castShadow = true;
+      this.light.position.set( 0, 0, -this.lightCameraZ );      
+      this.light.shadow.mapSize.width = 512;  // default
+      this.light.shadow.mapSize.height = 512; // default
+      this.light.shadow.camera.near = 0.5;       // default
+      this.light.shadow.camera.far = this.width;      // default
+
+      this.scene.add(this.light);
+    }
+
+    /**
+     * The surface that receives shadows
+     *
+     * @memberof Shadows
+     */
+    createPlane() {
+      const material = new THREE.ShadowMaterial();
+      const geometry = new THREE.BoxGeometry(this.width, this.height, 1);
+      this.plane = new THREE.Mesh( geometry, material );
+
+      this.scene.add(this.plane);
+      this.plane.receiveShadow = true;
+   }
+
+    draw(Canvas) {
+      const Camera = Canvas.Camera;
+      
+      // plane
+      this.plane.position.x = 0;
+      this.plane.position.y = 0;
+      
+      // light
+      this.light.position.x = Camera.x + Camera.offsetX - Camera.width / 2 + 25;
+      this.light.position.y = Camera.y + Camera.offsetY - Camera.height / 2 + 25;
+      
+      // camera
+      this.camera.position.x = 0;
+      this.camera.position.y = 0;
+      this.camera.position.z = -5000;
+      this.camera.rotation.z = 180 * Math.PI / 180;
+      this.camera.rotation.y = 180 * Math.PI / 180;
+
+      // avoid duplicate rendering with effect composer
+      this.renderer.render(this.scene, this.camera);
+      
+      // update
+      this.plane.material.needsUpdate = true;
+    }
+  }
+
+  class Layer extends CanvasBaseClass {
     /**
      * Creates an instance of Layer.
      * @param {*} id
      * @param {*} [args={}]
      * @memberof Layer
      */
-    constructor(id, args = {}) {
+    create(id, args) {
       this.name = args.name;
-      this.width = args.width;
-      this.height = args.height;
 
       // create the canvas element and add it to the document body
       this.element = document.createElement('canvas');
@@ -33,9 +148,27 @@ var game = (function () {
         this.element.style.display = 'none';
       }
 
-      // set/get the context: 2d, webgl
-      const context = (typeof args.context === 'undefined') ? '2d' : args.context;
-      this.context = this.element.getContext(context) ;
+      // 2d layer
+      if (
+        typeof args.type === 'undefined'
+        || args.type === '2d'
+      ) {
+        this.type = '2d';
+        this.context = this.element.getContext('2d');
+      }
+
+      // do 3d scene creation
+      if (args.type === '3d') {
+        this.type = '3d';
+        this.context = this.element.getContext('webgl');
+
+        // init a 3d scene
+        this.ThreeLayer = new ThreeLayer();
+        this.ThreeLayer.create({
+          domElement: this.element,
+          lightCameraZ: typeof args.lightCameraZ === 'undefined' ? -25 : args.lightCameraZ,
+        });
+      }
     }
 
     /**
@@ -80,12 +213,10 @@ var game = (function () {
    *
    * @class Camera
    */
-  class Camera {
-    constructor(width, height) {
-      this.width = width;
-      this.height = height;
-      this.x = width / 2;
-      this.y = height / 2;
+  class Camera extends CanvasBaseClass {
+    init() {
+      this.x = this.width / 2;
+      this.y = this.height / 2;
       this.offsetX = 0;
       this.offsetY = 0;
     }
@@ -196,223 +327,23 @@ var game = (function () {
    * Inverts the colors on the scene
    */
 
-  const InvertShader = {
-
-  	uniforms: {
-  		"tDiffuse": { value: null },
-  	},
-
-  	vertexShader: [
-
-  	  "varying vec2 vUv;",
-
-  		"void main() {",
-        "vUv = uv;",
-        "gl_Position = projectionMatrix * modelViewMatrix * vec4( position, 1.0 );",
-  		"}"
-
-  	].join( "\n" ),
-
-  	fragmentShader: [
-
-  	"uniform sampler2D tDiffuse;",
-  	"varying vec2 vUv;",
-
-  	"void main() {",
-      "vec4 color = texture2D( tDiffuse, vUv );",
-  		"vec3 c = color.rgb;",
-
-  	  "gl_FragColor = vec4(1.0 - c.r, 1.0 - c.g, 1.0 - c.b, 1);",
-  	"}",
-
-  	].join( "\n" )
-
-  };
-
-  class Shadows {
-    /**
-     * Create core three.js items
-     * @param {*} args
-     * @memberof Shadows
-     */
-    constructor(args) {
-      // parse args
-      this.domElement = args.domElement;
-      this.width = args.width;
-      this.height = args.height;
-
-      // specify the vantage point of the scene lighting camera
-      this.cameraZ = (typeof args.cameraZ !== 'undefined') ? args.cameraZ : 25;
-
-      // set this to true to invert the scene's colors
-      this.invert = false;
-      
-      // create the scene, lights, plane
-      this.init();
-      this.createLights();
-
-      // Use different material depending on if we are inverting the colors.
-      // If we are inverting the colors we are using the scene as
-      // an alpha map for a separate shadow layer.
-      // If we are not then we are using the scene as a shadow layer.
-      const material = this.invert
-        ? new THREE.MeshPhongMaterial({
-            color: 0xFFFFFF,
-            opacity: 1,
-            transparent: false,
-            specular: new THREE.Color(0x000000),
-            shininess: 0,
-          })
-        : new THREE.ShadowMaterial();
-      this.createPlane(material);
-    }
-
-    init() {
-      // init canvas
-      this.scene = new THREE.Scene();
-      this.camera = new THREE.OrthographicCamera( this.width / - 2, this.width / 2, this.height / 2, this.height / - 2, 1, 5000 );
-      this.renderer = new THREE.WebGLRenderer({
-        alpha: true,
-        canvas: this.domElement,
-        antialias: true,
-      });
-      this.renderer.setSize(window.innerWidth, window.innerHeight);
-      this.renderer.shadowMap.enabled = true;
-      this.renderer.shadowMap.type = THREE.PCFSoftShadowMap; // the default is THREE.PCFShadowMap
-
-      // call the effect composer
-      if (this.invert) {
-        this.invertSceneColors();
-      }
-
-      // resize handling
-      window.addEventListener( 'resize', () => {
-        this.camera.aspect = window.innerWidth / window.innerHeight;
-        this.camera.updateProjectionMatrix();
-
-        this.renderer.setSize( window.innerWidth, window.innerHeight );
-      }, false );
-    }
-
-    invertSceneColors() {
-      // postprocessing
-      this.composer = new THREE.EffectComposer(this.renderer);
-      
-      // add invert effect
-      const invertEffect = new THREE.ShaderPass(InvertShader);
-      invertEffect.renderToScreen = true;
-      this.composer.addPass(invertEffect);
-
-      // add renderer
-      const renderPass = new THREE.RenderPass(this.scene, this.camera);
-      this.composer.addPass(renderPass);
-    }
-
-    /**
-     * Create light sources
-     *
-     * @memberof Shadows
-     */
-    createLights() {
-
-      this.light = new THREE.PointLight( 0xFFFFFF, 1, 0, 0.5 );
-      this.light.castShadow = true;
-      this.light.position.set( 0, 0, -this.cameraZ );      
-      this.light.shadow.mapSize.width = 512;  // default
-      this.light.shadow.mapSize.height = 512; // default
-      this.light.shadow.camera.near = 0.5;       // default
-      this.light.shadow.camera.far = this.width;      // default
-
-      this.scene.add(this.light);
-    }
-
-    /**
-     * The surface that receives shadows
-     *
-     * @memberof Shadows
-     */
-    createPlane(material) {
-      const geometry = new THREE.BoxGeometry(this.width, this.height, 1);
-      this.plane = new THREE.Mesh( geometry, material );
-
-      this.scene.add(this.plane);
-      this.plane.receiveShadow = true;
-   }
-
-    draw(Canvas) {
-      const Camera = Canvas.Camera;
-      
-      // update the shadow receive plane position
-      this.plane.position.x = 0;
-      this.plane.position.y = 0;
-      this.light.position.x = Camera.x + Camera.offsetX - Camera.width / 2 + 25;
-      this.light.position.y = Camera.y + Camera.offsetY - Camera.height / 2 + 25;
-      
-      // update camera position
-      this.camera.position.x = 0;
-      this.camera.position.y = 0;
-      this.camera.position.z = -5000;
-      this.camera.rotation.z = 180 * Math.PI / 180;
-      this.camera.rotation.y = 180 * Math.PI / 180;
-
-      // avoid duplicate rendering with effect composer
-      if (this.invert) {
-        this.composer.render();
-      } else {
-        this.renderer.render(this.scene, this.camera);
-      }
-      
-      // update
-      this.plane.material.needsUpdate = true;
-    }
-  }
-
   /**
-   * Creates a canvas and provides methods for drawing to it
+   * Provides an interface to Canvas elements and drawing to them
    * @class Canvas
    */
-  class Canvas {
-    constructor(args = {}) {
-      // set constants
-      this.width = args.width;
-      this.height = args.height;
-
+  class Canvas extends CanvasBaseClass {
+    init() {
       // for consistent spacing off the canvas edge
       this.padding = 24;
+
+      // camera
+      this.Camera = new Camera();
 
       // generate all the <canvas> elements
       this.generateLayers();
 
-      // generate object caches
-      this.generateObjectCaches();
-
       // set a default ctx
       this.ctx = this.primaryLayer.context;
-      
-      // camera
-      this.Camera = new Camera(this.width, this.height);
-
-      // shadows
-      this.Shadows = new Shadows({
-        width: this.width,
-        height: this.height,
-        domElement: this.getLayerByName('shadow3d').element,
-      });
-
-      this.Objects = new Shadows({
-        width: this.width,
-        height: this.height,
-        domElement: this.getLayerByName('objects3d').element,
-        cameraZ: 300,
-      });
-
-      // shadows as canvas texture
-      // this.CanvasTexture = new CanvasTexture({
-      //   width: this.width,
-      //   height: this.height,
-      //   domElement: this.getLayerByName('shadow3dtexture').element,
-      //   canvasElement: this.getLayerByName('shadow3d').element,
-      // });
     }
 
     /**
@@ -427,23 +358,59 @@ var game = (function () {
       this.canvasDiv.element.id = 'domParent';
       document.body.appendChild(this.canvasDiv.element);
 
+      // create a tmp div for generating images offscreen
+      this.tmpDiv = document.createElement('div');
+      this.tmpDiv.setAttribute('style', `width: 50px; height: 50px; position: absolute; left: -99999px`);
+      this.tmpDiv.id = 'hidden';
+      document.body.appendChild(this.tmpDiv);
+
+      // the layers array and id counter
       this.layers = [];
       this.canvasId = 0;
 
-      // create canvas layers
-      this.createLayer('background');
-      this.createLayer('primary');
-      this.createLayer('character');
-      this.createLayer('objects3d', { context: 'webgl' });
-      this.createLayer('secondary');
-      this.createLayer('override');
-      this.createLayer('shadow');
-      this.createLayer('shadow3d', { context: 'webgl' });
-      this.createLayer('shadow3dtexture', { context: 'webgl' });
-      this.createLayer('mouse');
-      this.createLayer('hud');
-      this.createLayer('menu');
-      this.createLayer('debug');
+      // the layers we are going to generate,
+      // defaults to 2d
+      const layers = [
+        { name: 'background' },
+        { name: 'primary' },
+        { name: 'character' },
+        {
+          name: 'object3d',
+          type: '3d',
+          lightCameraZ: 300
+        },
+        { name: 'secondary' },
+        { name: 'override' },
+        { name: 'shadow' },
+        {
+          name: 'shadow3d',
+          type: '3d'
+        },
+        {
+          name: 'shadow3dtexture',
+          type: '3d'
+        },
+        { name: 'mouse' },
+        { name: 'hude' },
+        { name: 'menu' },
+        { name: 'debug' },
+        {
+          name: 'tmp',
+          appendTo: this.tmpDiv
+        },
+      ];
+
+      for (let i = 0; i < layers.length; i++) {
+        // get a unique id
+        this.canvasId++;
+        const id = `canvas-${this.canvasId}`;
+
+        const layer = new Layer();
+        layer.create(id, layers[i]);
+
+        // add 'er to the stack
+        this.layers.push(layer);
+      }
 
       // get explicit reference to debug layer
       this.debugLayer = this.getLayerByName('debug');
@@ -458,40 +425,9 @@ var game = (function () {
       // get reference to shadow layer
       this.shadowLayer = this.getLayerByName('shadow');
 
-      // create a tmp div for generating images
-      this.tmpDiv = document.createElement('div');
-      this.tmpDiv.setAttribute('style', `width: 50px; height: 50px; position: absolute; left: -99999px`);
-      this.tmpDiv.id = 'hidden';
-      document.body.appendChild(this.tmpDiv);
-
-      this.createLayer('tmp', {
-        appendTo: this.tmpDiv,
-        width: 50,
-        height: 50,
-      });
-    }
-
-    /**
-     * Creates a new canvas layer
-     *
-     * @param {*} name
-     * @param {*} [args={}]
-     * @memberof Canvas
-     */
-    createLayer(name, args = {}) {
-      // get a unique id
-      this.canvasId++;
-      const id = `canvas-${this.canvasId}`;
-
-      // merge args with defaults
-      const layerArgs = Object.assign({}, args, {
-        name,
-        width: this.width,
-        height: this.height,
-      });
-
-      // add 'er to the stack
-      this.layers.push(new Layer(id, layerArgs));
+      // reference to our 3d layers
+      this.object3dLayer = this.getLayerByName('object3d');
+      this.shadow3dLayer = this.getLayerByName('shadow3d');
     }
 
     /**
@@ -504,6 +440,19 @@ var game = (function () {
     deleteLayer(name) {
       const layer = this.getLayerByName(name);
       layer.delete();
+    }
+
+    /**
+     * Triggers the draw method on each 3d scene
+     *
+     * @memberof Canvas
+     */
+    draw3d() {
+      for (var i = 0; i < this.layers.length; i++) {
+        if (this.layers[i].type === '3d') {
+          this.layers[i].ThreeLayer.draw(this);
+        }
+      }
     }
 
     /**
@@ -554,15 +503,6 @@ var game = (function () {
       }
 
       return color;
-    }
-
-    /**
-     * Generates all object types
-     *
-     * @memberof Canvas
-     */
-    generateObjectCaches() {
-
     }
 
     /**
@@ -1937,11 +1877,11 @@ var game = (function () {
           visible.push(item);
 
           if (typeof item.mesh !== 'undefined') {
-            this.Canvas.Shadows.scene.add(item.mesh);
+            this.Canvas.shadow3dLayer.ThreeLayer.scene.add(item.mesh);
           }
         } else {
           if (typeof item.mesh !== 'undefined') {
-            this.Canvas.Shadows.scene.remove(item.mesh);
+            this.Canvas.shadow3dLayer.ThreeLayer.scene.remove(item.mesh);
           }
         }
       }
@@ -2395,14 +2335,14 @@ var game = (function () {
           visible.push(this.array[i]);
 
           if (typeof this.array[i].mesh !== 'undefined') {
-            this.Canvas.Objects.scene.add(this.array[i].mesh);
+            this.Canvas.object3dLayer.ThreeLayer.scene.add(this.array[i].mesh);
           }
         } else {
           this.array[i].stopMovement();
           this.array[i].isVisible = false;
 
           if (typeof this.array[i].mesh !== 'undefined') {
-            this.Canvas.Objects.scene.remove(this.array[i].mesh);
+            this.Canvas.object3dLayer.ThreeLayer.scene.remove(this.array[i].mesh);
           }
         }
       }
@@ -2870,10 +2810,12 @@ var game = (function () {
         // draw the characters
         this.Characters.draw(Canvas);
 
-        this.Canvas.Shadows.draw(this.Canvas);
+        // draw all 3d elements
+        this.Canvas.draw3d();
+
+        // this.Canvas.Shadows.draw(this.Canvas);
         // this.Canvas.Shadows2.draw();
-        
-        this.Canvas.Objects.draw(this.Canvas);
+        // this.Canvas.Objects.draw(this.Canvas);
 
         // draw the shadows
         this.drawShadows();
@@ -3798,17 +3740,14 @@ var game = (function () {
 
     // debug handler
     this.Debug = new Debug(this);
-    this.debug = false;
+    this.debug = true;
 
     // input handler
     this.Keyboard = new KeyboardController();
     this.Mouse = new Mouse();
 
     // create the canvas
-    this.Canvas = new Canvas({
-      width: window.innerWidth,
-      height: window.innerHeight,
-    });
+    this.Canvas = new Canvas();
 
     // the object factory
     this.Objects = new Objects(this);

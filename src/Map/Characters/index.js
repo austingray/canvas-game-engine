@@ -105,14 +105,14 @@ class Characters extends MapBaseClass {
         visible.push(this.array[i]);
 
         if (typeof this.array[i].mesh !== 'undefined') {
-          this.Canvas.Objects.scene.add(this.array[i].mesh);
+          this.Canvas.object3dLayer.ThreeLayer.scene.add(this.array[i].mesh);
         }
       } else {
         this.array[i].stopMovement();
         this.array[i].isVisible = false;
 
         if (typeof this.array[i].mesh !== 'undefined') {
-          this.Canvas.Objects.scene.remove(this.array[i].mesh);
+          this.Canvas.object3dLayer.ThreeLayer.scene.remove(this.array[i].mesh);
         }
       }
     }

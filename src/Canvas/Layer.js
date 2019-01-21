@@ -1,14 +1,15 @@
-class Layer {
+import CanvasBaseClass from './CanvasBaseClass';
+import ThreeLayer from './Three/ThreeLayer';
+
+class Layer extends CanvasBaseClass {
   /**
    * Creates an instance of Layer.
    * @param {*} id
    * @param {*} [args={}]
    * @memberof Layer
    */
-  constructor(id, args = {}) {
+  create(id, args) {
     this.name = args.name;
-    this.width = args.width;
-    this.height = args.height
 
     // create the canvas element and add it to the document body
     this.element = document.createElement('canvas');
@@ -30,9 +31,27 @@ class Layer {
       this.element.style.display = 'none';
     }
 
-    // set/get the context: 2d, webgl
-    const context = (typeof args.context === 'undefined') ? '2d' : args.context;
-    this.context = this.element.getContext(context) ;
+    // 2d layer
+    if (
+      typeof args.type === 'undefined'
+      || args.type === '2d'
+    ) {
+      this.type = '2d';
+      this.context = this.element.getContext('2d');
+    }
+
+    // do 3d scene creation
+    if (args.type === '3d') {
+      this.type = '3d';
+      this.context = this.element.getContext('webgl');
+
+      // init a 3d scene
+      this.ThreeLayer = new ThreeLayer()
+      this.ThreeLayer.create({
+        domElement: this.element,
+        lightCameraZ: typeof args.lightCameraZ === 'undefined' ? -25 : args.lightCameraZ,
+      });
+    }
   }
 
   /**

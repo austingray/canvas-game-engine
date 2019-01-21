@@ -162,10 +162,12 @@ class Map extends MapBaseClass {
       // draw the characters
       this.Characters.draw(Canvas);
 
-      this.Canvas.Shadows.draw(this.Canvas);
+      // draw all 3d elements
+      this.Canvas.draw3d();
+
+      // this.Canvas.Shadows.draw(this.Canvas);
       // this.Canvas.Shadows2.draw();
-      
-      this.Canvas.Objects.draw(this.Canvas);
+      // this.Canvas.Objects.draw(this.Canvas);
 
       // draw the shadows
       this.drawShadows();

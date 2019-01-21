@@ -12,17 +12,14 @@ function game() {
 
   // debug handler
   this.Debug = new Debug(this);
-  this.debug = false;
+  this.debug = true;
 
   // input handler
   this.Keyboard = new Keyboard();
   this.Mouse = new Mouse();
 
   // create the canvas
-  this.Canvas = new Canvas({
-    width: window.innerWidth,
-    height: window.innerHeight,
-  });
+  this.Canvas = new Canvas();
 
   // the object factory
   this.Objects = new Objects(this);

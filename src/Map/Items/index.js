@@ -66,11 +66,11 @@ class Items extends MapBaseClass {
         visible.push(item);
 
         if (typeof item.mesh !== 'undefined') {
-          this.Canvas.Shadows.scene.add(item.mesh);
+          this.Canvas.shadow3dLayer.ThreeLayer.scene.add(item.mesh);
         }
       } else {
         if (typeof item.mesh !== 'undefined') {
-          this.Canvas.Shadows.scene.remove(item.mesh);
+          this.Canvas.shadow3dLayer.ThreeLayer.scene.remove(item.mesh);
         }
       }
     }
