@@ -514,7 +514,11 @@ var game = (function () {
       const layer = new Layer(id, layerArgs);
       
       // setup threejs
-      layer.Three =  new ThreeLayer();
+      const threeArgs = Object.assign({}, layerArgs);
+
+      layer.Three =  new ThreeLayer({
+
+      });
 
       this.layers.push(layer);
     }

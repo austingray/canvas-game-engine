@@ -1,6 +1,6 @@
 import InvertShader from './Shaders/InvertShader';
 
-class Shadows {
+class ThreeLayer {
   /**
    * Create core three.js items
    * @param {*} args
@@ -109,4 +109,4 @@ class Shadows {
   }
 }
 
-export default Shadows;
+export default ThreeLayer;
