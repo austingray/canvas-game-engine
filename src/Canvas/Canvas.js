@@ -1,53 +1,26 @@
+import CanvasBaseClass from './CanvasBaseClass';
 import Layer from './Layer';
 import Camera from './Camera';
 import Shadows from './Three/Shadows';
+import ThreeLayer from './Three/ThreeLayer';
 
 /**
- * Creates a canvas and provides methods for drawing to it
+ * Provides an interface to Canvas elements and drawing to them
  * @class Canvas
  */
-class Canvas {
-  constructor(args = {}) {
-    // set constants
-    this.width = args.width;
-    this.height = args.height;
-
+class Canvas extends CanvasBaseClass {
+  init() {
     // for consistent spacing off the canvas edge
     this.padding = 24;
+
+    // camera
+    this.Camera = new Camera();
 
     // generate all the <canvas> elements
     this.generateLayers();
 
-    // generate object caches
-    this.generateObjectCaches();
-
     // set a default ctx
     this.ctx = this.primaryLayer.context;
-    
-    // camera
-    this.Camera = new Camera(this.width, this.height);
-
-    // shadows
-    this.Shadows = new Shadows({
-      width: this.width,
-      height: this.height,
-      domElement: this.getLayerByName('shadow3d').element,
-    });
-
-    this.Objects = new Shadows({
-      width: this.width,
-      height: this.height,
-      domElement: this.getLayerByName('objects3d').element,
-      cameraZ: 300,
-    });
-
-    // shadows as canvas texture
-    // this.CanvasTexture = new CanvasTexture({
-    //   width: this.width,
-    //   height: this.height,
-    //   domElement: this.getLayerByName('shadow3dtexture').element,
-    //   canvasElement: this.getLayerByName('shadow3d').element,
-    // });
   }
 
   /**
@@ -63,23 +36,59 @@ class Canvas {
     this.canvasDiv.element.id = 'domParent';
     document.body.appendChild(this.canvasDiv.element);
 
+    // create a tmp div for generating images offscreen
+    this.tmpDiv = document.createElement('div');
+    this.tmpDiv.setAttribute('style', `width: 50px; height: 50px; position: absolute; left: -99999px`);
+    this.tmpDiv.id = 'hidden';
+    document.body.appendChild(this.tmpDiv);
+
+    // the layers array and id counter
     this.layers = [];
     this.canvasId = 0;
 
-    // create canvas layers
-    this.createLayer('background');
-    this.createLayer('primary');
-    this.createLayer('character');
-    this.createLayer('objects3d', { context: 'webgl' });
-    this.createLayer('secondary');
-    this.createLayer('override');
-    this.createLayer('shadow');
-    this.createLayer('shadow3d', { context: 'webgl' });
-    this.createLayer('shadow3dtexture', { context: 'webgl' });
-    this.createLayer('mouse');
-    this.createLayer('hud');
-    this.createLayer('menu');
-    this.createLayer('debug');
+    // the layers we are going to generate,
+    // defaults to 2d
+    const layers = [
+      { name: 'background' },
+      { name: 'primary' },
+      { name: 'character' },
+      {
+        name: 'object3d',
+        type: '3d',
+        lightCameraZ: 300
+      },
+      { name: 'secondary' },
+      { name: 'override' },
+      { name: 'shadow' },
+      {
+        name: 'shadow3d',
+        type: '3d'
+      },
+      {
+        name: 'shadow3dtexture',
+        type: '3d'
+      },
+      { name: 'mouse' },
+      { name: 'hude' },
+      { name: 'menu' },
+      { name: 'debug' },
+      {
+        name: 'tmp',
+        appendTo: this.tmpDiv
+      },
+    ];
+
+    for (let i = 0; i < layers.length; i++) {
+      // get a unique id
+      this.canvasId++;
+      const id = `canvas-${this.canvasId}`;
+
+      const layer = new Layer();
+      layer.create(id, layers[i]);
+
+      // add 'er to the stack
+      this.layers.push(layer);
+    }
 
     // get explicit reference to debug layer
     this.debugLayer = this.getLayerByName('debug');
@@ -94,40 +103,9 @@ class Canvas {
     // get reference to shadow layer
     this.shadowLayer = this.getLayerByName('shadow');
 
-    // create a tmp div for generating images
-    this.tmpDiv = document.createElement('div');
-    this.tmpDiv.setAttribute('style', `width: 50px; height: 50px; position: absolute; left: -99999px`);
-    this.tmpDiv.id = 'hidden';
-    document.body.appendChild(this.tmpDiv);
-
-    this.createLayer('tmp', {
-      appendTo: this.tmpDiv,
-      width: 50,
-      height: 50,
-    });
-  }
-
-  /**
-   * Creates a new canvas layer
-   *
-   * @param {*} name
-   * @param {*} [args={}]
-   * @memberof Canvas
-   */
-  createLayer(name, args = {}) {
-    // get a unique id
-    this.canvasId++;
-    const id = `canvas-${this.canvasId}`;
-
-    // merge args with defaults
-    const layerArgs = Object.assign({}, args, {
-      name,
-      width: this.width,
-      height: this.height,
-    })
-
-    // add 'er to the stack
-    this.layers.push(new Layer(id, layerArgs));
+    // reference to our 3d layers
+    this.object3dLayer = this.getLayerByName('object3d');
+    this.shadow3dLayer = this.getLayerByName('shadow3d');
   }
 
   /**
@@ -140,6 +118,19 @@ class Canvas {
   deleteLayer(name) {
     const layer = this.getLayerByName(name);
     layer.delete();
+  }
+
+  /**
+   * Triggers the draw method on each 3d scene
+   *
+   * @memberof Canvas
+   */
+  draw3d() {
+    for (var i = 0; i < this.layers.length; i++) {
+      if (this.layers[i].type === '3d') {
+        this.layers[i].ThreeLayer.draw(this);
+      }
+    }
   }
 
   /**
@@ -190,15 +181,6 @@ class Canvas {
     }
 
     return color;
-  }
-
-  /**
-   * Generates all object types
-   *
-   * @memberof Canvas
-   */
-  generateObjectCaches() {
-
   }
 
   /**

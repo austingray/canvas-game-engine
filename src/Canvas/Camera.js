@@ -1,14 +1,14 @@
+import CanvasBaseClass from './CanvasBaseClass';
+
 /**
  * Calculates drawing x/y offsets
  *
  * @class Camera
  */
-class Camera {
-  constructor(width, height) {
-    this.width = width;
-    this.height = height;
-    this.x = width / 2;
-    this.y = height / 2;
+class Camera extends CanvasBaseClass {
+  init() {
+    this.x = this.width / 2;
+    this.y = this.height / 2;
     this.offsetX = 0;
     this.offsetY = 0;
   }

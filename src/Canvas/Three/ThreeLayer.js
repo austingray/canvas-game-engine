@@ -1,14 +1,14 @@
-class Shadows {
+import CanvasBaseClass from '../CanvasBaseClass';
+
+class ThreeLayer extends CanvasBaseClass {
   /**
    * Creates a three.js scene
    * @param {*} args
    * @memberof Shadows
    */
-  constructor(args) {
+  create(args) {
     // parse args
     this.domElement = args.domElement;
-    this.width = args.width;
-    this.height = args.height;
 
     // specify the vantage point of the scene lighting camera
     this.lightCameraZ = (typeof args.lightCameraZ !== 'undefined') ? args.lightCameraZ : 25;
@@ -54,7 +54,7 @@ class Shadows {
   createLights() {
     this.light = new THREE.PointLight( 0xFFFFFF, 1, 0, 0.5 );
     this.light.castShadow = true;
-    this.light.position.set( 0, 0, -this.cameraZ );      
+    this.light.position.set( 0, 0, -this.lightCameraZ );      
     this.light.shadow.mapSize.width = 512;  // default
     this.light.shadow.mapSize.height = 512; // default
     this.light.shadow.camera.near = 0.5;       // default
@@ -103,4 +103,4 @@ class Shadows {
   }
 }
 
-export default Shadows;
+export default ThreeLayer;

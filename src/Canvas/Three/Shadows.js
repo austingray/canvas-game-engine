@@ -1,12 +1,13 @@
+import CanvasBaseClass from '../CanvasBaseClass';
 import InvertShader from './Shaders/InvertShader';
 
-class Shadows {
+class Shadows extends CanvasBaseClass {
   /**
    * Create core three.js items
    * @param {*} args
    * @memberof Shadows
    */
-  constructor(args) {
+  create(args) {
     // parse args
     this.domElement = args.domElement;
     this.width = args.width;
