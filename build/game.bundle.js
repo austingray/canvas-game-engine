@@ -300,10 +300,10 @@ var game = (function () {
      */
     inViewport(x1, y1, x2, y2) {
       // calc the viewport
-      const vpX1 = this.x - this.width;
-      const vpX2 = this.x + this.width;
-      const vpY1 = this.y - this.height;
-      const vpY2 = this.y + this.height;
+      const vpX1 = this.x - this.width / 2;
+      const vpX2 = this.x + this.width / 2;
+      const vpY1 = this.y - this.height / 2;
+      const vpY2 = this.y + this.height / 2;
 
       // if in viewport
       if (
